@@ -11,8 +11,7 @@ interface Remark {
   id: string;
   description: string;
   normRef: string;
-  deadline: string;       // срок устранения
-  reportDeadline: string; // срок предоставления отчёта
+  deadline: string; // срок устранения
   status: Status;
 }
 
@@ -23,6 +22,7 @@ interface Prescription {
   object: string;
   contractor: string;
   responsible: string;
+  reportDeadline: string; // единый срок предоставления отчёта
   remarks: Remark[];
   comments: Comment[];
 }
@@ -56,7 +56,7 @@ function overallStatus(remarks: Remark[]): Status {
 }
 
 function newRemark(): Remark {
-  return { id: Date.now().toString() + Math.random(), description: "", normRef: "", deadline: "", reportDeadline: "", status: "Выдано" };
+  return { id: Date.now().toString() + Math.random(), description: "", normRef: "", deadline: "", status: "Выдано" };
 }
 
 // --- Начальные данные ---
@@ -68,9 +68,10 @@ const INITIAL: Prescription[] = [
     object: "Цех №3",
     contractor: "ООО «СтройПодряд»",
     responsible: "Козлов А.В.",
+    reportDeadline: "12.06.2024",
     remarks: [
-      { id: "r1", description: "Захламление эвакуационного выхода посторонними предметами", normRef: "ППР РФ п. 24", deadline: "14.06.2024", reportDeadline: "12.06.2024", status: "Просрочено" },
-      { id: "r2", description: "Отсутствует план эвакуации на видном месте", normRef: "ГОСТ 12.1.004-91", deadline: "20.06.2024", reportDeadline: "18.06.2024", status: "В работе" },
+      { id: "r1", description: "Захламление эвакуационного выхода посторонними предметами", normRef: "ППР РФ п. 24", deadline: "14.06.2024", status: "Просрочено" },
+      { id: "r2", description: "Отсутствует план эвакуации на видном месте", normRef: "ГОСТ 12.1.004-91", deadline: "20.06.2024", status: "В работе" },
     ],
     comments: [
       { id: 1, author: "Алексеев С.Н.", role: "Специалист ОТ", text: "Выдано предписание. Прошу устранить в указанный срок.", time: "05.06.2024 10:00" },
@@ -84,8 +85,9 @@ const INITIAL: Prescription[] = [
     object: "Склад А",
     contractor: "ИП Морозов В.П.",
     responsible: "Морозов В.П.",
+    reportDeadline: "18.06.2024",
     remarks: [
-      { id: "r3", description: "Отсутствует принудительная вытяжка в помещении склада", normRef: "СП 60.13330.2020 п. 8.2", deadline: "20.06.2024", reportDeadline: "18.06.2024", status: "В работе" },
+      { id: "r3", description: "Отсутствует принудительная вытяжка в помещении склада", normRef: "СП 60.13330.2020 п. 8.2", deadline: "20.06.2024", status: "В работе" },
     ],
     comments: [],
   },
@@ -96,8 +98,9 @@ const INITIAL: Prescription[] = [
     object: "Линия сборки",
     contractor: "ООО «МонтажГрупп»",
     responsible: "Иванов Д.К.",
+    reportDeadline: "09.06.2024",
     remarks: [
-      { id: "r4", description: "Отсутствует ограждение опасной зоны около конвейера №2", normRef: "ГОСТ 12.2.062-81 п. 4.1", deadline: "10.06.2024", reportDeadline: "09.06.2024", status: "Устранено" },
+      { id: "r4", description: "Отсутствует ограждение опасной зоны около конвейера №2", normRef: "ГОСТ 12.2.062-81 п. 4.1", deadline: "10.06.2024", status: "Устранено" },
     ],
     comments: [
       { id: 1, author: "Иванов Д.К.", role: "Подрядчик", text: "Ограждение установлено, прикладываю фото.", time: "09.06.2024 14:30" },
@@ -213,6 +216,7 @@ interface FormState {
   object: string;
   contractor: string;
   responsible: string;
+  reportDeadline: string;
   remarks: Remark[];
 }
 
@@ -259,18 +263,11 @@ function RemarkRow({
         />
       </Field>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Срок устранения *">
           <DatePicker
             value={remark.deadline}
             onChange={v => set("deadline", v)}
-            placeholder="Выбрать дату"
-          />
-        </Field>
-        <Field label="Срок предоставления отчёта *">
-          <DatePicker
-            value={remark.reportDeadline}
-            onChange={v => set("reportDeadline", v)}
             placeholder="Выбрать дату"
           />
         </Field>
@@ -292,6 +289,7 @@ function AddForm({ onClose, onSave }: { onClose: () => void; onSave: (p: Prescri
     object: "",
     contractor: "",
     responsible: "",
+    reportDeadline: "",
     remarks: [newRemark()],
   });
 
@@ -310,7 +308,8 @@ function AddForm({ onClose, onSave }: { onClose: () => void; onSave: (p: Prescri
   const isValid =
     form.object.trim() &&
     form.contractor.trim() &&
-    form.remarks.every(r => r.description.trim() && r.deadline && r.reportDeadline);
+    form.reportDeadline &&
+    form.remarks.every(r => r.description.trim() && r.deadline);
 
   const handleSave = () => {
     if (!isValid) return;
@@ -323,6 +322,7 @@ function AddForm({ onClose, onSave }: { onClose: () => void; onSave: (p: Prescri
       object: form.object,
       contractor: form.contractor,
       responsible: form.responsible,
+      reportDeadline: form.reportDeadline,
       remarks: form.remarks,
       comments: [],
     });
@@ -399,6 +399,17 @@ function AddForm({ onClose, onSave }: { onClose: () => void; onSave: (p: Prescri
               <Icon name="Plus" size={14} />
               Добавить замечание
             </button>
+          </div>
+
+          {/* Срок отчёта — единый */}
+          <div className="border-t border-border pt-5">
+            <Field label="Срок предоставления отчёта по всем замечаниям *">
+              <DatePicker
+                value={form.reportDeadline}
+                onChange={v => setField("reportDeadline", v)}
+                placeholder="Выбрать дату"
+              />
+            </Field>
           </div>
         </div>
 
@@ -493,10 +504,11 @@ function PrescriptionDetail({
         </div>
 
         {/* Общая информация */}
-        <div className="px-6 py-4 border-b border-border flex-shrink-0 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="px-6 py-4 border-b border-border flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <InfoRow icon="Building2" label="Объект" value={p.object} />
           <InfoRow icon="Users" label="Подрядчик" value={p.contractor} />
           {p.responsible && <InfoRow icon="User" label="Ответственный" value={p.responsible} />}
+          {p.reportDeadline && <InfoRow icon="FileCheck" label="Срок предоставления отчёта" value={p.reportDeadline} />}
         </div>
 
         {/* Табы */}
@@ -546,19 +558,11 @@ function PrescriptionDetail({
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-secondary/30 rounded-lg p-3">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Срок устранения</p>
-                      <p className={`text-sm font-medium ${r.status === "Просрочено" ? "text-red-400" : "text-foreground"}`} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                        {r.deadline}
-                      </p>
-                    </div>
-                    <div className="bg-secondary/30 rounded-lg p-3">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Срок отчёта</p>
-                      <p className="text-sm font-medium text-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                        {r.reportDeadline}
-                      </p>
-                    </div>
+                  <div className="bg-secondary/30 rounded-lg p-3 inline-flex flex-col">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Срок устранения</p>
+                    <p className={`text-sm font-medium ${r.status === "Просрочено" ? "text-red-400" : "text-foreground"}`} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                      {r.deadline}
+                    </p>
                   </div>
 
                   {/* Смена статуса замечания */}
