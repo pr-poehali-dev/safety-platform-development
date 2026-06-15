@@ -45,11 +45,28 @@ const STATUS_STYLE: Record<Status, string> = {
 
 const ALL_STATUSES: Status[] = ["Черновик", "Выдано", "Устранено", "Просрочено"];
 
+function isOverdue(remark: Remark): boolean {
+  if (remark.status === "Устранено") return false;
+  if (!remark.deadline) return false;
+  const [d, m, y] = remark.deadline.split(".").map(Number);
+  const deadline = new Date(y, m - 1, d);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today > deadline;
+}
+
+function effectiveStatus(remark: Remark): Status {
+  if (remark.status === "Устранено") return "Устранено";
+  if (isOverdue(remark)) return "Просрочено";
+  return remark.status;
+}
+
 function overallStatus(remarks: Remark[]): Status {
   if (!remarks.length) return "Черновик";
-  if (remarks.some(r => r.status === "Просрочено")) return "Просрочено";
-  if (remarks.every(r => r.status === "Устранено")) return "Устранено";
-  if (remarks.some(r => r.status === "Выдано")) return "Выдано";
+  const statuses = remarks.map(effectiveStatus);
+  if (statuses.some(s => s === "Просрочено")) return "Просрочено";
+  if (statuses.every(s => s === "Устранено")) return "Устранено";
+  if (statuses.some(s => s === "Выдано")) return "Выдано";
   return "Черновик";
 }
 
@@ -544,7 +561,7 @@ function PrescriptionDetail({
                 <div key={r.id} className="border border-border rounded-xl p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <span className="text-xs font-semibold text-primary uppercase tracking-wider">Замечание #{i + 1}</span>
-                    <StatusBadge status={r.status} />
+                    <StatusBadge status={effectiveStatus(r)} />
                   </div>
 
                   <p className="text-sm text-foreground leading-relaxed bg-secondary/40 rounded-lg p-3">{r.description}</p>
@@ -558,8 +575,9 @@ function PrescriptionDetail({
 
                   <div className="bg-secondary/30 rounded-lg p-3 inline-flex flex-col">
                     <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Срок устранения</p>
-                    <p className={`text-sm font-medium ${r.status === "Просрочено" ? "text-red-400" : "text-foreground"}`} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                    <p className={`text-sm font-medium ${isOverdue(r) ? "text-red-400" : "text-foreground"}`} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
                       {r.deadline}
+                      {isOverdue(r) && <span className="text-[10px] ml-2 font-normal">— просрочено</span>}
                     </p>
                   </div>
 
@@ -571,7 +589,7 @@ function PrescriptionDetail({
                         <button
                           key={s}
                           onClick={() => setRemarkStatus(r.id, s)}
-                          className={`text-[11px] px-2.5 py-1 rounded-md border font-medium transition-colors ${r.status === s ? STATUS_STYLE[s] : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"}`}
+                          className={`text-[11px] px-2.5 py-1 rounded-md border font-medium transition-colors ${effectiveStatus(r) === s ? STATUS_STYLE[s] : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"}`}
                         >
                           {s}
                         </button>
