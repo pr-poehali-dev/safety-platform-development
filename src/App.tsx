@@ -12,9 +12,28 @@ import { AppUser, INITIAL_USERS } from "@/lib/auth";
 
 const queryClient = new QueryClient();
 
+const STORAGE_KEY = "ot_users";
+
+function loadUsers(): AppUser[] {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved) as AppUser[];
+  } catch (_) { /* ignore */ }
+  return INITIAL_USERS;
+}
+
+function saveUsers(users: AppUser[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+}
+
 const App = () => {
   const [user, setUser] = useState<AppUser | null>(null);
-  const [users, setUsers] = useState<AppUser[]>(INITIAL_USERS);
+  const [users, setUsers] = useState<AppUser[]>(loadUsers);
+
+  const handleUsersChange = (updated: AppUser[]) => {
+    saveUsers(updated);
+    setUsers(updated);
+  };
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -32,7 +51,7 @@ const App = () => {
               element={
                 !user ? <Navigate to="/login" replace /> :
                 user.role === "admin"
-                  ? <Admin currentUser={user} users={users} onUsersChange={setUsers} onLogout={() => setUser(null)} />
+                  ? <Admin currentUser={user} users={users} onUsersChange={handleUsersChange} onLogout={() => setUser(null)} />
                   : <Index user={user} onLogout={() => setUser(null)} />
               }
             />
