@@ -24,9 +24,10 @@ interface Prescription {
   date: string;
   object: string;
   contractor: string;
-  inspector: string;     // ФИО специалиста по ОТ, проводившего проверку
+  inspector: string;      // ФИО специалиста по ОТ, проводившего проверку
   representative: string; // представитель подрядной организации (в присутствии)
   responsible: string;
+  replyEmail: string;     // email для отправки отчёта об устранении
   reportDeadline: string; // единый срок предоставления отчёта
   remarks: Remark[];
   comments: Comment[];
@@ -97,6 +98,7 @@ const INITIAL: Prescription[] = [
     inspector: "Алексеев С.Н.",
     representative: "Козлов А.В.",
     responsible: "Козлов А.В.",
+    replyEmail: "ot@sbd.ru",
     reportDeadline: "12.06.2024",
     remarks: [
       { id: "r1", place: "Эвакуационный выход №2", description: "Захламление эвакуационного выхода посторонними предметами", normRef: "ППР РФ п. 24", deadline: "14.06.2024", status: "Просрочено" },
@@ -116,6 +118,7 @@ const INITIAL: Prescription[] = [
     inspector: "Алексеев С.Н.",
     representative: "Морозов В.П.",
     responsible: "Морозов В.П.",
+    replyEmail: "ot@sbd.ru",
     reportDeadline: "18.06.2024",
     remarks: [
       { id: "r3", place: "Помещение склада", description: "Отсутствует принудительная вытяжка в помещении склада", normRef: "СП 60.13330.2020 п. 8.2", deadline: "20.06.2024", status: "Выдано" },
@@ -131,6 +134,7 @@ const INITIAL: Prescription[] = [
     inspector: "Алексеев С.Н.",
     representative: "Иванов Д.К.",
     responsible: "Иванов Д.К.",
+    replyEmail: "ot@sbd.ru",
     reportDeadline: "09.06.2024",
     remarks: [
       { id: "r4", place: "Конвейер №2", description: "Отсутствует ограждение опасной зоны около конвейера №2", normRef: "ГОСТ 12.2.062-81 п. 4.1", deadline: "10.06.2024", status: "Устранено" },
@@ -249,6 +253,7 @@ interface FormState {
   object: string;
   contractor: string;
   representative: string;
+  replyEmail: string;
   reportDeadline: string;
   remarks: Remark[];
 }
@@ -332,6 +337,7 @@ function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave: (p: P
     object: "",
     contractor: "",
     representative: "",
+    replyEmail: "",
     reportDeadline: "",
     remarks: [newRemark()],
   });
@@ -367,6 +373,7 @@ function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave: (p: P
       inspector: inspectorLabel,
       representative: form.representative,
       responsible: "",
+      replyEmail: form.replyEmail,
       reportDeadline: form.reportDeadline,
       remarks: form.remarks,
       comments: [],
@@ -455,15 +462,25 @@ function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave: (p: P
             </button>
           </div>
 
-          {/* Срок отчёта — единый */}
-          <div className="border-t border-border pt-5">
-            <Field label="Срок предоставления отчёта по всем замечаниям *">
-              <DatePicker
-                value={form.reportDeadline}
-                onChange={v => setField("reportDeadline", v)}
-                placeholder="Выбрать дату"
-              />
-            </Field>
+          {/* Срок отчёта + email */}
+          <div className="border-t border-border pt-5 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Срок предоставления отчёта *">
+                <DatePicker
+                  value={form.reportDeadline}
+                  onChange={v => setField("reportDeadline", v)}
+                  placeholder="Выбрать дату"
+                />
+              </Field>
+              <Field label="Электронная почта для ответа">
+                <InputBase
+                  type="email"
+                  value={form.replyEmail}
+                  onChange={e => setField("replyEmail", e.target.value)}
+                  placeholder="example@company.ru"
+                />
+              </Field>
+            </div>
           </div>
         </div>
 

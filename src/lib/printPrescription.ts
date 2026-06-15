@@ -16,6 +16,7 @@ interface Prescription {
   inspector: string;
   representative: string;
   responsible: string;
+  replyEmail: string;
   reportDeadline: string;
   remarks: Remark[];
 }
@@ -270,7 +271,7 @@ export function printPrescription(p: Prescription): void {
     <span class="fill">${p.contractor}</span>. Копия Акта направляется в адрес подрядной организации
     <span class="fill">${p.contractor}</span> по электронной почте.<br/>
     Отчет об устранении нарушений по данному Акту, направить в ООО «СБД» по электронной почте
-    <span class="fill">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+    <span class="fill">${p.replyEmail || "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"}</span>
     не позднее <span class="fill">${p.reportDeadline || "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"}</span>.
   </div>
 
