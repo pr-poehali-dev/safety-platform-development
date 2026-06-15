@@ -904,7 +904,17 @@ export default function Index({ user, onLogout }: IndexProps) {
                           <StatusBadge status={status} />
                         </td>
                         <td className="px-5 py-4">
-                          <Icon name="ChevronRight" size={15} className="text-muted-foreground group-hover:text-foreground transition-colors" />
+                          <div className="flex items-center gap-2 justify-end">
+                            <button
+                              onClick={e => { e.stopPropagation(); printPrescription(p); }}
+                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors whitespace-nowrap opacity-0 group-hover:opacity-100"
+                              title="Распечатать предписание"
+                            >
+                              <Icon name="Printer" size={13} />
+                              Печать
+                            </button>
+                            <Icon name="ChevronRight" size={15} className="text-muted-foreground group-hover:text-foreground transition-colors" />
+                          </div>
                         </td>
                       </tr>
                     );
