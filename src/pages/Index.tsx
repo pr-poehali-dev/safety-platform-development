@@ -4,6 +4,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format, parse, isValid } from "date-fns";
 import { ru } from "date-fns/locale";
 import { AppUser, ROLE_LABELS, ROLE_COLORS } from "@/lib/auth";
+import { printPrescription } from "@/lib/printPrescription";
 
 // --- Типы ---
 type Status = "Черновик" | "Выдано" | "Устранено" | "Просрочено";
@@ -547,9 +548,19 @@ function PrescriptionDetail({
             </div>
             <p className="text-xs text-muted-foreground mt-1">Выдано {p.date} · {p.object}</p>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors ml-4 flex-shrink-0">
-            <Icon name="X" size={18} />
-          </button>
+          <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+            <button
+              onClick={() => printPrescription(p)}
+              className="flex items-center gap-1.5 text-xs border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 rounded-lg px-3 py-1.5 transition-colors"
+              title="Сформировать PDF для печати"
+            >
+              <Icon name="Printer" size={13} />
+              Распечатать
+            </button>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+              <Icon name="X" size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Информация */}
