@@ -248,9 +248,7 @@ function DatePicker({ value, onChange, placeholder }: { value: string; onChange:
 interface FormState {
   object: string;
   contractor: string;
-  inspector: string;
   representative: string;
-  responsible: string;
   reportDeadline: string;
   remarks: Remark[];
 }
@@ -327,13 +325,13 @@ function RemarkRow({
   );
 }
 
-function AddForm({ onClose, onSave }: { onClose: () => void; onSave: (p: Prescription) => void }) {
+function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave: (p: Prescription) => void; user: AppUser }) {
+  const inspectorLabel = [user.position, user.name].filter(Boolean).join(", ");
+
   const [form, setForm] = useState<FormState>({
     object: "",
     contractor: "",
-    inspector: "",
     representative: "",
-    responsible: "",
     reportDeadline: "",
     remarks: [newRemark()],
   });
@@ -366,9 +364,9 @@ function AddForm({ onClose, onSave }: { onClose: () => void; onSave: (p: Prescri
       date: now.toLocaleDateString("ru-RU"),
       object: form.object,
       contractor: form.contractor,
-      inspector: form.inspector,
+      inspector: inspectorLabel,
       representative: form.representative,
-      responsible: form.responsible,
+      responsible: "",
       reportDeadline: form.reportDeadline,
       remarks: form.remarks,
       comments: [],
@@ -412,12 +410,12 @@ function AddForm({ onClose, onSave }: { onClose: () => void; onSave: (p: Prescri
               </Field>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Проверка проведена (ФИО специалиста по ОТ)">
-                <InputBase
-                  value={form.inspector}
-                  onChange={e => setField("inspector", e.target.value)}
-                  placeholder="ФИО специалиста по ОТ"
-                />
+              <Field label="Проверка проведена">
+                <div className="flex items-center gap-2 bg-secondary/40 border border-border rounded-lg px-3 py-2 text-sm text-foreground min-h-[38px]">
+                  <Icon name="UserCheck" size={13} className="text-primary flex-shrink-0" />
+                  <span className="truncate">{inspectorLabel || <span className="text-muted-foreground italic">Заполните профиль</span>}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">Заполняется автоматически из вашей учётной записи</p>
               </Field>
               <Field label="В присутствии представителя подрядчика">
                 <InputBase
@@ -427,13 +425,6 @@ function AddForm({ onClose, onSave }: { onClose: () => void; onSave: (p: Prescri
                 />
               </Field>
             </div>
-            <Field label="Ответственный от подрядчика">
-              <InputBase
-                value={form.responsible}
-                onChange={e => setField("responsible", e.target.value)}
-                placeholder="ФИО ответственного лица"
-              />
-            </Field>
           </div>
 
           {/* Замечания */}
@@ -965,7 +956,7 @@ export default function Index({ user, onLogout }: IndexProps) {
         </div>
       </main>
 
-      {showAdd && canEdit && <AddForm onClose={() => setShowAdd(false)} onSave={addPrescription} />}
+      {showAdd && canEdit && <AddForm onClose={() => setShowAdd(false)} onSave={addPrescription} user={user} />}
       {selected && (
         <PrescriptionDetail
           prescription={selected}
