@@ -21,12 +21,13 @@ interface UserFormData {
   login: string;
   password: string;
   name: string;
+  position: string;
   role: UserRole;
   contractor: string;
 }
 
 function emptyForm(): UserFormData {
-  return { login: "", password: "", name: "", role: "specialist", contractor: "" };
+  return { login: "", password: "", name: "", position: "", role: "specialist", contractor: "" };
 }
 
 export default function Admin({ currentUser, users, onUsersChange, onLogout }: AdminProps) {
@@ -47,7 +48,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
   };
 
   const openEdit = (u: AppUser) => {
-    setForm({ login: u.login, password: u.password, name: u.name, role: u.role, contractor: u.contractor ?? "" });
+    setForm({ login: u.login, password: u.password, name: u.name, position: u.position ?? "", role: u.role, contractor: u.contractor ?? "" });
     setEditUser(u);
     setError("");
     setShowForm(true);
@@ -69,6 +70,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
         login: form.login.trim(),
         password: form.password,
         name: form.name.trim(),
+        position: form.position.trim() || undefined,
         role: form.role,
         contractor: form.role === "contractor" ? form.contractor.trim() : undefined,
       } : u));
@@ -78,6 +80,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
         login: form.login.trim(),
         password: form.password,
         name: form.name.trim(),
+        position: form.position.trim() || undefined,
         role: form.role,
         contractor: form.role === "contractor" ? form.contractor.trim() : undefined,
       };
@@ -171,6 +174,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
                       </div>
                       <div>
                         <p className="text-sm text-foreground">{u.name}</p>
+                        {u.position && <p className="text-[11px] text-muted-foreground">{u.position}</p>}
                         {u.id === currentUser.id && <span className="text-[10px] text-primary">Это вы</span>}
                       </div>
                     </div>
@@ -227,6 +231,10 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
             <div className="px-6 py-5 space-y-4">
               <FormField label="ФИО *">
                 <FormInput value={form.name} onChange={v => set("name", v)} placeholder="Иванов Иван Иванович" />
+              </FormField>
+
+              <FormField label="Должность">
+                <FormInput value={form.position} onChange={v => set("position", v)} placeholder="Инженер по охране труда" />
               </FormField>
 
               <div className="grid grid-cols-2 gap-3">

@@ -5,6 +5,7 @@ export interface AppUser {
   login: string;
   password: string;
   name: string;
+  position?: string; // должность
   role: UserRole;
   contractor?: string; // для роли contractor — название организации
 }
