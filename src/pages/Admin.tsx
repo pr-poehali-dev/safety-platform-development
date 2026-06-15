@@ -40,6 +40,10 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
 
   const [loginManual, setLoginManual] = useState(false);
   const [passwordManual, setPasswordManual] = useState(false);
+  const [roleFilter, setRoleFilter] = useState<UserRole | null>(null);
+
+  const filteredUsers = roleFilter ? users.filter(u => u.role === roleFilter) : users;
+  const toggleFilter = (role: UserRole) => setRoleFilter(prev => prev === role ? null : role);
 
   const generateLogin = (name: string) => {
     const parts = name.trim().split(/\s+/);
@@ -174,19 +178,27 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
 
         {/* Статистика по ролям */}
         <div className="grid grid-cols-3 gap-3">
-          {ALL_ROLES.map(role => (
-            <div key={role} className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${ROLE_COLORS[role]}`}>
-                <Icon name={ROLE_ICONS[role]} size={16} />
-              </div>
-              <div>
-                <div className="text-xl font-light" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                  {users.filter(u => u.role === role).length}
+          {ALL_ROLES.map(role => {
+            const active = roleFilter === role;
+            return (
+              <button
+                key={role}
+                onClick={() => toggleFilter(role)}
+                className={`bg-card border rounded-xl p-4 flex items-center gap-3 transition-all text-left w-full ${active ? "border-primary ring-1 ring-primary/40" : "border-border hover:border-primary/40"}`}
+              >
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center border flex-shrink-0 ${ROLE_COLORS[role]}`}>
+                  <Icon name={ROLE_ICONS[role]} size={16} />
                 </div>
-                <div className="text-xs text-muted-foreground">{ROLE_LABELS[role]}</div>
-              </div>
-            </div>
-          ))}
+                <div className="min-w-0">
+                  <div className="text-xl font-light" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                    {users.filter(u => u.role === role).length}
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">{ROLE_LABELS[role]}</div>
+                </div>
+                {active && <Icon name="X" size={13} className="ml-auto text-muted-foreground flex-shrink-0" />}
+              </button>
+            );
+          })}
         </div>
 
         {/* Таблица пользователей */}
@@ -202,7 +214,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {users.map(u => (
+              {filteredUsers.map(u => (
                 <tr key={u.id} className="hover:bg-secondary/20 transition-colors">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
