@@ -48,7 +48,7 @@ export default function Login({ users, onLogin }: LoginProps) {
           <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-4" style={{ boxShadow: "0 0 24px hsl(199 89% 48% / 0.3)" }}>
             <Icon name="Shield" size={22} className="text-primary-foreground" />
           </div>
-          <h1 className="text-xl font-semibold text-foreground tracking-tight">Охрана Труда Онлайн</h1>
+          <h1 className="text-xl font-semibold text-foreground tracking-tight">SafeWork</h1>
           <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest">Система управления ОТ и ПБ</p>
         </div>
 
