@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
-import { AppUser, UserRole, ROLE_LABELS, ROLE_COLORS } from "@/lib/auth";
+import { AppUser, UserRole, ROLE_LABELS, ROLE_COLORS, apiCreateUser, apiUpdateUser, apiDeleteUser } from "@/lib/auth";
 
 interface AdminProps {
   currentUser: AppUser;
@@ -87,7 +87,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
     setShowForm(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.login.trim() || !form.password.trim() || !form.name.trim()) {
       setError("Заполните все обязательные поля");
       return;
@@ -98,15 +98,17 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
       return;
     }
     if (editUser) {
-      onUsersChange(users.map(u => u.id === editUser.id ? {
-        ...u,
+      const updated: AppUser = {
+        ...editUser,
         login: form.login.trim(),
         password: form.password,
         name: form.name.trim(),
         position: form.position.trim() || undefined,
         role: form.role,
         contractor: form.role === "contractor" ? form.contractor.trim() : undefined,
-      } : u));
+      };
+      await apiUpdateUser(updated);
+      onUsersChange(users.map(u => u.id === editUser.id ? updated : u));
     } else {
       const newUser: AppUser = {
         id: Date.now().toString(),
@@ -117,13 +119,15 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
         role: form.role,
         contractor: form.role === "contractor" ? form.contractor.trim() : undefined,
       };
+      await apiCreateUser(newUser);
       onUsersChange([...users, newUser]);
     }
     setShowForm(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (id === currentUser.id) return;
+    await apiDeleteUser(id);
     onUsersChange(users.filter(u => u.id !== id));
     setDeleteConfirm(null);
   };

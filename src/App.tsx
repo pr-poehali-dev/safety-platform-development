@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,43 +8,20 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
-import { AppUser, getUsers, saveUsers } from "@/lib/auth";
+import { AppUser, fetchUsers, loadSession, saveSession, clearSession } from "@/lib/auth";
 
 const queryClient = new QueryClient();
 
-const SESSION_KEY = "ot_session";
-const SESSION_TTL = 60 * 60 * 1000; // 1 час
-
-interface Session {
-  user: AppUser;
-  loginAt: number;
-}
-
-function loadSession(): AppUser | null {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    const session: Session = JSON.parse(raw);
-    if (Date.now() - session.loginAt > SESSION_TTL) {
-      localStorage.removeItem(SESSION_KEY);
-      return null;
-    }
-    return session.user;
-  } catch (_) { return null; }
-}
-
-function saveSession(user: AppUser) {
-  const session: Session = { user, loginAt: Date.now() };
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-}
-
-function clearSession() {
-  localStorage.removeItem(SESSION_KEY);
-}
-
 const App = () => {
   const [user, setUser] = useState<AppUser | null>(() => loadSession());
-  const [users, setUsers] = useState<AppUser[]>(() => getUsers());
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(true);
+
+  useEffect(() => {
+    fetchUsers()
+      .then(setUsers)
+      .finally(() => setUsersLoading(false));
+  }, []);
 
   const handleLogin = (u: AppUser) => {
     saveSession(u);
@@ -57,14 +34,23 @@ const App = () => {
   };
 
   const handleUsersChange = (updated: AppUser[]) => {
-    saveUsers(updated);
     setUsers(updated);
-    // обновляем сессию если текущий пользователь изменился
     if (user) {
       const updatedSelf = updated.find(u => u.id === user.id);
       if (updatedSelf) saveSession(updatedSelf);
     }
   };
+
+  if (usersLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-muted-foreground">Загрузка...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

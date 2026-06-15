@@ -22,27 +22,58 @@ export const ROLE_COLORS: Record<UserRole, string> = {
   contractor: "text-green-400 bg-green-400/10 border-green-400/20",
 };
 
-const STORAGE_KEY = "ot_users_v2";
+const USERS_URL = "https://functions.poehali.dev/9f213d27-a6a3-4ce0-b6b1-0d26003c43eb";
 
-export const INITIAL_USERS: AppUser[] = [
-  { id: "1", login: "admin", password: "admin123", name: "Иванова О.В.", role: "admin" },
-  { id: "2", login: "specialist", password: "spec123", name: "Алексеев С.Н.", role: "specialist" },
-  { id: "3", login: "contractor", password: "contr123", name: "Козлов А.В.", role: "contractor", contractor: "ООО «СтройПодряд»" },
-];
-
-export function getUsers(): AppUser[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as AppUser[];
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (_) { /* ignore */ }
-  // Первый запуск — сохраняем дефолтных пользователей
-  saveUsers(INITIAL_USERS);
-  return INITIAL_USERS;
+export async function fetchUsers(): Promise<AppUser[]> {
+  const res = await fetch(USERS_URL);
+  const data = await res.json();
+  return (typeof data === "string" ? JSON.parse(data) : data) as AppUser[];
 }
 
-export function saveUsers(users: AppUser[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+export async function apiCreateUser(user: AppUser): Promise<void> {
+  await fetch(USERS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(user),
+  });
+}
+
+export async function apiUpdateUser(user: AppUser): Promise<void> {
+  await fetch(USERS_URL, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(user),
+  });
+}
+
+export async function apiDeleteUser(id: string): Promise<void> {
+  await fetch(USERS_URL, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+}
+
+// Сессия хранится в localStorage — это нормально, она привязана к конкретному браузеру
+const SESSION_KEY = "ot_session_v2";
+const SESSION_TTL = 60 * 60 * 1000; // 1 час
+
+interface Session { user: AppUser; loginAt: number; }
+
+export function loadSession(): AppUser | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const s: Session = JSON.parse(raw);
+    if (Date.now() - s.loginAt > SESSION_TTL) { localStorage.removeItem(SESSION_KEY); return null; }
+    return s.user;
+  } catch (_) { return null; }
+}
+
+export function saveSession(user: AppUser): void {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ user, loginAt: Date.now() }));
+}
+
+export function clearSession(): void {
+  localStorage.removeItem(SESSION_KEY);
 }
