@@ -651,7 +651,12 @@ function PrescriptionDetail({
 }
 
 // --- Главный экран ---
-export default function Index() {
+interface IndexProps {
+  user: { name: string; role: string };
+  onLogout: () => void;
+}
+
+export default function Index({ user, onLogout }: IndexProps) {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>(INITIAL);
   const [showAdd, setShowAdd] = useState(false);
   const [selected, setSelected] = useState<Prescription | null>(null);
@@ -687,9 +692,18 @@ export default function Index() {
           </div>
           <span className="text-sm font-semibold tracking-tight">Охрана Труда Онлайн</span>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-          Алексеев С.Н. · Специалист ОТ
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+            {user.name} · {user.role}
+          </div>
+          <button
+            onClick={onLogout}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors"
+          >
+            <Icon name="LogOut" size={13} />
+            Выйти
+          </button>
         </div>
       </header>
 
