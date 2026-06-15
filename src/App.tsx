@@ -8,27 +8,13 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
-import { AppUser, INITIAL_USERS } from "@/lib/auth";
+import { AppUser, getUsers, saveUsers } from "@/lib/auth";
 
 const queryClient = new QueryClient();
 
-const STORAGE_KEY = "ot_users";
-
-function loadUsers(): AppUser[] {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved) as AppUser[];
-  } catch (_) { /* ignore */ }
-  return INITIAL_USERS;
-}
-
-function saveUsers(users: AppUser[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-}
-
 const App = () => {
   const [user, setUser] = useState<AppUser | null>(null);
-  const [users, setUsers] = useState<AppUser[]>(loadUsers);
+  const [users, setUsers] = useState<AppUser[]>(() => getUsers());
 
   const handleUsersChange = (updated: AppUser[]) => {
     saveUsers(updated);
