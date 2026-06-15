@@ -5,7 +5,7 @@ import { format, parse, isValid } from "date-fns";
 import { ru } from "date-fns/locale";
 
 // --- Типы ---
-type Status = "Черновик" | "Выдано" | "В работе" | "Устранено" | "Просрочено";
+type Status = "Черновик" | "Выдано" | "Устранено" | "Просрочено";
 
 interface Remark {
   id: string;
@@ -39,18 +39,16 @@ interface Comment {
 const STATUS_STYLE: Record<Status, string> = {
   "Черновик":   "text-muted-foreground bg-muted border-border",
   "Выдано":     "text-primary bg-primary/10 border-primary/20",
-  "В работе":   "text-yellow-400 bg-yellow-400/10 border-yellow-400/20",
   "Устранено":  "text-green-400 bg-green-400/10 border-green-400/20",
   "Просрочено": "text-red-400 bg-red-400/10 border-red-400/20",
 };
 
-const ALL_STATUSES: Status[] = ["Черновик", "Выдано", "В работе", "Устранено", "Просрочено"];
+const ALL_STATUSES: Status[] = ["Черновик", "Выдано", "Устранено", "Просрочено"];
 
 function overallStatus(remarks: Remark[]): Status {
   if (!remarks.length) return "Черновик";
   if (remarks.some(r => r.status === "Просрочено")) return "Просрочено";
   if (remarks.every(r => r.status === "Устранено")) return "Устранено";
-  if (remarks.some(r => r.status === "В работе")) return "В работе";
   if (remarks.some(r => r.status === "Выдано")) return "Выдано";
   return "Черновик";
 }
@@ -71,7 +69,7 @@ const INITIAL: Prescription[] = [
     reportDeadline: "12.06.2024",
     remarks: [
       { id: "r1", description: "Захламление эвакуационного выхода посторонними предметами", normRef: "ППР РФ п. 24", deadline: "14.06.2024", status: "Просрочено" },
-      { id: "r2", description: "Отсутствует план эвакуации на видном месте", normRef: "ГОСТ 12.1.004-91", deadline: "20.06.2024", status: "В работе" },
+      { id: "r2", description: "Отсутствует план эвакуации на видном месте", normRef: "ГОСТ 12.1.004-91", deadline: "20.06.2024", status: "Выдано" },
     ],
     comments: [
       { id: 1, author: "Алексеев С.Н.", role: "Специалист ОТ", text: "Выдано предписание. Прошу устранить в указанный срок.", time: "05.06.2024 10:00" },
@@ -87,7 +85,7 @@ const INITIAL: Prescription[] = [
     responsible: "Морозов В.П.",
     reportDeadline: "18.06.2024",
     remarks: [
-      { id: "r3", description: "Отсутствует принудительная вытяжка в помещении склада", normRef: "СП 60.13330.2020 п. 8.2", deadline: "20.06.2024", status: "В работе" },
+      { id: "r3", description: "Отсутствует принудительная вытяжка в помещении склада", normRef: "СП 60.13330.2020 п. 8.2", deadline: "20.06.2024", status: "Выдано" },
     ],
     comments: [],
   },
