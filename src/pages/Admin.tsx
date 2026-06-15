@@ -38,12 +38,45 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [error, setError] = useState("");
 
+  const [loginManual, setLoginManual] = useState(false);
+  const [passwordManual, setPasswordManual] = useState(false);
+
+  const generateLogin = (name: string) => {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length < 2) return name.toLowerCase().replace(/[^a-zа-яё]/gi, "");
+    const [last, first, middle] = parts;
+    const translit = (s: string) => s.toLowerCase().replace(/[а-яё]/g, c =>
+      ({ а:"a",б:"b",в:"v",г:"g",д:"d",е:"e",ё:"yo",ж:"zh",з:"z",и:"i",й:"y",к:"k",
+         л:"l",м:"m",н:"n",о:"o",п:"p",р:"r",с:"s",т:"t",у:"u",ф:"f",х:"kh",ц:"ts",
+         ч:"ch",ш:"sh",щ:"shch",ъ:"",ы:"y",ь:"",э:"e",ю:"yu",я:"ya" }[c] ?? c));
+    return translit(last) + (first ? "_" + translit(first[0]) : "") + (middle ? translit(middle[0]) : "");
+  };
+
+  const generatePassword = (name: string) => {
+    const parts = name.trim().split(/\s+/);
+    const last = parts[0] ?? "";
+    const first = (parts[1] ?? "").slice(0, 1).toUpperCase();
+    const year = new Date().getFullYear();
+    return last.slice(0, 4).replace(/[а-яёa-z]/gi, c => c.toUpperCase()) + first + year;
+  };
+
   const set = (k: keyof UserFormData, v: string) => setForm(prev => ({ ...prev, [k]: v }));
+
+  const setName = (v: string) => {
+    setForm(prev => ({
+      ...prev,
+      name: v,
+      login: loginManual ? prev.login : generateLogin(v),
+      password: passwordManual ? prev.password : generatePassword(v),
+    }));
+  };
 
   const openCreate = () => {
     setForm(emptyForm());
     setEditUser(null);
     setError("");
+    setLoginManual(false);
+    setPasswordManual(false);
     setShowForm(true);
   };
 
@@ -230,7 +263,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
 
             <div className="px-6 py-5 space-y-4">
               <FormField label="ФИО *">
-                <FormInput value={form.name} onChange={v => set("name", v)} placeholder="Иванов Иван Иванович" />
+                <FormInput value={form.name} onChange={editUser ? v => set("name", v) : setName} placeholder="Иванов Иван Иванович" />
               </FormField>
 
               <FormField label="Должность">
@@ -238,14 +271,28 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
               </FormField>
 
               <div className="grid grid-cols-2 gap-3">
-                <FormField label="Логин *">
-                  <FormInput value={form.login} onChange={v => set("login", v)} placeholder="ivan_ivanov" />
+                <FormField label={
+                  <span className="flex items-center gap-1.5">
+                    Логин *
+                    {!editUser && !loginManual && <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">авто</span>}
+                  </span>
+                }>
+                  <FormInput
+                    value={form.login}
+                    onChange={v => { setLoginManual(true); set("login", v); }}
+                    placeholder="ivan_ivanov"
+                  />
                 </FormField>
-                <FormField label="Пароль *">
+                <FormField label={
+                  <span className="flex items-center gap-1.5">
+                    Пароль *
+                    {!editUser && !passwordManual && <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">авто</span>}
+                  </span>
+                }>
                   <div className="relative">
                     <FormInput
                       value={form.password}
-                      onChange={v => set("password", v)}
+                      onChange={v => { setPasswordManual(true); set("password", v); }}
                       placeholder="Пароль"
                       type={showPassword ? "text" : "password"}
                     />
@@ -330,7 +377,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
   );
 }
 
-function FormField({ label, children }: { label: string; children: React.ReactNode }) {
+function FormField({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
       <label className="text-xs text-muted-foreground font-medium">{label}</label>
