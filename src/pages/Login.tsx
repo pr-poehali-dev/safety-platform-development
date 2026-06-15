@@ -49,7 +49,7 @@ export default function Login({ users, onLogin }: LoginProps) {
             <Icon name="Shield" size={22} className="text-primary-foreground" />
           </div>
           <h1 className="text-xl font-semibold text-foreground tracking-tight">SafeWork</h1>
-          <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest">Система управления ОТ и ПБ</p>
+          <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest py-0 px-[1px]">СИСТЕМА УПРАВЛЕНИЯ ОХРАНОЙ ТРУДА И ПРОМЫШЛЕННОЙ БЕЗОПАСНОСТЬЮ</p>
         </div>
 
         {/* Форма */}
