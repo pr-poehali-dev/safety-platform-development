@@ -4,6 +4,15 @@ import Icon from "@/components/ui/icon";
 // --- Типы ---
 type Status = "Черновик" | "Выдано" | "В работе" | "Устранено" | "Просрочено";
 
+interface Remark {
+  id: string;
+  description: string;
+  normRef: string;
+  deadline: string;       // срок устранения
+  reportDeadline: string; // срок предоставления отчёта
+  status: Status;
+}
+
 interface Prescription {
   id: string;
   number: string;
@@ -11,11 +20,7 @@ interface Prescription {
   object: string;
   contractor: string;
   responsible: string;
-  description: string;
-  normRef: string;
-  deadline: string;
-  status: Status;
-  photos: string[];
+  remarks: Remark[];
   comments: Comment[];
 }
 
@@ -27,6 +32,30 @@ interface Comment {
   time: string;
 }
 
+// --- Вспомогательные ---
+const STATUS_STYLE: Record<Status, string> = {
+  "Черновик":   "text-muted-foreground bg-muted border-border",
+  "Выдано":     "text-primary bg-primary/10 border-primary/20",
+  "В работе":   "text-yellow-400 bg-yellow-400/10 border-yellow-400/20",
+  "Устранено":  "text-green-400 bg-green-400/10 border-green-400/20",
+  "Просрочено": "text-red-400 bg-red-400/10 border-red-400/20",
+};
+
+const ALL_STATUSES: Status[] = ["Черновик", "Выдано", "В работе", "Устранено", "Просрочено"];
+
+function overallStatus(remarks: Remark[]): Status {
+  if (!remarks.length) return "Черновик";
+  if (remarks.some(r => r.status === "Просрочено")) return "Просрочено";
+  if (remarks.every(r => r.status === "Устранено")) return "Устранено";
+  if (remarks.some(r => r.status === "В работе")) return "В работе";
+  if (remarks.some(r => r.status === "Выдано")) return "Выдано";
+  return "Черновик";
+}
+
+function newRemark(): Remark {
+  return { id: Date.now().toString() + Math.random(), description: "", normRef: "", deadline: "", reportDeadline: "", status: "Выдано" };
+}
+
 // --- Начальные данные ---
 const INITIAL: Prescription[] = [
   {
@@ -36,11 +65,10 @@ const INITIAL: Prescription[] = [
     object: "Цех №3",
     contractor: "ООО «СтройПодряд»",
     responsible: "Козлов А.В.",
-    description: "Нарушение требований пожарной безопасности: захламление эвакуационного выхода посторонними предметами",
-    normRef: "ППР РФ п. 24, ГОСТ 12.1.004-91",
-    deadline: "14.06.2024",
-    status: "Просрочено",
-    photos: [],
+    remarks: [
+      { id: "r1", description: "Захламление эвакуационного выхода посторонними предметами", normRef: "ППР РФ п. 24", deadline: "14.06.2024", reportDeadline: "12.06.2024", status: "Просрочено" },
+      { id: "r2", description: "Отсутствует план эвакуации на видном месте", normRef: "ГОСТ 12.1.004-91", deadline: "20.06.2024", reportDeadline: "18.06.2024", status: "В работе" },
+    ],
     comments: [
       { id: 1, author: "Алексеев С.Н.", role: "Специалист ОТ", text: "Выдано предписание. Прошу устранить в указанный срок.", time: "05.06.2024 10:00" },
       { id: 2, author: "Козлов А.В.", role: "Подрядчик", text: "Принято, начинаем работы.", time: "06.06.2024 09:15" },
@@ -53,39 +81,21 @@ const INITIAL: Prescription[] = [
     object: "Склад А",
     contractor: "ИП Морозов В.П.",
     responsible: "Морозов В.П.",
-    description: "Неисправность вентиляционной системы в помещении склада: отсутствует принудительная вытяжка",
-    normRef: "СП 60.13330.2020 п. 8.2",
-    deadline: "20.06.2024",
-    status: "В работе",
-    photos: [],
+    remarks: [
+      { id: "r3", description: "Отсутствует принудительная вытяжка в помещении склада", normRef: "СП 60.13330.2020 п. 8.2", deadline: "20.06.2024", reportDeadline: "18.06.2024", status: "В работе" },
+    ],
     comments: [],
   },
   {
     id: "3",
-    number: "П-2024-087",
-    date: "09.06.2024",
-    object: "Участок сварки",
-    contractor: "ООО «СтройПодряд»",
-    responsible: "Петрова М.С.",
-    description: "Работники выполняют сварочные работы без СИЗ органов дыхания (респираторов)",
-    normRef: "Приказ Минтруда №772н, п. 14",
-    deadline: "30.06.2024",
-    status: "Выдано",
-    photos: [],
-    comments: [],
-  },
-  {
-    id: "4",
     number: "П-2024-086",
     date: "01.06.2024",
     object: "Линия сборки",
     contractor: "ООО «МонтажГрупп»",
     responsible: "Иванов Д.К.",
-    description: "Отсутствует ограждение опасной зоны около конвейера №2",
-    normRef: "ГОСТ 12.2.062-81 п. 4.1",
-    deadline: "10.06.2024",
-    status: "Устранено",
-    photos: [],
+    remarks: [
+      { id: "r4", description: "Отсутствует ограждение опасной зоны около конвейера №2", normRef: "ГОСТ 12.2.062-81 п. 4.1", deadline: "10.06.2024", reportDeadline: "09.06.2024", status: "Устранено" },
+    ],
     comments: [
       { id: 1, author: "Иванов Д.К.", role: "Подрядчик", text: "Ограждение установлено, прикладываю фото.", time: "09.06.2024 14:30" },
       { id: 2, author: "Алексеев С.Н.", role: "Специалист ОТ", text: "Устранение подтверждено. Предписание закрыто.", time: "10.06.2024 09:00" },
@@ -93,160 +103,12 @@ const INITIAL: Prescription[] = [
   },
 ];
 
-const STATUS_STYLE: Record<Status, string> = {
-  "Черновик":   "text-muted-foreground bg-muted border-border",
-  "Выдано":     "text-primary bg-primary/10 border-primary/20",
-  "В работе":   "text-yellow-400 bg-yellow-400/10 border-yellow-400/20",
-  "Устранено":  "text-green-400 bg-green-400/10 border-green-400/20",
-  "Просрочено": "text-red-400 bg-red-400/10 border-red-400/20",
-};
-
-const ALL_STATUSES: Status[] = ["Черновик", "Выдано", "В работе", "Устранено", "Просрочено"];
-
-// --- Бейдж статуса ---
+// --- UI-компоненты ---
 function StatusBadge({ status }: { status: Status }) {
   return (
     <span className={`inline-flex items-center border text-[11px] font-medium px-2 py-0.5 rounded whitespace-nowrap ${STATUS_STYLE[status]}`}>
       {status}
     </span>
-  );
-}
-
-// --- Форма добавления предписания ---
-interface AddFormProps {
-  onClose: () => void;
-  onSave: (p: Prescription) => void;
-}
-
-function AddForm({ onClose, onSave }: AddFormProps) {
-  const [form, setForm] = useState({
-    object: "",
-    contractor: "",
-    responsible: "",
-    description: "",
-    normRef: "",
-    deadline: "",
-    status: "Выдано" as Status,
-  });
-
-  const set = (key: string, val: string) => setForm(prev => ({ ...prev, [key]: val }));
-
-  const handleSave = () => {
-    if (!form.object || !form.contractor || !form.description || !form.deadline) return;
-    const now = new Date();
-    const date = now.toLocaleDateString("ru-RU");
-    const num = "П-" + now.getFullYear() + "-" + String(Math.floor(Math.random() * 900) + 100);
-    onSave({
-      id: Date.now().toString(),
-      number: num,
-      date,
-      object: form.object,
-      contractor: form.contractor,
-      responsible: form.responsible,
-      description: form.description,
-      normRef: form.normRef,
-      deadline: form.deadline,
-      status: form.status,
-      photos: [],
-      comments: [],
-    });
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-card border border-border rounded-xl w-full max-w-lg shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card z-10">
-          <h2 className="text-base font-semibold">Новое предписание</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
-            <Icon name="X" size={18} />
-          </button>
-        </div>
-
-        <div className="px-6 py-5 space-y-4">
-          <Field label="Объект *">
-            <input
-              value={form.object}
-              onChange={e => set("object", e.target.value)}
-              placeholder="Например: Цех №3"
-              className="input-base"
-            />
-          </Field>
-
-          <Field label="Подрядчик *">
-            <input
-              value={form.contractor}
-              onChange={e => set("contractor", e.target.value)}
-              placeholder="Название организации или ИП"
-              className="input-base"
-            />
-          </Field>
-
-          <Field label="Ответственный от подрядчика">
-            <input
-              value={form.responsible}
-              onChange={e => set("responsible", e.target.value)}
-              placeholder="ФИО ответственного лица"
-              className="input-base"
-            />
-          </Field>
-
-          <Field label="Описание нарушения *">
-            <textarea
-              value={form.description}
-              onChange={e => set("description", e.target.value)}
-              placeholder="Опишите выявленное нарушение"
-              rows={3}
-              className="input-base resize-none"
-            />
-          </Field>
-
-          <Field label="Ссылка на нормативный документ">
-            <input
-              value={form.normRef}
-              onChange={e => set("normRef", e.target.value)}
-              placeholder="Например: ППР РФ п. 24"
-              className="input-base"
-            />
-          </Field>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Срок устранения *">
-              <input
-                type="date"
-                value={form.deadline}
-                onChange={e => set("deadline", e.target.value)}
-                className="input-base"
-              />
-            </Field>
-
-            <Field label="Статус">
-              <select
-                value={form.status}
-                onChange={e => set("status", e.target.value as Status)}
-                className="input-base"
-              >
-                {ALL_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </Field>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border sticky bottom-0 bg-card">
-          <button onClick={onClose} className="text-sm px-4 py-2 rounded-md border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">
-            Отмена
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!form.object || !form.contractor || !form.description || !form.deadline}
-            className="text-sm px-5 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            Создать предписание
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -259,134 +121,249 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-// --- Детальная карточка предписания ---
-interface DetailProps {
-  prescription: Prescription;
-  onClose: () => void;
-  onUpdate: (p: Prescription) => void;
+function InputBase(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className={`w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 ${props.className ?? ""}`}
+    />
+  );
 }
 
-function PrescriptionDetail({ prescription, onClose, onUpdate }: DetailProps) {
-  const [p, setP] = useState(prescription);
-  const [newComment, setNewComment] = useState("");
+function TextareaBase(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      {...props}
+      className={`w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none ${props.className ?? ""}`}
+    />
+  );
+}
 
-  const sendComment = () => {
-    if (!newComment.trim()) return;
-    const comment: Comment = {
-      id: Date.now(),
-      author: "Алексеев С.Н.",
-      role: "Специалист ОТ",
-      text: newComment.trim(),
-      time: new Date().toLocaleString("ru-RU"),
-    };
-    const updated = { ...p, comments: [...p.comments, comment] };
-    setP(updated);
-    onUpdate(updated);
-    setNewComment("");
-  };
+function SelectBase(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select
+      {...props}
+      className={`w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 ${props.className ?? ""}`}
+    />
+  );
+}
 
-  const setStatus = (status: Status) => {
-    const updated = { ...p, status };
-    setP(updated);
-    onUpdate(updated);
+// --- Форма добавления / редактирования ---
+interface FormState {
+  object: string;
+  contractor: string;
+  responsible: string;
+  remarks: Remark[];
+}
+
+function RemarkRow({
+  remark,
+  index,
+  onChange,
+  onRemove,
+  canRemove,
+}: {
+  remark: Remark;
+  index: number;
+  onChange: (r: Remark) => void;
+  onRemove: () => void;
+  canRemove: boolean;
+}) {
+  const set = (key: keyof Remark, val: string) => onChange({ ...remark, [key]: val });
+
+  return (
+    <div className="border border-border rounded-xl p-4 space-y-3 bg-secondary/20 relative">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs font-semibold text-primary uppercase tracking-wider">Замечание #{index + 1}</span>
+        {canRemove && (
+          <button onClick={onRemove} className="text-muted-foreground hover:text-red-400 transition-colors">
+            <Icon name="Trash2" size={14} />
+          </button>
+        )}
+      </div>
+
+      <Field label="Описание нарушения *">
+        <TextareaBase
+          value={remark.description}
+          onChange={e => set("description", e.target.value)}
+          placeholder="Опишите выявленное нарушение"
+          rows={2}
+        />
+      </Field>
+
+      <Field label="Ссылка на нормативный документ">
+        <InputBase
+          value={remark.normRef}
+          onChange={e => set("normRef", e.target.value)}
+          placeholder="Например: ППР РФ п. 24"
+        />
+      </Field>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Field label="Срок устранения *">
+          <InputBase
+            type="date"
+            value={remark.deadline}
+            onChange={e => set("deadline", e.target.value)}
+          />
+        </Field>
+        <Field label="Срок предоставления отчёта *">
+          <InputBase
+            type="date"
+            value={remark.reportDeadline}
+            onChange={e => set("reportDeadline", e.target.value)}
+          />
+        </Field>
+        <Field label="Статус">
+          <SelectBase
+            value={remark.status}
+            onChange={e => set("status", e.target.value as Status)}
+          >
+            {ALL_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </SelectBase>
+        </Field>
+      </div>
+    </div>
+  );
+}
+
+function AddForm({ onClose, onSave }: { onClose: () => void; onSave: (p: Prescription) => void }) {
+  const [form, setForm] = useState<FormState>({
+    object: "",
+    contractor: "",
+    responsible: "",
+    remarks: [newRemark()],
+  });
+
+  const setField = (key: keyof Omit<FormState, "remarks">, val: string) =>
+    setForm(prev => ({ ...prev, [key]: val }));
+
+  const updateRemark = (index: number, r: Remark) =>
+    setForm(prev => ({ ...prev, remarks: prev.remarks.map((x, i) => i === index ? r : x) }));
+
+  const addRemark = () =>
+    setForm(prev => ({ ...prev, remarks: [...prev.remarks, newRemark()] }));
+
+  const removeRemark = (index: number) =>
+    setForm(prev => ({ ...prev, remarks: prev.remarks.filter((_, i) => i !== index) }));
+
+  const isValid =
+    form.object.trim() &&
+    form.contractor.trim() &&
+    form.remarks.every(r => r.description.trim() && r.deadline && r.reportDeadline);
+
+  const handleSave = () => {
+    if (!isValid) return;
+    const now = new Date();
+    const num = "П-" + now.getFullYear() + "-" + String(Math.floor(Math.random() * 900) + 100);
+    onSave({
+      id: Date.now().toString(),
+      number: num,
+      date: now.toLocaleDateString("ru-RU"),
+      object: form.object,
+      contractor: form.contractor,
+      responsible: form.responsible,
+      remarks: form.remarks,
+      comments: [],
+    });
+    onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-fade-in flex flex-col max-h-[90vh]">
+      <div className="relative bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-fade-in flex flex-col max-h-[92vh]">
 
         {/* Header */}
-        <div className="flex items-start justify-between px-6 py-4 border-b border-border flex-shrink-0">
-          <div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-base font-semibold">{p.number}</span>
-              <StatusBadge status={p.status} />
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Выдано {p.date} · {p.object}</p>
-          </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors ml-4 flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+          <h2 className="text-base font-semibold">Новое предписание</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <Icon name="X" size={18} />
           </button>
         </div>
 
-        <div className="overflow-y-auto flex-1">
-          {/* Основная информация */}
-          <div className="px-6 py-5 space-y-4 border-b border-border">
-            <InfoRow icon="Building2" label="Объект" value={p.object} />
-            <InfoRow icon="Users" label="Подрядчик" value={p.contractor} />
-            {p.responsible && <InfoRow icon="User" label="Ответственный" value={p.responsible} />}
-            <InfoRow icon="Calendar" label="Срок устранения" value={p.deadline} highlight={p.status === "Просрочено"} />
-            {p.normRef && <InfoRow icon="BookOpen" label="Нормативный документ" value={p.normRef} />}
+        {/* Body */}
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
 
-            <div className="pt-1">
-              <p className="text-xs text-muted-foreground font-medium mb-1.5">Описание нарушения</p>
-              <p className="text-sm text-foreground leading-relaxed bg-secondary/40 rounded-lg p-3">{p.description}</p>
+          {/* Общие сведения */}
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Общие сведения</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Объект *">
+                <InputBase
+                  value={form.object}
+                  onChange={e => setField("object", e.target.value)}
+                  placeholder="Например: Цех №3"
+                />
+              </Field>
+              <Field label="Подрядчик *">
+                <InputBase
+                  value={form.contractor}
+                  onChange={e => setField("contractor", e.target.value)}
+                  placeholder="Название организации или ИП"
+                />
+              </Field>
             </div>
-          </div>
-
-          {/* Смена статуса */}
-          <div className="px-6 py-4 border-b border-border">
-            <p className="text-xs text-muted-foreground font-medium mb-2.5">Изменить статус</p>
-            <div className="flex flex-wrap gap-2">
-              {ALL_STATUSES.map(s => (
-                <button
-                  key={s}
-                  onClick={() => setStatus(s)}
-                  className={`text-xs px-3 py-1.5 rounded-md border font-medium transition-colors ${p.status === s ? STATUS_STYLE[s] + " opacity-100" : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"}`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Чат / комментарии */}
-          <div className="px-6 py-4">
-            <p className="text-xs text-muted-foreground font-medium mb-3">Переписка по предписанию</p>
-            {p.comments.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Комментариев пока нет</p>
-            ) : (
-              <div className="space-y-3 mb-4">
-                {p.comments.map(c => (
-                  <div key={c.id} className={`flex gap-3 ${c.role === "Специалист ОТ" ? "flex-row-reverse" : ""}`}>
-                    <div className="w-7 h-7 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-medium flex-shrink-0">
-                      {c.author[0]}
-                    </div>
-                    <div className={`max-w-[75%] ${c.role === "Специалист ОТ" ? "items-end" : "items-start"} flex flex-col`}>
-                      <div className={`rounded-xl px-3 py-2 text-sm leading-relaxed ${c.role === "Специалист ОТ" ? "bg-primary/15 text-foreground rounded-tr-sm" : "bg-secondary text-foreground rounded-tl-sm"}`}>
-                        {c.text}
-                      </div>
-                      <span className="text-[10px] text-muted-foreground mt-1 px-1">{c.author} · {c.time}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="flex gap-2">
-              <input
-                value={newComment}
-                onChange={e => setNewComment(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && sendComment()}
-                placeholder="Написать комментарий..."
-                className="flex-1 bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+            <Field label="Ответственный от подрядчика">
+              <InputBase
+                value={form.responsible}
+                onChange={e => setField("responsible", e.target.value)}
+                placeholder="ФИО ответственного лица"
               />
-              <button
-                onClick={sendComment}
-                disabled={!newComment.trim()}
-                className="bg-primary text-primary-foreground px-3 py-2 rounded-lg hover:bg-primary/90 disabled:opacity-40 transition-colors"
-              >
-                <Icon name="Send" size={14} />
-              </button>
-            </div>
+            </Field>
           </div>
+
+          {/* Замечания */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Замечания <span className="text-primary ml-1">{form.remarks.length}</span>
+              </p>
+            </div>
+
+            {form.remarks.map((r, i) => (
+              <RemarkRow
+                key={r.id}
+                remark={r}
+                index={i}
+                onChange={updated => updateRemark(i, updated)}
+                onRemove={() => removeRemark(i)}
+                canRemove={form.remarks.length > 1}
+              />
+            ))}
+
+            <button
+              onClick={addRemark}
+              className="w-full flex items-center justify-center gap-2 border border-dashed border-border rounded-xl py-3 text-sm text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors"
+            >
+              <Icon name="Plus" size={14} />
+              Добавить замечание
+            </button>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+          >
+            Отмена
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!isValid}
+            className="text-sm px-5 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Создать предписание
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
+// --- Карточка предписания ---
 function InfoRow({ icon, label, value, highlight }: { icon: string; label: string; value: string; highlight?: boolean }) {
   return (
     <div className="flex items-start gap-2.5">
@@ -399,7 +376,201 @@ function InfoRow({ icon, label, value, highlight }: { icon: string; label: strin
   );
 }
 
-// --- Главный компонент ---
+function PrescriptionDetail({
+  prescription,
+  onClose,
+  onUpdate,
+}: {
+  prescription: Prescription;
+  onClose: () => void;
+  onUpdate: (p: Prescription) => void;
+}) {
+  const [p, setP] = useState(prescription);
+  const [newComment, setNewComment] = useState("");
+  const [activeTab, setActiveTab] = useState<"remarks" | "chat">("remarks");
+
+  const sendComment = () => {
+    if (!newComment.trim()) return;
+    const c: Comment = {
+      id: Date.now(),
+      author: "Алексеев С.Н.",
+      role: "Специалист ОТ",
+      text: newComment.trim(),
+      time: new Date().toLocaleString("ru-RU"),
+    };
+    const updated = { ...p, comments: [...p.comments, c] };
+    setP(updated);
+    onUpdate(updated);
+    setNewComment("");
+  };
+
+  const setRemarkStatus = (remarkId: string, status: Status) => {
+    const remarks = p.remarks.map(r => r.id === remarkId ? { ...r, status } : r);
+    const updated = { ...p, remarks };
+    setP(updated);
+    onUpdate(updated);
+  };
+
+  const status = overallStatus(p.remarks);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-fade-in flex flex-col max-h-[92vh]">
+
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 py-4 border-b border-border flex-shrink-0">
+          <div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-base font-semibold" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{p.number}</span>
+              <StatusBadge status={status} />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Выдано {p.date} · {p.object}</p>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors ml-4 flex-shrink-0">
+            <Icon name="X" size={18} />
+          </button>
+        </div>
+
+        {/* Общая информация */}
+        <div className="px-6 py-4 border-b border-border flex-shrink-0 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <InfoRow icon="Building2" label="Объект" value={p.object} />
+          <InfoRow icon="Users" label="Подрядчик" value={p.contractor} />
+          {p.responsible && <InfoRow icon="User" label="Ответственный" value={p.responsible} />}
+        </div>
+
+        {/* Табы */}
+        <div className="flex border-b border-border flex-shrink-0">
+          <button
+            onClick={() => setActiveTab("remarks")}
+            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === "remarks" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >
+            <Icon name="AlertCircle" size={14} />
+            Замечания
+            <span className="text-[11px] bg-primary/15 text-primary px-1.5 py-0.5 rounded font-medium">
+              {p.remarks.length}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab("chat")}
+            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === "chat" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >
+            <Icon name="MessageSquare" size={14} />
+            Переписка
+            {p.comments.length > 0 && (
+              <span className="text-[11px] bg-secondary text-muted-foreground px-1.5 py-0.5 rounded font-medium">
+                {p.comments.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1">
+
+          {/* Вкладка замечаний */}
+          {activeTab === "remarks" && (
+            <div className="px-6 py-4 space-y-4">
+              {p.remarks.map((r, i) => (
+                <div key={r.id} className="border border-border rounded-xl p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-xs font-semibold text-primary uppercase tracking-wider">Замечание #{i + 1}</span>
+                    <StatusBadge status={r.status} />
+                  </div>
+
+                  <p className="text-sm text-foreground leading-relaxed bg-secondary/40 rounded-lg p-3">{r.description}</p>
+
+                  {r.normRef && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Icon name="BookOpen" size={12} />
+                      {r.normRef}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-secondary/30 rounded-lg p-3">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Срок устранения</p>
+                      <p className={`text-sm font-medium ${r.status === "Просрочено" ? "text-red-400" : "text-foreground"}`} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                        {r.deadline}
+                      </p>
+                    </div>
+                    <div className="bg-secondary/30 rounded-lg p-3">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Срок отчёта</p>
+                      <p className="text-sm font-medium text-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                        {r.reportDeadline}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Смена статуса замечания */}
+                  <div>
+                    <p className="text-[11px] text-muted-foreground mb-2">Изменить статус замечания:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {ALL_STATUSES.map(s => (
+                        <button
+                          key={s}
+                          onClick={() => setRemarkStatus(r.id, s)}
+                          className={`text-[11px] px-2.5 py-1 rounded-md border font-medium transition-colors ${r.status === s ? STATUS_STYLE[s] : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"}`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Вкладка чата */}
+          {activeTab === "chat" && (
+            <div className="px-6 py-4">
+              {p.comments.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <Icon name="MessageSquare" size={32} className="text-muted-foreground/30 mb-2" />
+                  <p className="text-sm text-muted-foreground">Сообщений пока нет</p>
+                </div>
+              ) : (
+                <div className="space-y-3 mb-4">
+                  {p.comments.map(c => (
+                    <div key={c.id} className={`flex gap-3 ${c.role === "Специалист ОТ" ? "flex-row-reverse" : ""}`}>
+                      <div className="w-7 h-7 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-medium flex-shrink-0">
+                        {c.author[0]}
+                      </div>
+                      <div className={`max-w-[75%] flex flex-col ${c.role === "Специалист ОТ" ? "items-end" : "items-start"}`}>
+                        <div className={`rounded-xl px-3 py-2 text-sm leading-relaxed ${c.role === "Специалист ОТ" ? "bg-primary/15 text-foreground rounded-tr-sm" : "bg-secondary text-foreground rounded-tl-sm"}`}>
+                          {c.text}
+                        </div>
+                        <span className="text-[10px] text-muted-foreground mt-1 px-1">{c.author} · {c.time}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2 sticky bottom-0 bg-card pt-2">
+                <input
+                  value={newComment}
+                  onChange={e => setNewComment(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && sendComment()}
+                  placeholder="Написать сообщение..."
+                  className="flex-1 bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                />
+                <button
+                  onClick={sendComment}
+                  disabled={!newComment.trim()}
+                  className="bg-primary text-primary-foreground px-3 py-2 rounded-lg hover:bg-primary/90 disabled:opacity-40 transition-colors"
+                >
+                  <Icon name="Send" size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Главный экран ---
 export default function Index() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>(INITIAL);
   const [showAdd, setShowAdd] = useState(false);
@@ -408,15 +579,18 @@ export default function Index() {
   const [search, setSearch] = useState("");
 
   const filtered = prescriptions.filter(p => {
-    const matchStatus = filterStatus === "Все" || p.status === filterStatus;
+    const status = overallStatus(p.remarks);
+    const matchStatus = filterStatus === "Все" || status === filterStatus;
     const q = search.toLowerCase();
-    const matchSearch = !q || p.number.toLowerCase().includes(q) || p.object.toLowerCase().includes(q) || p.contractor.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
+    const matchSearch = !q ||
+      p.number.toLowerCase().includes(q) ||
+      p.object.toLowerCase().includes(q) ||
+      p.contractor.toLowerCase().includes(q) ||
+      p.remarks.some(r => r.description.toLowerCase().includes(q));
     return matchStatus && matchSearch;
   });
 
-  const addPrescription = (p: Prescription) => {
-    setPrescriptions(prev => [p, ...prev]);
-  };
+  const addPrescription = (p: Prescription) => setPrescriptions(prev => [p, ...prev]);
 
   const updatePrescription = (updated: Prescription) => {
     setPrescriptions(prev => prev.map(p => p.id === updated.id ? updated : p));
@@ -426,7 +600,6 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
 
-      {/* Top bar */}
       <header className="border-b border-border px-6 py-4 flex items-center justify-between bg-background sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
@@ -440,15 +613,15 @@ export default function Index() {
         </div>
       </header>
 
-      {/* Page */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-5">
 
-        {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold text-foreground">Предписания</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Всего: {prescriptions.length} · Активных: {prescriptions.filter(p => p.status === "В работе" || p.status === "Выдано").length} · Просрочено: {prescriptions.filter(p => p.status === "Просрочено").length}
+              Всего: {prescriptions.length} ·{" "}
+              Активных: {prescriptions.filter(p => ["В работе", "Выдано"].includes(overallStatus(p.remarks))).length} ·{" "}
+              Просрочено: {prescriptions.filter(p => overallStatus(p.remarks) === "Просрочено").length}
             </p>
           </div>
           <button
@@ -460,7 +633,7 @@ export default function Index() {
           </button>
         </div>
 
-        {/* Filters */}
+        {/* Фильтры */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1 max-w-sm">
             <Icon name="Search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -484,11 +657,11 @@ export default function Index() {
           </div>
         </div>
 
-        {/* Table */}
+        {/* Таблица */}
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Icon name="ClipboardList" size={40} className="text-muted-foreground/40 mb-3" />
+              <Icon name="ClipboardList" size={40} className="text-muted-foreground/30 mb-3" />
               <p className="text-sm text-muted-foreground">Предписания не найдены</p>
               {search && <p className="text-xs text-muted-foreground mt-1">Попробуйте изменить параметры поиска</p>}
             </div>
@@ -500,47 +673,54 @@ export default function Index() {
                     <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Номер</th>
                     <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Объект</th>
                     <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Подрядчик</th>
-                    <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Нарушение</th>
-                    <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Срок</th>
+                    <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Замечания</th>
+                    <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Ближайший срок</th>
                     <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Статус</th>
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {filtered.map((p) => (
-                    <tr
-                      key={p.id}
-                      onClick={() => setSelected(p)}
-                      className="hover:bg-secondary/30 cursor-pointer transition-colors group"
-                    >
-                      <td className="px-5 py-4">
-                        <span className="text-xs font-medium text-primary" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{p.number}</span>
-                        <div className="text-[11px] text-muted-foreground mt-0.5">{p.date}</div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className="text-sm text-foreground">{p.object}</span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className="text-sm text-foreground">{p.contractor}</span>
-                        {p.responsible && <div className="text-[11px] text-muted-foreground mt-0.5">{p.responsible}</div>}
-                      </td>
-                      <td className="px-5 py-4 max-w-[240px]">
-                        <p className="text-sm text-foreground line-clamp-2 leading-snug">{p.description}</p>
-                        {p.normRef && <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{p.normRef}</p>}
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className={`text-sm ${p.status === "Просрочено" ? "text-red-400 font-medium" : "text-foreground"}`} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                          {p.deadline}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <StatusBadge status={p.status} />
-                      </td>
-                      <td className="px-5 py-4">
-                        <Icon name="ChevronRight" size={15} className="text-muted-foreground group-hover:text-foreground transition-colors" />
-                      </td>
-                    </tr>
-                  ))}
+                  {filtered.map(p => {
+                    const status = overallStatus(p.remarks);
+                    const nearestDeadline = p.remarks.map(r => r.deadline).sort()[0];
+                    return (
+                      <tr
+                        key={p.id}
+                        onClick={() => setSelected(p)}
+                        className="hover:bg-secondary/30 cursor-pointer transition-colors group"
+                      >
+                        <td className="px-5 py-4">
+                          <span className="text-xs font-medium text-primary" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{p.number}</span>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">{p.date}</div>
+                        </td>
+                        <td className="px-5 py-4 text-sm text-foreground">{p.object}</td>
+                        <td className="px-5 py-4">
+                          <span className="text-sm text-foreground">{p.contractor}</span>
+                          {p.responsible && <div className="text-[11px] text-muted-foreground mt-0.5">{p.responsible}</div>}
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{p.remarks.length}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {p.remarks.length === 1 ? "замечание" : p.remarks.length < 5 ? "замечания" : "замечаний"}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{p.remarks[0]?.description}</p>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className={`text-sm ${status === "Просрочено" ? "text-red-400 font-medium" : "text-foreground"}`} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                            {nearestDeadline}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <StatusBadge status={status} />
+                        </td>
+                        <td className="px-5 py-4">
+                          <Icon name="ChevronRight" size={15} className="text-muted-foreground group-hover:text-foreground transition-colors" />
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -548,7 +728,6 @@ export default function Index() {
         </div>
       </main>
 
-      {/* Модалки */}
       {showAdd && <AddForm onClose={() => setShowAdd(false)} onSave={addPrescription} />}
       {selected && (
         <PrescriptionDetail
