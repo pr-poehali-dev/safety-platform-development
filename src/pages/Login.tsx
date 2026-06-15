@@ -1,16 +1,19 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
-
-const DEMO_USERS = [
-  { login: "admin", password: "admin123", name: "Алексеев С.Н.", role: "Специалист ОТ" },
-  { login: "contractor", password: "pass123", name: "Козлов А.В.", role: "Представитель подрядчика" },
-];
+import { AppUser, ROLE_LABELS, ROLE_COLORS, UserRole } from "@/lib/auth";
 
 interface LoginProps {
-  onLogin: (user: { name: string; role: string }) => void;
+  users: AppUser[];
+  onLogin: (user: AppUser) => void;
 }
 
-export default function Login({ onLogin }: LoginProps) {
+const ROLE_ICONS: Record<UserRole, string> = {
+  admin: "Crown",
+  specialist: "ShieldCheck",
+  contractor: "HardHat",
+};
+
+export default function Login({ users, onLogin }: LoginProps) {
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -21,11 +24,10 @@ export default function Login({ onLogin }: LoginProps) {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     setTimeout(() => {
-      const user = DEMO_USERS.find(u => u.login === login.trim() && u.password === password);
+      const user = users.find(u => u.login === login.trim() && u.password === password);
       if (user) {
-        onLogin({ name: user.name, role: user.role });
+        onLogin(user);
       } else {
         setError("Неверный логин или пароль");
       }
@@ -34,11 +36,8 @@ export default function Login({ onLogin }: LoginProps) {
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center bg-background p-4"
-      style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
-    >
-      {/* Фоновая сетка */}
+    <div className="min-h-screen flex items-center justify-center bg-background p-4" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
+      {/* Фон */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute inset-0" style={{
           backgroundImage: "radial-gradient(circle at 1px 1px, hsl(var(--border)) 1px, transparent 0)",
@@ -46,21 +45,20 @@ export default function Login({ onLogin }: LoginProps) {
           opacity: 0.4,
         }} />
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full"
-          style={{ background: "radial-gradient(circle, hsl(199 89% 48% / 0.06) 0%, transparent 70%)" }}
-        />
+          style={{ background: "radial-gradient(circle, hsl(199 89% 48% / 0.06) 0%, transparent 70%)" }} />
       </div>
 
       <div className="relative w-full max-w-sm animate-fade-in">
         {/* Логотип */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-4 shadow-lg" style={{ boxShadow: "0 0 24px hsl(199 89% 48% / 0.3)" }}>
+          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-4" style={{ boxShadow: "0 0 24px hsl(199 89% 48% / 0.3)" }}>
             <Icon name="Shield" size={22} className="text-primary-foreground" />
           </div>
           <h1 className="text-xl font-semibold text-foreground tracking-tight">Охрана Труда Онлайн</h1>
           <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest">Система управления ОТ и ПБ</p>
         </div>
 
-        {/* Карточка формы */}
+        {/* Форма */}
         <div className="bg-card border border-border rounded-2xl p-6 shadow-2xl">
           <p className="text-sm font-medium text-foreground mb-5">Вход в систему</p>
 
@@ -74,7 +72,7 @@ export default function Login({ onLogin }: LoginProps) {
                   onChange={e => { setLogin(e.target.value); setError(""); }}
                   placeholder="Введите логин"
                   autoComplete="username"
-                  className="w-full bg-background border border-border rounded-lg pl-9 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-colors"
+                  className="w-full bg-background border border-border rounded-lg pl-9 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors"
                 />
               </div>
             </div>
@@ -89,13 +87,9 @@ export default function Login({ onLogin }: LoginProps) {
                   onChange={e => { setPassword(e.target.value); setError(""); }}
                   placeholder="Введите пароль"
                   autoComplete="current-password"
-                  className="w-full bg-background border border-border rounded-lg pl-9 pr-10 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-colors"
+                  className="w-full bg-background border border-border rounded-lg pl-9 pr-10 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(s => !s)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
+                <button type="button" onClick={() => setShowPassword(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                   <Icon name={showPassword ? "EyeOff" : "Eye"} size={14} />
                 </button>
               </div>
@@ -113,40 +107,33 @@ export default function Login({ onLogin }: LoginProps) {
               disabled={loading || !login || !password}
               className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground text-sm font-medium py-2.5 rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors mt-2"
             >
-              {loading ? (
-                <>
-                  <Icon name="Loader" size={14} className="animate-spin" />
-                  Вход...
-                </>
-              ) : (
-                <>
-                  <Icon name="LogIn" size={14} />
-                  Войти
-                </>
-              )}
+              {loading ? <><Icon name="Loader" size={14} className="animate-spin" />Вход...</> : <><Icon name="LogIn" size={14} />Войти</>}
             </button>
           </form>
 
-          {/* Подсказка для демо */}
-          <div className="mt-5 pt-4 border-t border-border space-y-1.5">
-            <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mb-2">Демо-доступ</p>
-            {DEMO_USERS.map(u => (
-              <button
-                key={u.login}
-                type="button"
-                onClick={() => { setLogin(u.login); setPassword(u.password); setError(""); }}
-                className="w-full flex items-center justify-between text-xs px-3 py-2 rounded-lg bg-secondary/40 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <span>{u.name}</span>
-                <span className="text-[10px] opacity-60">{u.role}</span>
-              </button>
-            ))}
+          {/* Демо-доступ */}
+          <div className="mt-5 pt-4 border-t border-border">
+            <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mb-2.5">Демо-доступ</p>
+            <div className="space-y-1.5">
+              {users.map(u => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => { setLogin(u.login); setPassword(u.password); setError(""); }}
+                  className="w-full flex items-center gap-3 text-xs px-3 py-2 rounded-lg bg-secondary/40 hover:bg-secondary transition-colors group"
+                >
+                  <div className={`w-6 h-6 rounded-md flex items-center justify-center border flex-shrink-0 ${ROLE_COLORS[u.role]}`}>
+                    <Icon name={ROLE_ICONS[u.role]} size={12} />
+                  </div>
+                  <span className="flex-1 text-left text-foreground">{u.name}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${ROLE_COLORS[u.role]}`}>{ROLE_LABELS[u.role]}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        <p className="text-center text-[11px] text-muted-foreground mt-6">
-          © 2024 Охрана Труда Онлайн
-        </p>
+        <p className="text-center text-[11px] text-muted-foreground mt-6">© 2024 Охрана Труда Онлайн</p>
       </div>
     </div>
   );
