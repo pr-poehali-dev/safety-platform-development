@@ -1,17 +1,11 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
-import { AppUser, ROLE_LABELS, ROLE_COLORS, UserRole } from "@/lib/auth";
+import { AppUser } from "@/lib/auth";
 
 interface LoginProps {
   users: AppUser[];
   onLogin: (user: AppUser) => void;
 }
-
-const ROLE_ICONS: Record<UserRole, string> = {
-  admin: "Crown",
-  specialist: "ShieldCheck",
-  contractor: "HardHat",
-};
 
 export default function Login({ users, onLogin }: LoginProps) {
   const [login, setLogin] = useState("");
@@ -111,26 +105,7 @@ export default function Login({ users, onLogin }: LoginProps) {
             </button>
           </form>
 
-          {/* Демо-доступ */}
-          <div className="mt-5 pt-4 border-t border-border">
-            <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mb-2.5">Демо-доступ</p>
-            <div className="space-y-1.5">
-              {users.map(u => (
-                <button
-                  key={u.id}
-                  type="button"
-                  onClick={() => { setLogin(u.login); setPassword(u.password); setError(""); }}
-                  className="w-full flex items-center gap-3 text-xs px-3 py-2 rounded-lg bg-secondary/40 hover:bg-secondary transition-colors group"
-                >
-                  <div className={`w-6 h-6 rounded-md flex items-center justify-center border flex-shrink-0 ${ROLE_COLORS[u.role]}`}>
-                    <Icon name={ROLE_ICONS[u.role]} size={12} />
-                  </div>
-                  <span className="flex-1 text-left text-foreground">{u.name}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${ROLE_COLORS[u.role]}`}>{ROLE_LABELS[u.role]}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+
         </div>
 
         <p className="text-center text-[11px] text-muted-foreground mt-6">© 2024 Охрана Труда Онлайн</p>
