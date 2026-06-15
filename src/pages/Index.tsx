@@ -11,6 +11,7 @@ type Status = "Черновик" | "Выдано" | "Устранено" | "Пр
 
 interface Remark {
   id: string;
+  place: string; // место нарушения
   description: string;
   normRef: string;
   deadline: string; // срок устранения
@@ -23,6 +24,8 @@ interface Prescription {
   date: string;
   object: string;
   contractor: string;
+  inspector: string;     // ФИО специалиста по ОТ, проводившего проверку
+  representative: string; // представитель подрядной организации (в присутствии)
   responsible: string;
   reportDeadline: string; // единый срок предоставления отчёта
   remarks: Remark[];
@@ -80,7 +83,7 @@ function overallStatus(remarks: Remark[]): Status {
 }
 
 function newRemark(): Remark {
-  return { id: Date.now().toString() + Math.random(), description: "", normRef: "", deadline: "", status: "Выдано" };
+  return { id: Date.now().toString() + Math.random(), place: "", description: "", normRef: "", deadline: "", status: "Выдано" };
 }
 
 // --- Начальные данные ---
@@ -91,11 +94,13 @@ const INITIAL: Prescription[] = [
     date: "05.06.2024",
     object: "Цех №3",
     contractor: "ООО «СтройПодряд»",
+    inspector: "Алексеев С.Н.",
+    representative: "Козлов А.В.",
     responsible: "Козлов А.В.",
     reportDeadline: "12.06.2024",
     remarks: [
-      { id: "r1", description: "Захламление эвакуационного выхода посторонними предметами", normRef: "ППР РФ п. 24", deadline: "14.06.2024", status: "Просрочено" },
-      { id: "r2", description: "Отсутствует план эвакуации на видном месте", normRef: "ГОСТ 12.1.004-91", deadline: "20.06.2024", status: "Выдано" },
+      { id: "r1", place: "Эвакуационный выход №2", description: "Захламление эвакуационного выхода посторонними предметами", normRef: "ППР РФ п. 24", deadline: "14.06.2024", status: "Просрочено" },
+      { id: "r2", place: "Коридор 1-го этажа", description: "Отсутствует план эвакуации на видном месте", normRef: "ГОСТ 12.1.004-91", deadline: "20.06.2024", status: "Выдано" },
     ],
     comments: [
       { id: 1, author: "Алексеев С.Н.", role: "Специалист ОТ", text: "Выдано предписание. Прошу устранить в указанный срок.", time: "05.06.2024 10:00" },
@@ -108,10 +113,12 @@ const INITIAL: Prescription[] = [
     date: "07.06.2024",
     object: "Склад А",
     contractor: "ИП Морозов В.П.",
+    inspector: "Алексеев С.Н.",
+    representative: "Морозов В.П.",
     responsible: "Морозов В.П.",
     reportDeadline: "18.06.2024",
     remarks: [
-      { id: "r3", description: "Отсутствует принудительная вытяжка в помещении склада", normRef: "СП 60.13330.2020 п. 8.2", deadline: "20.06.2024", status: "Выдано" },
+      { id: "r3", place: "Помещение склада", description: "Отсутствует принудительная вытяжка в помещении склада", normRef: "СП 60.13330.2020 п. 8.2", deadline: "20.06.2024", status: "Выдано" },
     ],
     comments: [],
   },
@@ -121,10 +128,12 @@ const INITIAL: Prescription[] = [
     date: "01.06.2024",
     object: "Линия сборки",
     contractor: "ООО «МонтажГрупп»",
+    inspector: "Алексеев С.Н.",
+    representative: "Иванов Д.К.",
     responsible: "Иванов Д.К.",
     reportDeadline: "09.06.2024",
     remarks: [
-      { id: "r4", description: "Отсутствует ограждение опасной зоны около конвейера №2", normRef: "ГОСТ 12.2.062-81 п. 4.1", deadline: "10.06.2024", status: "Устранено" },
+      { id: "r4", place: "Конвейер №2", description: "Отсутствует ограждение опасной зоны около конвейера №2", normRef: "ГОСТ 12.2.062-81 п. 4.1", deadline: "10.06.2024", status: "Устранено" },
     ],
     comments: [
       { id: 1, author: "Иванов Д.К.", role: "Подрядчик", text: "Ограждение установлено, прикладываю фото.", time: "09.06.2024 14:30" },
@@ -239,6 +248,8 @@ function DatePicker({ value, onChange, placeholder }: { value: string; onChange:
 interface FormState {
   object: string;
   contractor: string;
+  inspector: string;
+  representative: string;
   responsible: string;
   reportDeadline: string;
   remarks: Remark[];
@@ -269,6 +280,14 @@ function RemarkRow({
           </button>
         )}
       </div>
+
+      <Field label="Место нарушения">
+        <InputBase
+          value={remark.place}
+          onChange={e => set("place", e.target.value)}
+          placeholder="Например: Эвакуационный выход №2"
+        />
+      </Field>
 
       <Field label="Описание нарушения *">
         <TextareaBase
@@ -312,6 +331,8 @@ function AddForm({ onClose, onSave }: { onClose: () => void; onSave: (p: Prescri
   const [form, setForm] = useState<FormState>({
     object: "",
     contractor: "",
+    inspector: "",
+    representative: "",
     responsible: "",
     reportDeadline: "",
     remarks: [newRemark()],
@@ -345,6 +366,8 @@ function AddForm({ onClose, onSave }: { onClose: () => void; onSave: (p: Prescri
       date: now.toLocaleDateString("ru-RU"),
       object: form.object,
       contractor: form.contractor,
+      inspector: form.inspector,
+      representative: form.representative,
       responsible: form.responsible,
       reportDeadline: form.reportDeadline,
       remarks: form.remarks,
@@ -385,6 +408,22 @@ function AddForm({ onClose, onSave }: { onClose: () => void; onSave: (p: Prescri
                   value={form.contractor}
                   onChange={e => setField("contractor", e.target.value)}
                   placeholder="Название организации или ИП"
+                />
+              </Field>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Проверка проведена (ФИО специалиста по ОТ)">
+                <InputBase
+                  value={form.inspector}
+                  onChange={e => setField("inspector", e.target.value)}
+                  placeholder="ФИО специалиста по ОТ"
+                />
+              </Field>
+              <Field label="В присутствии представителя подрядчика">
+                <InputBase
+                  value={form.representative}
+                  onChange={e => setField("representative", e.target.value)}
+                  placeholder="ФИО представителя подрядчика"
                 />
               </Field>
             </div>

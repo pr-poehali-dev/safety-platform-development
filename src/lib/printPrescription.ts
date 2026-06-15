@@ -1,5 +1,6 @@
 interface Remark {
   id: string;
+  place: string;
   description: string;
   normRef: string;
   deadline: string;
@@ -12,6 +13,8 @@ interface Prescription {
   date: string;
   object: string;
   contractor: string;
+  inspector: string;
+  representative: string;
   responsible: string;
   reportDeadline: string;
   remarks: Remark[];
@@ -23,7 +26,7 @@ export function printPrescription(p: Prescription): void {
       (r, i) => `
       <tr>
         <td class="center">${i + 1}</td>
-        <td class="center">—</td>
+        <td class="center">${r.place || "—"}</td>
         <td>${r.description}</td>
         <td>${r.normRef || "—"}</td>
         <td class="center">${r.deadline || "—"}</td>
@@ -215,7 +218,8 @@ export function printPrescription(p: Prescription): void {
   <div class="requisites">
     <p><strong>Проверяемый объект:</strong> «<span class="underline-value">${p.object}</span>».</p>
     <p><strong>Работы проводит подрядная организация:</strong> «<span class="underline-value">${p.contractor}</span>»</p>
-    <p>Проверка проведена <span class="underline-value">${p.responsible || "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"}</span></p>
+    <p>Проверка проведена <span class="underline-value">${p.inspector || "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"}</span>
+      в присутствии представителя подрядной организации <span class="underline-value">${p.representative || "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"}</span></p>
     <div style="display:flex; gap:40px; font-size:8pt; color:#555; padding-left:120px; margin-top:1px;">
       <span>(Должность, ФИО представителя СОТ)</span>
       <span>(Наименование организации)</span>
