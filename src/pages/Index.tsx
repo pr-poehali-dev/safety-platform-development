@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Icon from "@/components/ui/icon";
+import { Calendar } from "@/components/ui/calendar";
+import { format, parse, isValid } from "date-fns";
+import { ru } from "date-fns/locale";
 
 // --- Типы ---
 type Status = "Черновик" | "Выдано" | "В работе" | "Устранено" | "Просрочено";
@@ -148,6 +151,63 @@ function SelectBase(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   );
 }
 
+// Формат хранения дат в данных: "dd.MM.yyyy"
+function DatePicker({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Закрытие по клику снаружи
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  // Парсим "dd.MM.yyyy" → Date для Calendar
+  const selected: Date | undefined = (() => {
+    if (!value) return undefined;
+    const d = parse(value, "dd.MM.yyyy", new Date());
+    return isValid(d) ? d : undefined;
+  })();
+
+  const handleSelect = (day: Date | undefined) => {
+    if (day) {
+      onChange(format(day, "dd.MM.yyyy"));
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 hover:border-foreground/30 transition-colors"
+      >
+        <span className={value ? "text-foreground" : "text-muted-foreground"}>
+          {value || (placeholder ?? "Выбрать дату")}
+        </span>
+        <Icon name="CalendarDays" size={14} className="text-muted-foreground flex-shrink-0" />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 top-full mt-1 left-0 bg-card border border-border rounded-xl shadow-xl animate-fade-in">
+          <Calendar
+            mode="single"
+            selected={selected}
+            onSelect={handleSelect}
+            locale={ru}
+            initialFocus
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // --- Форма добавления / редактирования ---
 interface FormState {
   object: string;
@@ -201,17 +261,17 @@ function RemarkRow({
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Field label="Срок устранения *">
-          <InputBase
-            type="date"
+          <DatePicker
             value={remark.deadline}
-            onChange={e => set("deadline", e.target.value)}
+            onChange={v => set("deadline", v)}
+            placeholder="Выбрать дату"
           />
         </Field>
         <Field label="Срок предоставления отчёта *">
-          <InputBase
-            type="date"
+          <DatePicker
             value={remark.reportDeadline}
-            onChange={e => set("reportDeadline", e.target.value)}
+            onChange={v => set("reportDeadline", v)}
+            placeholder="Выбрать дату"
           />
         </Field>
         <Field label="Статус">
