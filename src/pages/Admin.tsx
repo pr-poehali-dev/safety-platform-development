@@ -1,7 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import { AppUser, UserRole, ROLE_LABELS, ROLE_COLORS, apiCreateUser, apiUpdateUser, apiDeleteUser } from "@/lib/auth";
 
+// --- Типы предписаний (дублируем здесь, чтобы не создавать зависимости от Index) ---
+type Status = "Черновик" | "Выдано" | "Устранено" | "Просрочено";
+interface Remark { id: string; place: string; description: string; normRef: string; deadline: string; status: Status; }
+interface Prescription { id: string; number: string; date: string; object: string; contractor: string; inspector: string; representative: string; responsible: string; replyEmail: string; reportDeadline: string; remarks: Remark[]; comments: unknown[]; }
+
+const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
+
+const STATUS_STYLE: Record<Status, string> = {
+  "Черновик":   "text-muted-foreground bg-muted border-border",
+  "Выдано":     "text-primary bg-primary/10 border-primary/20",
+  "Устранено":  "text-green-400 bg-green-400/10 border-green-400/20",
+  "Просрочено": "text-red-400 bg-red-400/10 border-red-400/20",
+};
+
+function isOverdue(r: Remark) {
+  if (r.status === "Устранено" || !r.deadline) return false;
+  const [d, m, y] = r.deadline.split(".").map(Number);
+  const today = new Date(); today.setHours(0,0,0,0);
+  return today > new Date(y, m - 1, d);
+}
+function effectiveStatus(r: Remark): Status {
+  if (r.status === "Устранено") return "Устранено";
+  if (isOverdue(r)) return "Просрочено";
+  return r.status;
+}
+function overallStatus(remarks: Remark[]): Status {
+  if (!remarks.length) return "Черновик";
+  const ss = remarks.map(effectiveStatus);
+  if (ss.some(s => s === "Просрочено")) return "Просрочено";
+  if (ss.every(s => s === "Устранено")) return "Устранено";
+  if (ss.some(s => s === "Выдано")) return "Выдано";
+  return "Черновик";
+}
+
+function StatusBadge({ status }: { status: Status }) {
+  return <span className={`inline-flex items-center text-[11px] px-2 py-0.5 rounded border font-medium ${STATUS_STYLE[status]}`}>{status}</span>;
+}
+
+// --- Admin props ---
 interface AdminProps {
   currentUser: AppUser;
   users: AppUser[];
@@ -9,39 +48,49 @@ interface AdminProps {
   onLogout: () => void;
 }
 
-const ROLE_ICONS: Record<UserRole, string> = {
-  admin: "Crown",
-  specialist: "ShieldCheck",
-  contractor: "HardHat",
-};
-
+const ROLE_ICONS: Record<UserRole, string> = { admin: "Crown", specialist: "ShieldCheck", contractor: "HardHat" };
 const ALL_ROLES: UserRole[] = ["admin", "specialist", "contractor"];
 
-interface UserFormData {
-  login: string;
-  password: string;
-  name: string;
-  position: string;
-  role: UserRole;
-  contractor: string;
-}
+interface UserFormData { login: string; password: string; name: string; position: string; role: UserRole; contractor: string; }
+function emptyForm(): UserFormData { return { login: "", password: "", name: "", position: "", role: "specialist", contractor: "" }; }
 
-function emptyForm(): UserFormData {
-  return { login: "", password: "", name: "", position: "", role: "specialist", contractor: "" };
+function FormField({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+  return <div className="space-y-1.5"><label className="text-xs font-medium text-muted-foreground">{label}</label>{children}</div>;
+}
+function FormInput({ value, onChange, placeholder, type = "text" }: { value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
+  return <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="w-full bg-secondary/40 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />;
 }
 
 export default function Admin({ currentUser, users, onUsersChange, onLogout }: AdminProps) {
+  const [tab, setTab] = useState<"users" | "prescriptions">("users");
+
+  // --- Users state ---
   const [showForm, setShowForm] = useState(false);
   const [editUser, setEditUser] = useState<AppUser | null>(null);
   const [form, setForm] = useState<UserFormData>(emptyForm());
   const [showPassword, setShowPassword] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [error, setError] = useState("");
-
   const [loginManual, setLoginManual] = useState(false);
   const [passwordManual, setPasswordManual] = useState(false);
   const [roleFilter, setRoleFilter] = useState<UserRole | null>(null);
 
+  // --- Prescriptions state ---
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [pLoading, setPLoading] = useState(false);
+  const [pSearch, setPSearch] = useState("");
+  const [pDeleteConfirm, setPDeleteConfirm] = useState<string | null>(null);
+  const [pDeleting, setPDeleting] = useState(false);
+  const [editPrescription, setEditPrescription] = useState<Prescription | null>(null);
+
+  useEffect(() => {
+    if (tab === "prescriptions" && prescriptions.length === 0) {
+      setPLoading(true);
+      fetch(PRESCRIPTIONS_API).then(r => r.json()).then(setPrescriptions).finally(() => setPLoading(false));
+    }
+  }, [tab]);
+
+  // --- Users helpers ---
   const filteredUsers = roleFilter ? users.filter(u => u.role === roleFilter) : users;
   const toggleFilter = (role: UserRole) => setRoleFilter(prev => prev === role ? null : role);
 
@@ -65,79 +114,63 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
   };
 
   const set = (k: keyof UserFormData, v: string) => setForm(prev => ({ ...prev, [k]: v }));
+  const setName = (v: string) => setForm(prev => ({
+    ...prev, name: v,
+    login: loginManual ? prev.login : generateLogin(v),
+    password: passwordManual ? prev.password : generatePassword(v),
+  }));
 
-  const setName = (v: string) => {
-    setForm(prev => ({
-      ...prev,
-      name: v,
-      login: loginManual ? prev.login : generateLogin(v),
-      password: passwordManual ? prev.password : generatePassword(v),
-    }));
-  };
-
-  const openCreate = () => {
-    setForm(emptyForm());
-    setEditUser(null);
-    setError("");
-    setLoginManual(false);
-    setPasswordManual(false);
-    setShowForm(true);
-  };
-
-  const openEdit = (u: AppUser) => {
-    setForm({ login: u.login, password: u.password, name: u.name, position: u.position ?? "", role: u.role, contractor: u.contractor ?? "" });
-    setEditUser(u);
-    setError("");
-    setShowForm(true);
-  };
+  const openCreate = () => { setForm(emptyForm()); setEditUser(null); setError(""); setLoginManual(false); setPasswordManual(false); setShowForm(true); };
+  const openEdit = (u: AppUser) => { setForm({ login: u.login, password: u.password, name: u.name, position: u.position ?? "", role: u.role, contractor: u.contractor ?? "" }); setEditUser(u); setError(""); setShowForm(true); };
 
   const handleSave = async () => {
-    if (!form.login.trim() || !form.password.trim() || !form.name.trim()) {
-      setError("Заполните все обязательные поля");
-      return;
-    }
+    if (!form.login.trim() || !form.password.trim() || !form.name.trim()) { setError("Заполните все обязательные поля"); return; }
     const duplicate = users.find(u => u.login === form.login.trim() && u.id !== editUser?.id);
-    if (duplicate) {
-      setError("Пользователь с таким логином уже существует");
-      return;
-    }
+    if (duplicate) { setError("Пользователь с таким логином уже существует"); return; }
     if (editUser) {
-      const updated: AppUser = {
-        ...editUser,
-        login: form.login.trim(),
-        password: form.password,
-        name: form.name.trim(),
-        position: form.position.trim() || undefined,
-        role: form.role,
-        contractor: form.role === "contractor" ? form.contractor.trim() : undefined,
-      };
+      const updated: AppUser = { ...editUser, login: form.login.trim(), password: form.password, name: form.name.trim(), position: form.position.trim() || undefined, role: form.role, contractor: form.role === "contractor" ? form.contractor.trim() : undefined };
       await apiUpdateUser(updated);
       onUsersChange(users.map(u => u.id === editUser.id ? updated : u));
     } else {
-      const newUser: AppUser = {
-        id: Date.now().toString(),
-        login: form.login.trim(),
-        password: form.password,
-        name: form.name.trim(),
-        position: form.position.trim() || undefined,
-        role: form.role,
-        contractor: form.role === "contractor" ? form.contractor.trim() : undefined,
-      };
+      const newUser: AppUser = { id: Date.now().toString(), login: form.login.trim(), password: form.password, name: form.name.trim(), position: form.position.trim() || undefined, role: form.role, contractor: form.role === "contractor" ? form.contractor.trim() : undefined };
       await apiCreateUser(newUser);
       onUsersChange([...users, newUser]);
     }
     setShowForm(false);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDeleteUser = async (id: string) => {
     if (id === currentUser.id) return;
     await apiDeleteUser(id);
     onUsersChange(users.filter(u => u.id !== id));
     setDeleteConfirm(null);
   };
 
+  // --- Prescriptions helpers ---
+  const filteredPrescriptions = prescriptions.filter(p => {
+    if (!pSearch) return true;
+    const q = pSearch.toLowerCase();
+    return p.number.toLowerCase().includes(q) || p.object.toLowerCase().includes(q) || p.contractor.toLowerCase().includes(q);
+  });
+
+  const handleDeletePrescription = async (id: string) => {
+    setPDeleting(true);
+    await fetch(PRESCRIPTIONS_API, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    setPrescriptions(prev => prev.filter(p => p.id !== id));
+    setPDeleteConfirm(null);
+    setPDeleting(false);
+  };
+
+  const handleSavePrescription = async (p: Prescription) => {
+    await fetch(PRESCRIPTIONS_API, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) });
+    setPrescriptions(prev => prev.map(x => x.id === p.id ? p : x));
+    setEditPrescription(null);
+  };
+
   return (
     <div className="min-h-screen bg-background" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
+
+      {/* Header */}
       <header className="border-b border-border px-6 py-4 flex items-center justify-between bg-background sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
@@ -151,200 +184,253 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
             <Icon name="Crown" size={12} className="text-yellow-400" />
             {currentUser.name}
           </div>
-          <button
-            onClick={onLogout}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors"
-          >
+          <button onClick={onLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors">
             <Icon name="LogOut" size={13} />
             Выйти
           </button>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold">Управление пользователями</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Всего учётных записей: {users.length}</p>
-          </div>
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-2 bg-primary text-primary-foreground text-sm px-4 py-2.5 rounded-lg hover:bg-primary/90 transition-colors font-medium"
-          >
-            <Icon name="Plus" size={15} />
-            Создать пользователя
-          </button>
+      {/* Табы */}
+      <div className="border-b border-border bg-background">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex gap-1 pt-2">
+          {([
+            { key: "users", label: "Управление пользователями", icon: "Users" },
+            { key: "prescriptions", label: "Управление предписаниями", icon: "ClipboardList" },
+          ] as const).map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${tab === t.key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            >
+              <Icon name={t.icon} size={14} />
+              {t.label}
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* Статистика по ролям */}
-        <div className="grid grid-cols-3 gap-3">
-          {ALL_ROLES.map(role => {
-            const active = roleFilter === role;
-            return (
-              <button
-                key={role}
-                onClick={() => toggleFilter(role)}
-                className={`bg-card border rounded-xl p-4 flex items-center gap-3 transition-all text-left w-full ${active ? "border-primary ring-1 ring-primary/40" : "border-border hover:border-primary/40"}`}
-              >
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center border flex-shrink-0 ${ROLE_COLORS[role]}`}>
-                  <Icon name={ROLE_ICONS[role]} size={16} />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xl font-light" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                    {users.filter(u => u.role === role).length}
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">{ROLE_LABELS[role]}</div>
-                </div>
-                {active && <Icon name="X" size={13} className="ml-auto text-muted-foreground flex-shrink-0" />}
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+
+        {/* ===== РАЗДЕЛ: ПОЛЬЗОВАТЕЛИ ===== */}
+        {tab === "users" && (
+          <>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-xl font-semibold">Управление пользователями</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">Всего учётных записей: {users.length}</p>
+              </div>
+              <button onClick={openCreate} className="flex items-center gap-2 bg-primary text-primary-foreground text-sm px-4 py-2.5 rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                <Icon name="Plus" size={15} />
+                Создать пользователя
               </button>
-            );
-          })}
-        </div>
+            </div>
 
-        {/* Таблица пользователей */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border bg-secondary/20">
-                <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Пользователь</th>
-                <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Логин</th>
-                <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Роль</th>
-                <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider hidden md:table-cell">Организация</th>
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filteredUsers.map(u => (
-                <tr key={u.id} className="hover:bg-secondary/20 transition-colors">
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-7 h-7 rounded-md flex items-center justify-center border flex-shrink-0 ${ROLE_COLORS[u.role]}`}>
-                        <Icon name={ROLE_ICONS[u.role]} size={13} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-foreground">{u.name}</p>
-                        {u.position && <p className="text-[11px] text-muted-foreground">{u.position}</p>}
-                        {u.id === currentUser.id && <span className="text-[10px] text-primary">Это вы</span>}
-                      </div>
+            <div className="grid grid-cols-3 gap-3">
+              {ALL_ROLES.map(role => {
+                const active = roleFilter === role;
+                return (
+                  <button key={role} onClick={() => toggleFilter(role)} className={`bg-card border rounded-xl p-4 flex items-center gap-3 transition-all text-left w-full ${active ? "border-primary ring-1 ring-primary/40" : "border-border hover:border-primary/40"}`}>
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center border flex-shrink-0 ${ROLE_COLORS[role]}`}>
+                      <Icon name={ROLE_ICONS[role]} size={16} />
                     </div>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className="text-sm text-muted-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{u.login}</span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className={`inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded border font-medium ${ROLE_COLORS[u.role]}`}>
-                      <Icon name={ROLE_ICONS[u.role]} size={10} />
-                      {ROLE_LABELS[u.role]}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 hidden md:table-cell text-sm text-muted-foreground">
-                    {u.contractor || <span className="text-muted-foreground/40">—</span>}
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-2 justify-end">
-                      <button
-                        onClick={() => openEdit(u)}
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded hover:bg-secondary"
-                      >
-                        <Icon name="Pencil" size={13} />
-                      </button>
-                      {u.id !== currentUser.id && (
-                        <button
-                          onClick={() => setDeleteConfirm(u.id)}
-                          className="text-xs text-muted-foreground hover:text-red-400 transition-colors p-1.5 rounded hover:bg-red-400/10"
-                        >
-                          <Icon name="Trash2" size={13} />
-                        </button>
-                      )}
+                    <div className="min-w-0">
+                      <div className="text-xl font-light" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{users.filter(u => u.role === role).length}</div>
+                      <div className="text-xs text-muted-foreground truncate">{ROLE_LABELS[role]}</div>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    {active && <Icon name="X" size={13} className="ml-auto text-muted-foreground flex-shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border bg-secondary/20">
+                    <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Пользователь</th>
+                    <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Логин</th>
+                    <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Роль</th>
+                    <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider hidden md:table-cell">Организация</th>
+                    <th className="px-5 py-3" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filteredUsers.map(u => (
+                    <tr key={u.id} className="hover:bg-secondary/20 transition-colors">
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-7 h-7 rounded-md flex items-center justify-center border flex-shrink-0 ${ROLE_COLORS[u.role]}`}>
+                            <Icon name={ROLE_ICONS[u.role]} size={13} />
+                          </div>
+                          <div>
+                            <p className="text-sm text-foreground">{u.name}</p>
+                            {u.position && <p className="text-[11px] text-muted-foreground">{u.position}</p>}
+                            {u.id === currentUser.id && <span className="text-[10px] text-primary">Это вы</span>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5"><span className="text-sm text-muted-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{u.login}</span></td>
+                      <td className="px-5 py-3.5">
+                        <span className={`inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded border font-medium ${ROLE_COLORS[u.role]}`}>
+                          <Icon name={ROLE_ICONS[u.role]} size={10} />
+                          {ROLE_LABELS[u.role]}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 hidden md:table-cell text-sm text-muted-foreground">{u.contractor || <span className="text-muted-foreground/40">—</span>}</td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2 justify-end">
+                          <button onClick={() => openEdit(u)} className="text-xs text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded hover:bg-secondary">
+                            <Icon name="Pencil" size={13} />
+                          </button>
+                          {u.id !== currentUser.id && (
+                            <button onClick={() => setDeleteConfirm(u.id)} className="text-xs text-muted-foreground hover:text-red-400 transition-colors p-1.5 rounded hover:bg-red-400/10">
+                              <Icon name="Trash2" size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {/* ===== РАЗДЕЛ: ПРЕДПИСАНИЯ ===== */}
+        {tab === "prescriptions" && (
+          <>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-xl font-semibold">Управление предписаниями</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {pLoading ? "Загрузка..." : `Всего: ${prescriptions.length}`}
+                </p>
+              </div>
+              <div className="relative max-w-xs w-full">
+                <Icon name="Search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={pSearch}
+                  onChange={e => setPSearch(e.target.value)}
+                  placeholder="Поиск по номеру, объекту..."
+                  className="w-full bg-card border border-border rounded-lg pl-8 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                />
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              {pLoading ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <Icon name="Loader" size={28} className="text-primary animate-spin mb-3" />
+                  <p className="text-sm text-muted-foreground">Загрузка предписаний...</p>
+                </div>
+              ) : filteredPrescriptions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <Icon name="ClipboardList" size={40} className="text-muted-foreground/30 mb-3" />
+                  <p className="text-sm text-muted-foreground">Предписания не найдены</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[700px]">
+                    <thead>
+                      <tr className="border-b border-border bg-secondary/20">
+                        <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Номер / Дата</th>
+                        <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Объект</th>
+                        <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Подрядчик</th>
+                        <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Замечания</th>
+                        <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Статус</th>
+                        <th className="px-5 py-3" />
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {filteredPrescriptions.map(p => {
+                        const status = overallStatus(p.remarks);
+                        const overdueCount = p.remarks.filter(r => effectiveStatus(r) === "Просрочено").length;
+                        return (
+                          <tr key={p.id} className="hover:bg-secondary/20 transition-colors">
+                            <td className="px-5 py-3.5">
+                              <p className="text-sm font-medium text-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{p.number}</p>
+                              <p className="text-[11px] text-muted-foreground">{p.date}</p>
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <p className="text-sm text-foreground">{p.object}</p>
+                              {p.inspector && <p className="text-[11px] text-muted-foreground truncate max-w-[160px]">{p.inspector}</p>}
+                            </td>
+                            <td className="px-5 py-3.5 text-sm text-foreground">{p.contractor}</td>
+                            <td className="px-5 py-3.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-sm text-foreground">{p.remarks.length}</span>
+                                {overdueCount > 0 && <span className="text-[10px] text-red-400 bg-red-400/10 border border-red-400/20 px-1.5 py-0.5 rounded font-medium">{overdueCount} просрочено</span>}
+                              </div>
+                            </td>
+                            <td className="px-5 py-3.5"><StatusBadge status={status} /></td>
+                            <td className="px-5 py-3.5">
+                              <div className="flex items-center gap-2 justify-end">
+                                <button onClick={() => setEditPrescription(p)} className="text-xs text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded hover:bg-secondary" title="Редактировать">
+                                  <Icon name="Pencil" size={13} />
+                                </button>
+                                <button onClick={() => setPDeleteConfirm(p.id)} className="text-xs text-muted-foreground hover:text-red-400 transition-colors p-1.5 rounded hover:bg-red-400/10" title="Удалить">
+                                  <Icon name="Trash2" size={13} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </main>
 
-      {/* Форма создания / редактирования */}
+      {/* ===== МОДАЛКА: Форма пользователя ===== */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowForm(false)} />
           <div className="relative bg-card border border-border rounded-xl w-full max-w-md shadow-2xl animate-fade-in">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <h2 className="text-base font-semibold">{editUser ? "Редактировать пользователя" : "Новый пользователь"}</h2>
-              <button onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-                <Icon name="X" size={18} />
-              </button>
+              <button onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground transition-colors"><Icon name="X" size={18} /></button>
             </div>
-
             <div className="px-6 py-5 space-y-4">
               <FormField label="ФИО *">
                 <FormInput value={form.name} onChange={editUser ? v => set("name", v) : setName} placeholder="Иванов Иван Иванович" />
               </FormField>
-
               <FormField label="Должность">
                 <FormInput value={form.position} onChange={v => set("position", v)} placeholder="Инженер по охране труда" />
               </FormField>
-
               <div className="grid grid-cols-2 gap-3">
-                <FormField label={
-                  <span className="flex items-center gap-1.5">
-                    Логин *
-                    {!editUser && !loginManual && <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">авто</span>}
-                  </span>
-                }>
-                  <FormInput
-                    value={form.login}
-                    onChange={v => { setLoginManual(true); set("login", v); }}
-                    placeholder="ivan_ivanov"
-                  />
+                <FormField label={<span className="flex items-center gap-1.5">Логин *{!editUser && !loginManual && <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">авто</span>}</span>}>
+                  <FormInput value={form.login} onChange={v => { setLoginManual(true); set("login", v); }} placeholder="ivan_ivanov" />
                 </FormField>
-                <FormField label={
-                  <span className="flex items-center gap-1.5">
-                    Пароль *
-                    {!editUser && !passwordManual && <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">авто</span>}
-                  </span>
-                }>
+                <FormField label={<span className="flex items-center gap-1.5">Пароль *{!editUser && !passwordManual && <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">авто</span>}</span>}>
                   <div className="relative">
-                    <FormInput
-                      value={form.password}
-                      onChange={v => { setPasswordManual(true); set("password", v); }}
-                      placeholder="Пароль"
-                      type={showPassword ? "text" : "password"}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(s => !s)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
+                    <FormInput value={form.password} onChange={v => { setPasswordManual(true); set("password", v); }} placeholder="Пароль" type={showPassword ? "text" : "password"} />
+                    <button type="button" onClick={() => setShowPassword(s => !s)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                       <Icon name={showPassword ? "EyeOff" : "Eye"} size={13} />
                     </button>
                   </div>
                 </FormField>
               </div>
-
               <FormField label="Роль *">
                 <div className="grid grid-cols-3 gap-2">
                   {ALL_ROLES.map(r => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => set("role", r)}
-                      className={`flex flex-col items-center gap-1.5 py-3 rounded-lg border text-xs font-medium transition-colors ${form.role === r ? ROLE_COLORS[r] : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"}`}
-                    >
+                    <button key={r} type="button" onClick={() => set("role", r)} className={`flex flex-col items-center gap-1.5 py-3 rounded-lg border text-xs font-medium transition-colors ${form.role === r ? ROLE_COLORS[r] : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"}`}>
                       <Icon name={ROLE_ICONS[r]} size={16} />
                       {ROLE_LABELS[r]}
                     </button>
                   ))}
                 </div>
               </FormField>
-
               {form.role === "contractor" && (
                 <FormField label="Организация">
                   <FormInput value={form.contractor} onChange={v => set("contractor", v)} placeholder="ООО «Название»" />
                 </FormField>
               )}
-
               {error && (
                 <div className="flex items-center gap-2 text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
                   <Icon name="AlertCircle" size={13} />
@@ -352,64 +438,160 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
                 </div>
               )}
             </div>
-
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">
-              <button onClick={() => setShowForm(false)} className="text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
-                Отмена
-              </button>
-              <button
-                onClick={handleSave}
-                className="text-sm px-5 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
-              >
-                {editUser ? "Сохранить изменения" : "Создать"}
-              </button>
+              <button onClick={() => setShowForm(false)} className="text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">Отмена</button>
+              <button onClick={handleSave} className="text-sm px-5 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors">{editUser ? "Сохранить изменения" : "Создать"}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Подтверждение удаления */}
+      {/* ===== МОДАЛКА: Удаление пользователя ===== */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
-          <div className="relative bg-card border border-border rounded-xl w-full max-w-sm shadow-2xl animate-fade-in p-6 text-center">
-            <div className="w-10 h-10 rounded-full bg-red-400/10 flex items-center justify-center mx-auto mb-4">
-              <Icon name="Trash2" size={18} className="text-red-400" />
+          <div className="relative bg-card border border-border rounded-xl w-full max-w-sm shadow-2xl p-6 animate-fade-in">
+            <div className="flex items-start gap-3 mb-5">
+              <div className="w-9 h-9 rounded-lg bg-red-400/10 border border-red-400/20 flex items-center justify-center flex-shrink-0">
+                <Icon name="Trash2" size={16} className="text-red-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Удалить пользователя?</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {users.find(u => u.id === deleteConfirm)?.name} — это действие нельзя отменить.
+                </p>
+              </div>
             </div>
-            <h3 className="text-base font-semibold mb-2">Удалить пользователя?</h3>
-            <p className="text-sm text-muted-foreground mb-5">Это действие нельзя отменить.</p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteConfirm(null)} className="flex-1 text-sm py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
-                Отмена
-              </button>
-              <button onClick={() => handleDelete(deleteConfirm)} className="flex-1 text-sm py-2 rounded-lg bg-red-400 text-white font-medium hover:bg-red-500 transition-colors">
-                Удалить
+              <button onClick={() => setDeleteConfirm(null)} className="flex-1 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">Отмена</button>
+              <button onClick={() => handleDeleteUser(deleteConfirm)} className="flex-1 text-sm px-4 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600 transition-colors">Удалить</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== МОДАЛКА: Удаление предписания ===== */}
+      {pDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPDeleteConfirm(null)} />
+          <div className="relative bg-card border border-border rounded-xl w-full max-w-sm shadow-2xl p-6 animate-fade-in">
+            <div className="flex items-start gap-3 mb-5">
+              <div className="w-9 h-9 rounded-lg bg-red-400/10 border border-red-400/20 flex items-center justify-center flex-shrink-0">
+                <Icon name="Trash2" size={16} className="text-red-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Удалить предписание?</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {prescriptions.find(p => p.id === pDeleteConfirm)?.number} — все замечания и комментарии будут удалены безвозвратно.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setPDeleteConfirm(null)} className="flex-1 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">Отмена</button>
+              <button onClick={() => handleDeletePrescription(pDeleteConfirm)} disabled={pDeleting} className="flex-1 text-sm px-4 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600 disabled:opacity-50 transition-colors">
+                {pDeleting ? "Удаление..." : "Удалить"}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* ===== МОДАЛКА: Редактирование предписания ===== */}
+      {editPrescription && (
+        <PrescriptionEditModal
+          prescription={editPrescription}
+          onClose={() => setEditPrescription(null)}
+          onSave={handleSavePrescription}
+        />
+      )}
     </div>
   );
 }
 
-function FormField({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="text-xs text-muted-foreground font-medium">{label}</label>
-      {children}
-    </div>
-  );
-}
+// --- Модалка редактирования предписания ---
+function PrescriptionEditModal({ prescription: initial, onClose, onSave }: {
+  prescription: Prescription;
+  onClose: () => void;
+  onSave: (p: Prescription) => Promise<void>;
+}) {
+  const [p, setP] = useState<Prescription>({ ...initial, remarks: initial.remarks.map(r => ({ ...r })) });
+  const [saving, setSaving] = useState(false);
 
-function FormInput({ value, onChange, placeholder, type = "text" }: { value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
+  const setField = (key: keyof Omit<Prescription, "remarks" | "comments">, val: string) =>
+    setP(prev => ({ ...prev, [key]: val }));
+
+  const setRemark = (i: number, key: keyof Remark, val: string) =>
+    setP(prev => ({ ...prev, remarks: prev.remarks.map((r, idx) => idx === i ? { ...r, [key]: val } : r) }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave(p);
+    setSaving(false);
+  };
+
+  const inp = "w-full bg-secondary/40 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50";
+  const lbl = "text-xs font-medium text-muted-foreground";
+
   return (
-    <input
-      type={type}
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors"
-    />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] animate-fade-in">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+          <h2 className="text-base font-semibold">Редактирование предписания {p.number}</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors"><Icon name="X" size={18} /></button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+
+          {/* Основные поля */}
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Основные сведения</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5"><label className={lbl}>Объект</label><input value={p.object} onChange={e => setField("object", e.target.value)} className={inp} /></div>
+              <div className="space-y-1.5"><label className={lbl}>Подрядчик</label><input value={p.contractor} onChange={e => setField("contractor", e.target.value)} className={inp} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5"><label className={lbl}>Проверку провёл</label><input value={p.inspector} onChange={e => setField("inspector", e.target.value)} className={inp} /></div>
+              <div className="space-y-1.5"><label className={lbl}>В присутствии</label><input value={p.representative} onChange={e => setField("representative", e.target.value)} className={inp} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5"><label className={lbl}>Email для ответа</label><input value={p.replyEmail} onChange={e => setField("replyEmail", e.target.value)} className={inp} /></div>
+              <div className="space-y-1.5"><label className={lbl}>Срок отчёта</label><input value={p.reportDeadline} onChange={e => setField("reportDeadline", e.target.value)} className={inp} placeholder="дд.мм.гггг" /></div>
+            </div>
+          </div>
+
+          {/* Замечания */}
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Замечания ({p.remarks.length})</p>
+            {p.remarks.map((r, i) => (
+              <div key={r.id} className="border border-border rounded-xl p-4 space-y-3 bg-secondary/10">
+                <p className="text-xs font-semibold text-primary">Замечание #{i + 1}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5"><label className={lbl}>Место нарушения</label><input value={r.place} onChange={e => setRemark(i, "place", e.target.value)} className={inp} /></div>
+                  <div className="space-y-1.5"><label className={lbl}>Срок устранения</label><input value={r.deadline} onChange={e => setRemark(i, "deadline", e.target.value)} className={inp} placeholder="дд.мм.гггг" /></div>
+                </div>
+                <div className="space-y-1.5"><label className={lbl}>Описание нарушения</label><textarea value={r.description} onChange={e => setRemark(i, "description", e.target.value)} className={inp + " resize-none"} rows={2} /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5"><label className={lbl}>НПА/ЛНА</label><input value={r.normRef} onChange={e => setRemark(i, "normRef", e.target.value)} className={inp} /></div>
+                  <div className="space-y-1.5">
+                    <label className={lbl}>Статус</label>
+                    <select value={r.status} onChange={e => setRemark(i, "status", e.target.value)} className={inp}>
+                      {(["Черновик","Выдано","Устранено","Просрочено"] as Status[]).map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border flex-shrink-0">
+          <button onClick={onClose} className="text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">Отмена</button>
+          <button onClick={handleSave} disabled={saving} className="text-sm px-5 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
+            {saving ? "Сохранение..." : "Сохранить изменения"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
