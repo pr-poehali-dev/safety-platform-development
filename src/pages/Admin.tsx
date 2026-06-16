@@ -8,6 +8,59 @@ interface Remark { id: string; place: string; description: string; normRef: stri
 interface Prescription { id: string; number: string; date: string; object: string; contractor: string; inspector: string; representative: string; responsible: string; replyEmail: string; reportDeadline: string; remarks: Remark[]; comments: unknown[]; }
 
 const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
+const TEMPLATES_API = PRESCRIPTIONS_API + "/templates";
+
+// --- Тип шаблона ---
+interface TemplateColumn { key: string; label: string; width: number | null; enabled: boolean; }
+interface Template {
+  id: string;
+  name: string;
+  title: string;
+  subtitle: string;
+  companyName: string;
+  tableColumns: TemplateColumn[];
+  blockObjectLabel: string;
+  blockContractorLabel: string;
+  blockInspectorLabel: string;
+  blockRepresentativeLabel: string;
+  blockViolationsTitle: string;
+  blockCopiesText: string;
+  blockReportText: string;
+  fontSize: number;
+  fontFamily: string;
+  marginTop: number;
+  marginRight: number;
+  marginBottom: number;
+  marginLeft: number;
+  sigIssuerLabel: string;
+  sigReceiverLabel: string;
+  isDefault: boolean;
+}
+
+const DEFAULT_TEMPLATE: Omit<Template, "id" | "name" | "isDefault"> = {
+  title: "АКТ-ПРЕДПИСАНИЕ № {{number}}",
+  subtitle: "о нарушении требований охраны труда, пожарной, промышленной безопасности и экологии",
+  companyName: "СБД",
+  tableColumns: [
+    { key: "num",         label: "№ п/п",                                              width: 28,   enabled: true },
+    { key: "place",       label: "Место нарушения",                                    width: 70,   enabled: true },
+    { key: "description", label: "Описание нарушения / Фото нарушения (при наличии)", width: null, enabled: true },
+    { key: "normRef",     label: "Нарушен пункт НПА/ЛНА",                             width: 160,  enabled: true },
+    { key: "deadline",    label: "Срок устранения",                                    width: 90,   enabled: true },
+  ],
+  blockObjectLabel: "Проверяемый объект:",
+  blockContractorLabel: "Работы проводит подрядная организация:",
+  blockInspectorLabel: "Проверка проведена",
+  blockRepresentativeLabel: "в присутствии представителя подрядной организации",
+  blockViolationsTitle: "В ходе проверки выявлены следующие нарушения:",
+  blockCopiesText: "Акт составлен в 2-х экземплярах. 1 экз. Акта остается у Заказчика ООО «{{companyName}}», 2-й экземпляр Акта передается представителю {{contractor}}. Копия Акта направляется в адрес подрядной организации {{contractor}} по электронной почте.",
+  blockReportText: "Отчет об устранении нарушений по данному Акту, направить в ООО «{{companyName}}» по электронной почте {{replyEmail}} не позднее {{reportDeadline}}.",
+  fontSize: 11,
+  fontFamily: "Times New Roman",
+  marginTop: 15, marginRight: 15, marginBottom: 15, marginLeft: 20,
+  sigIssuerLabel: "Выдал:",
+  sigReceiverLabel: "С Актом ознакомлен, согласен и принял к исполнению:",
+};
 
 const STATUS_STYLE: Record<Status, string> = {
   "Черновик":   "text-muted-foreground bg-muted border-border",
@@ -62,7 +115,13 @@ function FormInput({ value, onChange, placeholder, type = "text" }: { value: str
 }
 
 export default function Admin({ currentUser, users, onUsersChange, onLogout }: AdminProps) {
-  const [tab, setTab] = useState<"users" | "prescriptions">("users");
+  const [tab, setTab] = useState<"users" | "prescriptions" | "templates">("users");
+
+  // --- Templates state ---
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [tLoading, setTLoading] = useState(false);
+  const [editTemplate, setEditTemplate] = useState<Template | null>(null);
+  const [tDeleteConfirm, setTDeleteConfirm] = useState<string | null>(null);
 
   // --- Users state ---
   const [showForm, setShowForm] = useState(false);
@@ -88,7 +147,43 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
       setPLoading(true);
       fetch(PRESCRIPTIONS_API).then(r => r.json()).then(setPrescriptions).finally(() => setPLoading(false));
     }
+    if (tab === "templates" && templates.length === 0) {
+      setTLoading(true);
+      fetch(TEMPLATES_API).then(r => r.json()).then(setTemplates).finally(() => setTLoading(false));
+    }
   }, [tab]);
+
+  // --- Templates helpers ---
+  const handleSaveTemplate = async (t: Template) => {
+    const isNew = !templates.find(x => x.id === t.id);
+    await fetch(TEMPLATES_API, {
+      method: isNew ? "POST" : "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(t),
+    });
+    if (isNew) {
+      setTemplates(prev => [...prev, t]);
+    } else {
+      setTemplates(prev => prev.map(x => x.id === t.id ? t : x));
+    }
+    setEditTemplate(null);
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    await fetch(TEMPLATES_API, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    setTemplates(prev => prev.filter(t => t.id !== id));
+    setTDeleteConfirm(null);
+  };
+
+  const createNewTemplate = () => {
+    const t: Template = {
+      ...DEFAULT_TEMPLATE,
+      id: Date.now().toString(),
+      name: "Новый шаблон",
+      isDefault: false,
+    };
+    setEditTemplate(t);
+  };
 
   // --- Users helpers ---
   const filteredUsers = roleFilter ? users.filter(u => u.role === roleFilter) : users;
@@ -197,6 +292,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
           {([
             { key: "users", label: "Управление пользователями", icon: "Users" },
             { key: "prescriptions", label: "Управление предписаниями", icon: "ClipboardList" },
+            { key: "templates", label: "Управление шаблонами", icon: "FileText" },
           ] as const).map(t => (
             <button
               key={t.key}
@@ -385,7 +481,94 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
             </div>
           </>
         )}
+
+        {/* ===== РАЗДЕЛ: ШАБЛОНЫ ===== */}
+        {tab === "templates" && (
+          <>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-xl font-semibold">Управление шаблонами</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">Конструктор бланков актов-предписаний</p>
+              </div>
+              <button onClick={createNewTemplate} className="flex items-center gap-2 bg-primary text-primary-foreground text-sm px-4 py-2.5 rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                <Icon name="Plus" size={15} />
+                Создать шаблон
+              </button>
+            </div>
+
+            {tLoading ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <Icon name="Loader" size={28} className="text-primary animate-spin mb-3" />
+                <p className="text-sm text-muted-foreground">Загрузка шаблонов...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {templates.map(t => (
+                  <div key={t.id} className="bg-card border border-border rounded-xl p-5 space-y-3 hover:border-primary/40 transition-colors">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                          <Icon name="FileText" size={15} className="text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">{t.name}</p>
+                          {t.isDefault && <span className="text-[10px] text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-medium">По умолчанию</span>}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button onClick={() => setEditTemplate(t)} className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors" title="Редактировать">
+                          <Icon name="Pencil" size={13} />
+                        </button>
+                        {!t.isDefault && (
+                          <button onClick={() => setTDeleteConfirm(t.id)} className="p-1.5 rounded text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-colors" title="Удалить">
+                            <Icon name="Trash2" size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground space-y-1 border-t border-border pt-3">
+                      <p><span className="text-foreground/60">Шрифт:</span> {t.fontFamily}, {t.fontSize}pt</p>
+                      <p><span className="text-foreground/60">Поля:</span> {t.marginTop}/{t.marginRight}/{t.marginBottom}/{t.marginLeft} мм</p>
+                      <p><span className="text-foreground/60">Колонки таблицы:</span> {t.tableColumns.filter(c => c.enabled).length} из {t.tableColumns.length}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </main>
+
+      {/* ===== МОДАЛКА: Удаление шаблона ===== */}
+      {tDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setTDeleteConfirm(null)} />
+          <div className="relative bg-card border border-border rounded-xl w-full max-w-sm shadow-2xl p-6 animate-fade-in">
+            <div className="flex items-start gap-3 mb-5">
+              <div className="w-9 h-9 rounded-lg bg-red-400/10 border border-red-400/20 flex items-center justify-center flex-shrink-0">
+                <Icon name="Trash2" size={16} className="text-red-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Удалить шаблон?</p>
+                <p className="text-xs text-muted-foreground mt-1">{templates.find(t => t.id === tDeleteConfirm)?.name} — действие нельзя отменить.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setTDeleteConfirm(null)} className="flex-1 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">Отмена</button>
+              <button onClick={() => handleDeleteTemplate(tDeleteConfirm)} className="flex-1 text-sm px-4 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600 transition-colors">Удалить</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== МОДАЛКА: Конструктор шаблона ===== */}
+      {editTemplate && (
+        <TemplateEditor
+          template={editTemplate}
+          onClose={() => setEditTemplate(null)}
+          onSave={handleSaveTemplate}
+        />
+      )}
 
       {/* ===== МОДАЛКА: Форма пользователя ===== */}
       {showForm && (
@@ -590,6 +773,241 @@ function PrescriptionEditModal({ prescription: initial, onClose, onSave }: {
           <button onClick={handleSave} disabled={saving} className="text-sm px-5 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
             {saving ? "Сохранение..." : "Сохранить изменения"}
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Конструктор шаблона ---
+function TemplateEditor({ template: initial, onClose, onSave }: {
+  template: Template;
+  onClose: () => void;
+  onSave: (t: Template) => Promise<void>;
+}) {
+  const [t, setT] = useState<Template>({ ...initial, tableColumns: initial.tableColumns.map(c => ({ ...c })) });
+  const [saving, setSaving] = useState(false);
+  const [activeSection, setActiveSection] = useState<"header" | "labels" | "table" | "texts" | "layout" | "preview">("header");
+
+  const set = <K extends keyof Template>(key: K, val: Template[K]) => setT(prev => ({ ...prev, [key]: val }));
+  const inp = "w-full bg-secondary/40 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50";
+  const lbl = "text-xs font-medium text-muted-foreground block mb-1.5";
+  const numInp = "w-20 bg-secondary/40 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50";
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave(t);
+    setSaving(false);
+  };
+
+  const toggleColumn = (key: string) =>
+    set("tableColumns", t.tableColumns.map(c => c.key === key ? { ...c, enabled: !c.enabled } : c));
+
+  const setColumnLabel = (key: string, label: string) =>
+    set("tableColumns", t.tableColumns.map(c => c.key === key ? { ...c, label } : c));
+
+  const setColumnWidth = (key: string, width: string) =>
+    set("tableColumns", t.tableColumns.map(c => c.key === key ? { ...c, width: width ? Number(width) : null } : c));
+
+  const SECTIONS = [
+    { key: "header",  label: "Заголовок",    icon: "Heading" },
+    { key: "labels",  label: "Реквизиты",    icon: "AlignLeft" },
+    { key: "table",   label: "Таблица",      icon: "Table" },
+    { key: "texts",   label: "Тексты",       icon: "FileText" },
+    { key: "layout",  label: "Оформление",   icon: "Sliders" },
+    { key: "preview", label: "Предпросмотр", icon: "Eye" },
+  ] as const;
+
+  // Пример данных для предпросмотра
+  const previewHtml = `
+    <div style="font-family:${t.fontFamily},serif;font-size:${t.fontSize}pt;padding:${t.marginTop}mm ${t.marginRight}mm ${t.marginBottom}mm ${t.marginLeft}mm;color:#000;background:#fff;line-height:1.5;">
+      <div style="text-align:center;margin-bottom:8px;">
+        <div style="font-weight:bold;text-transform:uppercase;font-size:13pt;">${t.title.replace("{{number}}", "МАН-2026-01")}</div>
+        <div style="font-weight:bold;font-size:10pt;margin-top:3px;">${t.subtitle}</div>
+      </div>
+      <div style="text-align:right;font-size:10pt;margin-bottom:10px;">от 16.06.2026</div>
+      <div style="font-size:10.5pt;line-height:1.7;margin-bottom:10px;">
+        <p><strong>${t.blockObjectLabel}</strong> «<u>Цех №3</u>».</p>
+        <p><strong>${t.blockContractorLabel}</strong> «<u>ООО «СтройПодряд»</u>»</p>
+        <p>${t.blockInspectorLabel} <u>Алексеев С.Н.</u> ${t.blockRepresentativeLabel} <u>Козлов А.В.</u></p>
+      </div>
+      <p style="font-weight:bold;margin-bottom:6px;">${t.blockViolationsTitle}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:9.5pt;margin-bottom:12px;">
+        <thead><tr>${t.tableColumns.filter(c=>c.enabled).map(c=>`<th style="border:1px solid #000;padding:4px 6px;font-weight:bold;text-align:center;${c.width?`width:${c.width}px`:''}">${c.label}</th>`).join("")}</tr></thead>
+        <tbody><tr>${t.tableColumns.filter(c=>c.enabled).map((_,i)=>`<td style="border:1px solid #000;padding:4px 6px;">${i===0?'1':i===1?'Выход №2':i===2?'Захламление прохода':i===3?'ППР п.24':'14.06.2026'}</td>`).join("")}</tr></tbody>
+      </table>
+      <div style="font-size:10pt;line-height:1.6;margin-bottom:12px;">
+        <p>${t.blockCopiesText.replace(/{{companyName}}/g, t.companyName).replace(/{{contractor}}/g,"ООО «СтройПодряд»")}</p>
+        <p style="margin-top:4px;">${t.blockReportText.replace(/{{companyName}}/g,t.companyName).replace("{{replyEmail}}","ot@sbd.ru").replace("{{reportDeadline}}","30.06.2026")}</p>
+      </div>
+      <div style="margin-top:10px;">
+        <p><strong>${t.sigIssuerLabel}</strong> _____________ (________________) _____________</p>
+        <p style="margin-top:16px;">${t.sigReceiverLabel}: _____________ _____________ (________________) _____________</p>
+      </div>
+    </div>
+  `;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-card border border-border rounded-xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[92vh] animate-fade-in">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <Icon name="FileText" size={16} className="text-primary" />
+            <input
+              value={t.name}
+              onChange={e => set("name", e.target.value)}
+              className="text-base font-semibold bg-transparent border-none outline-none focus:ring-0 text-foreground w-64"
+              placeholder="Название шаблона"
+            />
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+            <Icon name="X" size={18} />
+          </button>
+        </div>
+
+        {/* Навигация по секциям */}
+        <div className="flex gap-0 border-b border-border flex-shrink-0 overflow-x-auto">
+          {SECTIONS.map(s => (
+            <button
+              key={s.key}
+              onClick={() => setActiveSection(s.key)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${activeSection === s.key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            >
+              <Icon name={s.icon} size={13} />
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Содержимое секции */}
+        <div className="overflow-y-auto flex-1 px-6 py-5">
+
+          {/* ЗАГОЛОВОК */}
+          {activeSection === "header" && (
+            <div className="space-y-4">
+              <p className="text-xs text-muted-foreground mb-3">Используйте <code className="bg-secondary px-1 rounded">{"{{number}}"}</code> для подстановки номера предписания.</p>
+              <div><label className={lbl}>Заголовок документа</label><input value={t.title} onChange={e => set("title", e.target.value)} className={inp} /></div>
+              <div><label className={lbl}>Подзаголовок</label><input value={t.subtitle} onChange={e => set("subtitle", e.target.value)} className={inp} /></div>
+              <div><label className={lbl}>Название организации (для текстов)</label><input value={t.companyName} onChange={e => set("companyName", e.target.value)} className={inp} placeholder="СБД" /></div>
+            </div>
+          )}
+
+          {/* РЕКВИЗИТЫ */}
+          {activeSection === "labels" && (
+            <div className="space-y-4">
+              <div><label className={lbl}>Метка «Проверяемый объект»</label><input value={t.blockObjectLabel} onChange={e => set("blockObjectLabel", e.target.value)} className={inp} /></div>
+              <div><label className={lbl}>Метка «Подрядная организация»</label><input value={t.blockContractorLabel} onChange={e => set("blockContractorLabel", e.target.value)} className={inp} /></div>
+              <div><label className={lbl}>Метка «Проверка проведена»</label><input value={t.blockInspectorLabel} onChange={e => set("blockInspectorLabel", e.target.value)} className={inp} /></div>
+              <div><label className={lbl}>Метка «В присутствии»</label><input value={t.blockRepresentativeLabel} onChange={e => set("blockRepresentativeLabel", e.target.value)} className={inp} /></div>
+              <div><label className={lbl}>Заголовок таблицы нарушений</label><input value={t.blockViolationsTitle} onChange={e => set("blockViolationsTitle", e.target.value)} className={inp} /></div>
+              <div><label className={lbl}>Метка «Выдал»</label><input value={t.sigIssuerLabel} onChange={e => set("sigIssuerLabel", e.target.value)} className={inp} /></div>
+              <div><label className={lbl}>Метка «Ознакомлен»</label><input value={t.sigReceiverLabel} onChange={e => set("sigReceiverLabel", e.target.value)} className={inp} /></div>
+            </div>
+          )}
+
+          {/* ТАБЛИЦА */}
+          {activeSection === "table" && (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">Включайте/выключайте колонки и редактируйте их заголовки и ширину (в пикселях, оставьте пустым для авто).</p>
+              {t.tableColumns.map(col => (
+                <div key={col.key} className={`border rounded-xl p-4 space-y-3 transition-colors ${col.enabled ? "border-border bg-secondary/10" : "border-border/40 bg-muted/20 opacity-50"}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-primary uppercase tracking-wider">{col.key}</span>
+                    <button
+                      onClick={() => toggleColumn(col.key)}
+                      className={`text-xs px-3 py-1 rounded-lg border font-medium transition-colors ${col.enabled ? "bg-primary/10 border-primary/30 text-primary" : "border-border text-muted-foreground"}`}
+                    >
+                      {col.enabled ? "Включена" : "Выключена"}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="col-span-2"><label className={lbl}>Заголовок колонки</label><input value={col.label} onChange={e => setColumnLabel(col.key, e.target.value)} className={inp} disabled={!col.enabled} /></div>
+                    <div><label className={lbl}>Ширина (px)</label><input type="number" value={col.width ?? ""} onChange={e => setColumnWidth(col.key, e.target.value)} placeholder="авто" className={numInp} disabled={!col.enabled} /></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ТЕКСТЫ */}
+          {activeSection === "texts" && (
+            <div className="space-y-4">
+              <p className="text-xs text-muted-foreground">Переменные: <code className="bg-secondary px-1 rounded">{"{{companyName}}"}</code> <code className="bg-secondary px-1 rounded">{"{{contractor}}"}</code> <code className="bg-secondary px-1 rounded">{"{{replyEmail}}"}</code> <code className="bg-secondary px-1 rounded">{"{{reportDeadline}}"}</code></p>
+              <div>
+                <label className={lbl}>Текст об экземплярах акта</label>
+                <textarea value={t.blockCopiesText} onChange={e => set("blockCopiesText", e.target.value)} className={inp + " resize-none"} rows={4} />
+              </div>
+              <div>
+                <label className={lbl}>Текст об отчёте об устранении</label>
+                <textarea value={t.blockReportText} onChange={e => set("blockReportText", e.target.value)} className={inp + " resize-none"} rows={3} />
+              </div>
+            </div>
+          )}
+
+          {/* ОФОРМЛЕНИЕ */}
+          {activeSection === "layout" && (
+            <div className="space-y-5">
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Шрифт</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={lbl}>Семейство шрифта</label>
+                    <select value={t.fontFamily} onChange={e => set("fontFamily", e.target.value)} className={inp}>
+                      <option>Times New Roman</option>
+                      <option>Arial</option>
+                      <option>Calibri</option>
+                      <option>Georgia</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={lbl}>Размер (pt)</label>
+                    <input type="number" min={8} max={16} value={t.fontSize} onChange={e => set("fontSize", Number(e.target.value))} className={numInp} />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Поля документа (мм)</p>
+                <div className="grid grid-cols-4 gap-3">
+                  {(["marginTop","marginRight","marginBottom","marginLeft"] as const).map((k, i) => (
+                    <div key={k}>
+                      <label className={lbl}>{["Верхнее","Правое","Нижнее","Левое"][i]}</label>
+                      <input type="number" min={5} max={40} value={t[k]} onChange={e => set(k, Number(e.target.value))} className={numInp} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ПРЕДПРОСМОТР */}
+          {activeSection === "preview" && (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">Предпросмотр на тестовых данных. Масштаб уменьшен для отображения на экране.</p>
+              <div className="border border-border rounded-xl overflow-hidden bg-white">
+                <div
+                  style={{ transform: "scale(0.72)", transformOrigin: "top left", width: "139%", pointerEvents: "none" }}
+                  dangerouslySetInnerHTML={{ __html: previewHtml }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-border flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <input type="checkbox" id="isDefault" checked={t.isDefault} onChange={e => set("isDefault", e.target.checked)} className="rounded" />
+            <label htmlFor="isDefault" className="text-xs text-muted-foreground cursor-pointer">Использовать как шаблон по умолчанию</label>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">Отмена</button>
+            <button onClick={handleSave} disabled={saving} className="text-sm px-5 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
+              {saving ? "Сохранение..." : "Сохранить шаблон"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
