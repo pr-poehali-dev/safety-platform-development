@@ -6,57 +6,66 @@ import { ru } from "date-fns/locale";
 import { AppUser, ROLE_LABELS, ROLE_COLORS } from "@/lib/auth";
 import { printPrescription } from "@/lib/printPrescription";
 
-// --- Склонение ФИО в творительный падеж ---
+// --- Склонение слова в творительный падеж ---
+function declineWordInstr(word: string, isMale: boolean): string {
+  const w = word.toLowerCase();
+  if (!isMale) {
+    if (w.endsWith("ья")) return word.slice(0, -2) + "ьей";
+    if (w.endsWith("ия")) return word.slice(0, -2) + "ией";
+    if (w.endsWith("а"))  return word.slice(0, -1) + "ой";
+    if (w.endsWith("я"))  return word.slice(0, -1) + "ей";
+    return word;
+  }
+  if (w.endsWith("ий")) return word.slice(0, -2) + "им";
+  if (w.endsWith("ой")) return word.slice(0, -2) + "ым";
+  if (w.endsWith("ый")) return word.slice(0, -2) + "ым";
+  if (w.endsWith("ый")) return word.slice(0, -2) + "ым";
+  if (w.endsWith("й"))  return word.slice(0, -1) + "ем";
+  if (w.endsWith("ья")) return word.slice(0, -2) + "ьей";
+  if (w.endsWith("ия")) return word.slice(0, -2) + "ием";
+  if (w.endsWith("ь"))  return word.slice(0, -1) + "ем";
+  if (/[жшщч]$/.test(w)) return word + "ем";
+  if (/[оеё]в$/.test(w)) return word + "ым";
+  if (/[иы]н$/.test(w)) return word + "ым";
+  const consonants = "бвгджзклмнпрстфхцчшщ";
+  if (consonants.includes(w.slice(-1))) return word + "ом";
+  return word;
+}
+
+// Слова-исключения в должностях (предлоги/союзы — не склоняются)
+const STOP_WORDS = new Set(["и", "или", "по", "на", "в", "за", "с", "от", "для", "при", "к", "а", "но"]);
+
+// Склонение произвольной фразы-должности (каждое слово отдельно)
+function declinePosition(position: string, isMale: boolean): string {
+  return position.split(/\s+/).map(word => {
+    const clean = word.toLowerCase().replace(/[^а-яё]/g, "");
+    if (!clean || STOP_WORDS.has(clean)) return word;
+    return declineWordInstr(word, isMale);
+  }).join(" ");
+}
+
+// Склонение ФИО в творительный падеж
 function toInstrumental(fullName: string): string {
   const parts = fullName.trim().split(/\s+/);
   if (parts.length < 2) return fullName;
-
-  const declineWord = (word: string, isMale: boolean): string => {
-    const w = word.toLowerCase();
-
-    if (!isMale) {
-      // Женские: -ья → -ьей, -ия → -ией, на гласную -а/-я → -ой/-ей
-      if (w.endsWith("ья")) return word.slice(0, -2) + "ьей";
-      if (w.endsWith("ия")) return word.slice(0, -2) + "ией";
-      if (w.endsWith("а"))  return word.slice(0, -1) + "ой";
-      if (w.endsWith("я"))  return word.slice(0, -1) + "ей";
-      // Женские фамилии на согласную не склоняются
-      return word;
-    }
-
-    // Мужские
-    // -ий → -им (Лаврентий → Лаврентием, Вячеслав → ...)
-    if (w.endsWith("ий")) return word.slice(0, -2) + "им";
-    // -й → -ем
-    if (w.endsWith("й"))  return word.slice(0, -1) + "ем";
-    // -ья → -ьей
-    if (w.endsWith("ья")) return word.slice(0, -2) + "ьей";
-    // -ия → -ием
-    if (w.endsWith("ия")) return word.slice(0, -2) + "ием";
-    // -ь → -ем
-    if (w.endsWith("ь"))  return word.slice(0, -1) + "ем";
-    // Шипящие + ц → -ем
-    if (/[жшщч]$/.test(w)) return word + "ем";
-    // -ов/-ев/-ёв/-ин/-ын → -ым (Лаврентьев, Козлов, Путин)
-    if (/[оеё]в$/.test(w)) return word + "ым";
-    if (/[иы]н$/.test(w)) return word + "ым";
-    // Прочие согласные → -ом (Петрос, Симон и т.д.)
-    const consonants = "бвгджзклмнпрстфхцчшщ";
-    if (consonants.includes(w.slice(-1))) return word + "ом";
-    return word;
-  };
-
   const [last, first, middle] = parts;
-  // Определяем пол по отчеству (оканчивается на -вна/-чна → женский)
   const isMale = middle
     ? !(/вна$|чна$/i.test(middle))
     : !(/вна$|чна$/i.test(first ?? ""));
-
   return [
-    declineWord(last, isMale),
-    first  ? declineWord(first,  isMale) : "",
-    middle ? declineWord(middle, isMale) : "",
+    declineWordInstr(last, isMale),
+    first  ? declineWordInstr(first,  isMale) : "",
+    middle ? declineWordInstr(middle, isMale) : "",
   ].filter(Boolean).join(" ");
+}
+
+// Определение пола по ФИО (для склонения должности)
+function detectGenderFromName(fullName: string): boolean {
+  const parts = fullName.trim().split(/\s+/);
+  const middle = parts[2];
+  const first = parts[1];
+  if (middle) return !(/вна$|чна$/i.test(middle));
+  return !(/вна$|чна$/i.test(first ?? ""));
 }
 
 // --- Типы ---
@@ -326,8 +335,10 @@ function RemarkRow({
 }
 
 function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave: (p: Prescription) => Promise<void>; user: AppUser }) {
+  const isMale = user.name ? detectGenderFromName(user.name) : true;
+  const inspectorPosition = user.position ? declinePosition(user.position, isMale) : "";
   const inspectorName = user.name ? toInstrumental(user.name) : "";
-  const inspectorLabel = [user.position, inspectorName].filter(Boolean).join(", ");
+  const inspectorLabel = [inspectorPosition, inspectorName].filter(Boolean).join(" ");
 
   const [form, setForm] = useState<FormState>({
     object: "",
