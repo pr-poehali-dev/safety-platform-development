@@ -305,10 +305,9 @@ function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave: (p: P
   const handleSave = async () => {
     if (!isValid) return;
     const now = new Date();
-    const num = "П-" + now.getFullYear() + "-" + String(Math.floor(Math.random() * 900) + 100);
     await onSave({
       id: Date.now().toString(),
-      number: num,
+      number: "",
       date: now.toLocaleDateString("ru-RU"),
       object: form.object,
       contractor: form.contractor,
@@ -763,8 +762,10 @@ export default function Index({ user, onLogout }: IndexProps) {
   });
 
   const addPrescription = async (p: Prescription) => {
-    await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) });
-    setPrescriptions(prev => [p, ...prev]);
+    const res = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) });
+    const data = await res.json();
+    const saved = { ...p, number: data.number ?? p.number };
+    setPrescriptions(prev => [saved, ...prev]);
   };
 
   const updatePrescription = async (updated: Prescription) => {

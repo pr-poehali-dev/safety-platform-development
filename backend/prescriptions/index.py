@@ -81,12 +81,22 @@ def handler(event: dict, context) -> dict:
 
         # POST — создать предписание
         if method == "POST":
+            from datetime import datetime
             p = body
             pid = p["id"]
+            # Генерируем уникальный номер: МАН-YYYY-NN (сквозная нумерация с начала года)
+            year = datetime.now().year
+            cur.execute(
+                f"SELECT COUNT(*) FROM {SCHEMA}.prescriptions "
+                f"WHERE date_part('year', created_at) = %s",
+                (year,)
+            )
+            count = cur.fetchone()[0]
+            number = f"МАН-{year}-{str(count + 1).zfill(2)}"
             cur.execute(
                 f"INSERT INTO {SCHEMA}.prescriptions (id, number, date, object, contractor, inspector, representative, responsible, reply_email, report_deadline, comments) "
                 f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                (pid, p["number"], p["date"], p["object"], p["contractor"],
+                (pid, number, p["date"], p["object"], p["contractor"],
                  p.get("inspector",""), p.get("representative",""), p.get("responsible",""),
                  p.get("replyEmail",""), p.get("reportDeadline",""), json.dumps(p.get("comments",[]), ensure_ascii=False))
             )
@@ -97,7 +107,7 @@ def handler(event: dict, context) -> dict:
                     (r["id"], pid, r.get("place",""), r["description"], r.get("normRef",""), r.get("deadline",""), r.get("status","Выдано"), i)
                 )
             conn.commit()
-            return ok({"ok": True})
+            return ok({"ok": True, "number": number})
 
         # PUT — обновить предписание
         if method == "PUT":
