@@ -35,6 +35,8 @@ interface Template {
   sigIssuerLabel: string;
   sigReceiverLabel: string;
   isDefault: boolean;
+  paperSize: "A4" | "A3";
+  orientation: "portrait" | "landscape";
 }
 
 const DEFAULT_TEMPLATE: Omit<Template, "id" | "name" | "isDefault"> = {
@@ -60,6 +62,8 @@ const DEFAULT_TEMPLATE: Omit<Template, "id" | "name" | "isDefault"> = {
   marginTop: 15, marginRight: 15, marginBottom: 15, marginLeft: 20,
   sigIssuerLabel: "Выдал:",
   sigReceiverLabel: "С Актом ознакомлен, согласен и принял к исполнению:",
+  paperSize: "A4",
+  orientation: "portrait",
 };
 
 const STATUS_STYLE: Record<Status, string> = {
@@ -779,234 +783,326 @@ function PrescriptionEditModal({ prescription: initial, onClose, onSave }: {
   );
 }
 
-// --- Конструктор шаблона ---
+// Размеры бумаги в мм
+const PAPER_SIZES = {
+  A4: { w: 210, h: 297 },
+  A3: { w: 297, h: 420 },
+};
+
+// --- Конструктор шаблона (WYSIWYG) ---
 function TemplateEditor({ template: initial, onClose, onSave }: {
   template: Template;
   onClose: () => void;
   onSave: (t: Template) => Promise<void>;
 }) {
-  const [t, setT] = useState<Template>({ ...initial, tableColumns: initial.tableColumns.map(c => ({ ...c })) });
+  const [t, setT] = useState<Template>({
+    paperSize: "A4", orientation: "portrait",
+    ...initial,
+    tableColumns: initial.tableColumns.map(c => ({ ...c })),
+  });
   const [saving, setSaving] = useState(false);
-  const [activeSection, setActiveSection] = useState<"header" | "labels" | "table" | "texts" | "layout" | "preview">("header");
+  const [activePanel, setActivePanel] = useState<"page" | "header" | "requisites" | "table" | "texts" | "signatures">("page");
 
   const set = <K extends keyof Template>(key: K, val: Template[K]) => setT(prev => ({ ...prev, [key]: val }));
-  const inp = "w-full bg-secondary/40 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50";
-  const lbl = "text-xs font-medium text-muted-foreground block mb-1.5";
-  const numInp = "w-20 bg-secondary/40 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50";
+  const inp = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50";
+  const lbl = "text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1";
 
-  const handleSave = async () => {
-    setSaving(true);
-    await onSave(t);
-    setSaving(false);
-  };
+  const handleSave = async () => { setSaving(true); await onSave(t); setSaving(false); };
 
   const toggleColumn = (key: string) =>
     set("tableColumns", t.tableColumns.map(c => c.key === key ? { ...c, enabled: !c.enabled } : c));
-
   const setColumnLabel = (key: string, label: string) =>
     set("tableColumns", t.tableColumns.map(c => c.key === key ? { ...c, label } : c));
-
   const setColumnWidth = (key: string, width: string) =>
     set("tableColumns", t.tableColumns.map(c => c.key === key ? { ...c, width: width ? Number(width) : null } : c));
 
-  const SECTIONS = [
-    { key: "header",  label: "Заголовок",    icon: "Heading" },
-    { key: "labels",  label: "Реквизиты",    icon: "AlignLeft" },
-    { key: "table",   label: "Таблица",      icon: "Table" },
-    { key: "texts",   label: "Тексты",       icon: "FileText" },
-    { key: "layout",  label: "Оформление",   icon: "Sliders" },
-    { key: "preview", label: "Предпросмотр", icon: "Eye" },
-  ] as const;
+  // Размеры листа в пикселях для превью (96dpi / 25.4 * mm)
+  const px = (mm: number) => Math.round(mm * 96 / 25.4);
+  const paperW = t.orientation === "portrait" ? PAPER_SIZES[t.paperSize].w : PAPER_SIZES[t.paperSize].h;
+  const paperH = t.orientation === "portrait" ? PAPER_SIZES[t.paperSize].h : PAPER_SIZES[t.paperSize].w;
+  const pageWpx = px(paperW);
+  const pageHpx = px(paperH);
 
-  // Пример данных для предпросмотра
-  const previewHtml = `
-    <div style="font-family:${t.fontFamily},serif;font-size:${t.fontSize}pt;padding:${t.marginTop}mm ${t.marginRight}mm ${t.marginBottom}mm ${t.marginLeft}mm;color:#000;background:#fff;line-height:1.5;">
-      <div style="text-align:center;margin-bottom:8px;">
-        <div style="font-weight:bold;text-transform:uppercase;font-size:13pt;">${t.title.replace("{{number}}", "МАН-2026-01")}</div>
+  // Масштаб: превью вписывается в контейнер ~680px шириной
+  const PREVIEW_CONTAINER = 580;
+  const scale = PREVIEW_CONTAINER / pageWpx;
+
+  // Пример данных для превью
+  const sampleData = {
+    number: "МАН-2026-01", date: "16.06.2026",
+    object: "Цех сборки №3", contractor: "ООО «СтройПодряд»",
+    inspector: "Алексеев Сергей Николаевич", representative: "Козлов А.В.",
+    replyEmail: "ot@sbd.ru", reportDeadline: "30.06.2026",
+  };
+
+  const tableRowsHtml = `
+    <tr>
+      ${t.tableColumns.filter(c => c.enabled).map((c, i) => `<td style="border:1px solid #000;padding:4px 6px;font-size:9pt;vertical-align:top;">${
+        c.key === "num" ? "1" : c.key === "place" ? "Выход №2" : c.key === "description" ? "Захламление прохода посторонними предметами" : c.key === "normRef" ? "ППР п.24" : "20.06.2026"
+      }</td>`).join("")}
+    </tr>
+    <tr>${t.tableColumns.filter(c => c.enabled).map(() => `<td style="border:1px solid #000;padding:16px 6px;">&nbsp;</td>`).join("")}</tr>
+  `;
+
+  const pageHtml = `
+    <div style="
+      font-family:'${t.fontFamily}',Times,serif;
+      font-size:${t.fontSize}pt;
+      color:#000;background:#fff;
+      width:${pageWpx}px;min-height:${pageHpx}px;
+      padding:${px(t.marginTop)}px ${px(t.marginRight)}px ${px(t.marginBottom)}px ${px(t.marginLeft)}px;
+      box-sizing:border-box;line-height:1.5;
+    ">
+      <div style="text-align:center;margin-bottom:6px;">
+        <div style="font-weight:bold;text-transform:uppercase;font-size:13pt;">${t.title.replace("{{number}}", sampleData.number)}</div>
         <div style="font-weight:bold;font-size:10pt;margin-top:3px;">${t.subtitle}</div>
       </div>
-      <div style="text-align:right;font-size:10pt;margin-bottom:10px;">от 16.06.2026</div>
+      <div style="text-align:right;font-size:10pt;margin-top:6px;margin-bottom:10px;">от ${sampleData.date}</div>
       <div style="font-size:10.5pt;line-height:1.7;margin-bottom:10px;">
-        <p><strong>${t.blockObjectLabel}</strong> «<u>Цех №3</u>».</p>
-        <p><strong>${t.blockContractorLabel}</strong> «<u>ООО «СтройПодряд»</u>»</p>
-        <p>${t.blockInspectorLabel} <u>Алексеев С.Н.</u> ${t.blockRepresentativeLabel} <u>Козлов А.В.</u></p>
+        <p><strong>${t.blockObjectLabel}</strong> «<span style="border-bottom:1px solid #000;padding:0 4px;">${sampleData.object}</span>».</p>
+        <p><strong>${t.blockContractorLabel}</strong> «<span style="border-bottom:1px solid #000;padding:0 4px;">${sampleData.contractor}</span>»</p>
+        <p>${t.blockInspectorLabel} <span style="border-bottom:1px solid #000;padding:0 4px;font-weight:bold;">${sampleData.inspector}</span>
+          ${t.blockRepresentativeLabel} <span style="border-bottom:1px solid #000;padding:0 4px;font-weight:bold;">${sampleData.representative}</span></p>
+        <div style="display:flex;gap:40px;font-size:8pt;color:#555;padding-left:120px;margin-top:1px;">
+          <span>(Должность, ФИО представителя СОТ)</span><span>(Наименование организации)</span>
+        </div>
       </div>
-      <p style="font-weight:bold;margin-bottom:6px;">${t.blockViolationsTitle}</p>
-      <table style="width:100%;border-collapse:collapse;font-size:9.5pt;margin-bottom:12px;">
-        <thead><tr>${t.tableColumns.filter(c=>c.enabled).map(c=>`<th style="border:1px solid #000;padding:4px 6px;font-weight:bold;text-align:center;${c.width?`width:${c.width}px`:''}">${c.label}</th>`).join("")}</tr></thead>
-        <tbody><tr>${t.tableColumns.filter(c=>c.enabled).map((_,i)=>`<td style="border:1px solid #000;padding:4px 6px;">${i===0?'1':i===1?'Выход №2':i===2?'Захламление прохода':i===3?'ППР п.24':'14.06.2026'}</td>`).join("")}</tr></tbody>
+      <p style="font-weight:bold;margin:10px 0 6px;">${t.blockViolationsTitle}</p>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
+        <thead><tr>${t.tableColumns.filter(c => c.enabled).map(c =>
+          `<th style="border:1px solid #000;padding:5px 6px;font-weight:bold;text-align:center;font-size:9.5pt;${c.width ? `width:${c.width}px` : ''}">${c.label}</th>`
+        ).join("")}</tr></thead>
+        <tbody>${tableRowsHtml}</tbody>
       </table>
-      <div style="font-size:10pt;line-height:1.6;margin-bottom:12px;">
-        <p>${t.blockCopiesText.replace(/{{companyName}}/g, t.companyName).replace(/{{contractor}}/g,"ООО «СтройПодряд»")}</p>
-        <p style="margin-top:4px;">${t.blockReportText.replace(/{{companyName}}/g,t.companyName).replace("{{replyEmail}}","ot@sbd.ru").replace("{{reportDeadline}}","30.06.2026")}</p>
+      <div style="display:flex;gap:20px;align-items:flex-end;font-size:10pt;margin-bottom:16px;">
+        <div style="flex:1;border-bottom:1px solid #000;min-height:18px;">&nbsp;</div>
+        <div style="min-width:60px;text-align:center;"><div style="border-bottom:1px solid #000;">&nbsp;</div><div style="font-size:7.5pt;color:#444;">подпись</div></div>
+        <div style="text-align:right;"><div style="border-bottom:1px solid #000;min-width:120px;">&nbsp;</div><div style="font-size:7.5pt;color:#444;">Фамилия И.О.</div></div>
       </div>
-      <div style="margin-top:10px;">
-        <p><strong>${t.sigIssuerLabel}</strong> _____________ (________________) _____________</p>
-        <p style="margin-top:16px;">${t.sigReceiverLabel}: _____________ _____________ (________________) _____________</p>
+      <div style="font-size:10pt;line-height:1.6;margin-bottom:14px;">
+        <p>${(t.blockCopiesText||'').replace(/{{companyName}}/g, t.companyName).replace(/{{contractor}}/g, sampleData.contractor)}</p>
+        <p style="margin-top:4px;">${(t.blockReportText||'').replace(/{{companyName}}/g, t.companyName).replace("{{replyEmail}}", sampleData.replyEmail).replace("{{reportDeadline}}", sampleData.reportDeadline)}</p>
+      </div>
+      <div style="margin-top:10px;font-size:10.5pt;">
+        <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:4px;">
+          <span style="font-weight:bold;white-space:nowrap;">${t.sigIssuerLabel}</span>
+          <div style="flex:1;border-bottom:1px solid #000;">&nbsp;</div>
+          <span>(</span><div style="flex:1;border-bottom:1px solid #000;">&nbsp;</div><span>)</span>
+          <div style="flex:1;border-bottom:1px solid #000;">&nbsp;</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-top:16px;">
+          <span style="font-size:10pt;min-width:130px;line-height:1.4;">${t.sigReceiverLabel}</span>
+          <div>
+            <div style="display:flex;align-items:flex-end;gap:8px;">
+              <div style="border-bottom:1px solid #000;min-width:100px;">&nbsp;</div>
+              <div style="border-bottom:1px solid #000;min-width:100px;">&nbsp;</div>
+              <span>(</span><div style="border-bottom:1px solid #000;min-width:120px;">&nbsp;</div><span>)</span>
+              <div style="border-bottom:1px solid #000;min-width:80px;">&nbsp;</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   `;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-card border border-border rounded-xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[92vh] animate-fade-in">
+  const PANELS = [
+    { key: "page",       label: "Страница",   icon: "FileText" },
+    { key: "header",     label: "Заголовок",  icon: "Heading" },
+    { key: "requisites", label: "Реквизиты",  icon: "AlignLeft" },
+    { key: "table",      label: "Таблица",    icon: "Table" },
+    { key: "texts",      label: "Тексты",     icon: "AlignJustify" },
+    { key: "signatures", label: "Подписи",    icon: "PenLine" },
+  ] as const;
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <Icon name="FileText" size={16} className="text-primary" />
-            <input
-              value={t.name}
-              onChange={e => set("name", e.target.value)}
-              className="text-base font-semibold bg-transparent border-none outline-none focus:ring-0 text-foreground w-64"
-              placeholder="Название шаблона"
-            />
-          </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
-            <Icon name="X" size={18} />
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-background" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
+
+      {/* Топ-бар */}
+      <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-card flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors p-1">
+            <Icon name="ArrowLeft" size={16} />
+          </button>
+          <Icon name="FileText" size={15} className="text-primary" />
+          <input
+            value={t.name}
+            onChange={e => set("name", e.target.value)}
+            className="text-sm font-semibold bg-transparent border-none outline-none text-foreground w-56"
+            placeholder="Название шаблона"
+          />
+          {t.isDefault && <span className="text-[10px] text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-medium">По умолчанию</span>}
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+            <input type="checkbox" checked={t.isDefault} onChange={e => set("isDefault", e.target.checked)} className="rounded" />
+            По умолчанию
+          </label>
+          <button onClick={onClose} className="text-sm px-4 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">Отмена</button>
+          <button onClick={handleSave} disabled={saving} className="text-sm px-5 py-1.5 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
+            {saving ? "Сохранение..." : "Сохранить"}
           </button>
         </div>
+      </div>
 
-        {/* Навигация по секциям */}
-        <div className="flex gap-0 border-b border-border flex-shrink-0 overflow-x-auto">
-          {SECTIONS.map(s => (
-            <button
-              key={s.key}
-              onClick={() => setActiveSection(s.key)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${activeSection === s.key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-            >
-              <Icon name={s.icon} size={13} />
-              {s.label}
-            </button>
-          ))}
-        </div>
+      {/* Основная область: левая панель + предпросмотр */}
+      <div className="flex flex-1 overflow-hidden">
 
-        {/* Содержимое секции */}
-        <div className="overflow-y-auto flex-1 px-6 py-5">
+        {/* Левая панель настроек */}
+        <div className="w-72 flex-shrink-0 border-r border-border flex flex-col bg-card">
+          {/* Табы панели */}
+          <div className="flex flex-wrap gap-0 border-b border-border px-2 pt-2">
+            {PANELS.map(p => (
+              <button
+                key={p.key}
+                onClick={() => setActivePanel(p.key)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium rounded-t transition-colors mb-[-1px] border-b-2 ${activePanel === p.key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                <Icon name={p.icon} size={11} />
+                {p.label}
+              </button>
+            ))}
+          </div>
 
-          {/* ЗАГОЛОВОК */}
-          {activeSection === "header" && (
-            <div className="space-y-4">
-              <p className="text-xs text-muted-foreground mb-3">Используйте <code className="bg-secondary px-1 rounded">{"{{number}}"}</code> для подстановки номера предписания.</p>
-              <div><label className={lbl}>Заголовок документа</label><input value={t.title} onChange={e => set("title", e.target.value)} className={inp} /></div>
-              <div><label className={lbl}>Подзаголовок</label><input value={t.subtitle} onChange={e => set("subtitle", e.target.value)} className={inp} /></div>
-              <div><label className={lbl}>Название организации (для текстов)</label><input value={t.companyName} onChange={e => set("companyName", e.target.value)} className={inp} placeholder="СБД" /></div>
-            </div>
-          )}
+          {/* Содержимое панели */}
+          <div className="overflow-y-auto flex-1 p-4 space-y-3">
 
-          {/* РЕКВИЗИТЫ */}
-          {activeSection === "labels" && (
-            <div className="space-y-4">
-              <div><label className={lbl}>Метка «Проверяемый объект»</label><input value={t.blockObjectLabel} onChange={e => set("blockObjectLabel", e.target.value)} className={inp} /></div>
-              <div><label className={lbl}>Метка «Подрядная организация»</label><input value={t.blockContractorLabel} onChange={e => set("blockContractorLabel", e.target.value)} className={inp} /></div>
-              <div><label className={lbl}>Метка «Проверка проведена»</label><input value={t.blockInspectorLabel} onChange={e => set("blockInspectorLabel", e.target.value)} className={inp} /></div>
-              <div><label className={lbl}>Метка «В присутствии»</label><input value={t.blockRepresentativeLabel} onChange={e => set("blockRepresentativeLabel", e.target.value)} className={inp} /></div>
-              <div><label className={lbl}>Заголовок таблицы нарушений</label><input value={t.blockViolationsTitle} onChange={e => set("blockViolationsTitle", e.target.value)} className={inp} /></div>
-              <div><label className={lbl}>Метка «Выдал»</label><input value={t.sigIssuerLabel} onChange={e => set("sigIssuerLabel", e.target.value)} className={inp} /></div>
-              <div><label className={lbl}>Метка «Ознакомлен»</label><input value={t.sigReceiverLabel} onChange={e => set("sigReceiverLabel", e.target.value)} className={inp} /></div>
-            </div>
-          )}
-
-          {/* ТАБЛИЦА */}
-          {activeSection === "table" && (
-            <div className="space-y-3">
-              <p className="text-xs text-muted-foreground">Включайте/выключайте колонки и редактируйте их заголовки и ширину (в пикселях, оставьте пустым для авто).</p>
-              {t.tableColumns.map(col => (
-                <div key={col.key} className={`border rounded-xl p-4 space-y-3 transition-colors ${col.enabled ? "border-border bg-secondary/10" : "border-border/40 bg-muted/20 opacity-50"}`}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-primary uppercase tracking-wider">{col.key}</span>
-                    <button
-                      onClick={() => toggleColumn(col.key)}
-                      className={`text-xs px-3 py-1 rounded-lg border font-medium transition-colors ${col.enabled ? "bg-primary/10 border-primary/30 text-primary" : "border-border text-muted-foreground"}`}
-                    >
-                      {col.enabled ? "Включена" : "Выключена"}
+            {/* СТРАНИЦА */}
+            {activePanel === "page" && (<>
+              <div>
+                <label className={lbl}>Размер бумаги</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["A4","A3"] as const).map(size => (
+                    <button key={size} onClick={() => set("paperSize", size)}
+                      className={`py-2 rounded-lg border text-sm font-medium transition-colors ${t.paperSize === size ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
+                      {size}
                     </button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="col-span-2"><label className={lbl}>Заголовок колонки</label><input value={col.label} onChange={e => setColumnLabel(col.key, e.target.value)} className={inp} disabled={!col.enabled} /></div>
-                    <div><label className={lbl}>Ширина (px)</label><input type="number" value={col.width ?? ""} onChange={e => setColumnWidth(col.key, e.target.value)} placeholder="авто" className={numInp} disabled={!col.enabled} /></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* ТЕКСТЫ */}
-          {activeSection === "texts" && (
-            <div className="space-y-4">
-              <p className="text-xs text-muted-foreground">Переменные: <code className="bg-secondary px-1 rounded">{"{{companyName}}"}</code> <code className="bg-secondary px-1 rounded">{"{{contractor}}"}</code> <code className="bg-secondary px-1 rounded">{"{{replyEmail}}"}</code> <code className="bg-secondary px-1 rounded">{"{{reportDeadline}}"}</code></p>
-              <div>
-                <label className={lbl}>Текст об экземплярах акта</label>
-                <textarea value={t.blockCopiesText} onChange={e => set("blockCopiesText", e.target.value)} className={inp + " resize-none"} rows={4} />
-              </div>
-              <div>
-                <label className={lbl}>Текст об отчёте об устранении</label>
-                <textarea value={t.blockReportText} onChange={e => set("blockReportText", e.target.value)} className={inp + " resize-none"} rows={3} />
-              </div>
-            </div>
-          )}
-
-          {/* ОФОРМЛЕНИЕ */}
-          {activeSection === "layout" && (
-            <div className="space-y-5">
-              <div className="space-y-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Шрифт</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className={lbl}>Семейство шрифта</label>
-                    <select value={t.fontFamily} onChange={e => set("fontFamily", e.target.value)} className={inp}>
-                      <option>Times New Roman</option>
-                      <option>Arial</option>
-                      <option>Calibri</option>
-                      <option>Georgia</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className={lbl}>Размер (pt)</label>
-                    <input type="number" min={8} max={16} value={t.fontSize} onChange={e => set("fontSize", Number(e.target.value))} className={numInp} />
-                  </div>
+                  ))}
                 </div>
               </div>
-              <div className="space-y-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Поля документа (мм)</p>
-                <div className="grid grid-cols-4 gap-3">
-                  {(["marginTop","marginRight","marginBottom","marginLeft"] as const).map((k, i) => (
-                    <div key={k}>
-                      <label className={lbl}>{["Верхнее","Правое","Нижнее","Левое"][i]}</label>
-                      <input type="number" min={5} max={40} value={t[k]} onChange={e => set(k, Number(e.target.value))} className={numInp} />
+              <div>
+                <label className={lbl}>Ориентация</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => set("orientation", "portrait")}
+                    className={`py-2 rounded-lg border text-xs font-medium transition-colors flex flex-col items-center gap-1.5 ${t.orientation === "portrait" ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
+                    <div className={`border-2 rounded-sm ${t.orientation === "portrait" ? "border-primary" : "border-current"}`} style={{width:18,height:24}} />
+                    Книжная
+                  </button>
+                  <button onClick={() => set("orientation", "landscape")}
+                    className={`py-2 rounded-lg border text-xs font-medium transition-colors flex flex-col items-center gap-1.5 ${t.orientation === "landscape" ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
+                    <div className={`border-2 rounded-sm ${t.orientation === "landscape" ? "border-primary" : "border-current"}`} style={{width:24,height:18}} />
+                    Альбомная
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className={lbl}>Шрифт</label>
+                <select value={t.fontFamily} onChange={e => set("fontFamily", e.target.value)} className={inp}>
+                  <option>Times New Roman</option>
+                  <option>Arial</option>
+                  <option>Calibri</option>
+                  <option>Georgia</option>
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>Размер шрифта (pt)</label>
+                <input type="number" min={8} max={16} value={t.fontSize} onChange={e => set("fontSize", Number(e.target.value))} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>Поля документа (мм)</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["marginTop","marginRight","marginBottom","marginLeft"] as const).map((k,i) => (
+                    <div key={k} className="space-y-0.5">
+                      <span className="text-[10px] text-muted-foreground">{["Верхнее","Правое","Нижнее","Левое"][i]}</span>
+                      <input type="number" min={5} max={40} value={t[k]} onChange={e => set(k, Number(e.target.value))} className={inp} />
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* ПРЕДПРОСМОТР */}
-          {activeSection === "preview" && (
-            <div className="space-y-3">
-              <p className="text-xs text-muted-foreground">Предпросмотр на тестовых данных. Масштаб уменьшен для отображения на экране.</p>
-              <div className="border border-border rounded-xl overflow-hidden bg-white">
-                <div
-                  style={{ transform: "scale(0.72)", transformOrigin: "top left", width: "139%", pointerEvents: "none" }}
-                  dangerouslySetInnerHTML={{ __html: previewHtml }}
-                />
+              <div>
+                <label className={lbl}>Организация</label>
+                <input value={t.companyName} onChange={e => set("companyName", e.target.value)} className={inp} placeholder="СБД" />
               </div>
-            </div>
-          )}
+            </>)}
+
+            {/* ЗАГОЛОВОК */}
+            {activePanel === "header" && (<>
+              <p className="text-[10px] text-muted-foreground">Используйте <code className="bg-secondary/60 px-1 rounded">{"{{number}}"}</code> для номера предписания</p>
+              <div><label className={lbl}>Заголовок</label><input value={t.title} onChange={e => set("title", e.target.value)} className={inp} /></div>
+              <div><label className={lbl}>Подзаголовок</label><textarea value={t.subtitle} onChange={e => set("subtitle", e.target.value)} className={inp + " resize-none"} rows={2} /></div>
+            </>)}
+
+            {/* РЕКВИЗИТЫ */}
+            {activePanel === "requisites" && (<>
+              <div><label className={lbl}>Метка «Объект»</label><input value={t.blockObjectLabel} onChange={e => set("blockObjectLabel", e.target.value)} className={inp} /></div>
+              <div><label className={lbl}>Метка «Подрядчик»</label><input value={t.blockContractorLabel} onChange={e => set("blockContractorLabel", e.target.value)} className={inp} /></div>
+              <div><label className={lbl}>Метка «Проверка проведена»</label><input value={t.blockInspectorLabel} onChange={e => set("blockInspectorLabel", e.target.value)} className={inp} /></div>
+              <div><label className={lbl}>Метка «В присутствии»</label><input value={t.blockRepresentativeLabel} onChange={e => set("blockRepresentativeLabel", e.target.value)} className={inp} /></div>
+              <div><label className={lbl}>Заголовок раздела нарушений</label><input value={t.blockViolationsTitle} onChange={e => set("blockViolationsTitle", e.target.value)} className={inp} /></div>
+            </>)}
+
+            {/* ТАБЛИЦА */}
+            {activePanel === "table" && (
+              <div className="space-y-2">
+                <p className="text-[10px] text-muted-foreground">Нажмите на колонку чтобы включить/выключить. Ширина — в px, пусто = авто.</p>
+                {t.tableColumns.map(col => (
+                  <div key={col.key} className={`border rounded-lg p-3 space-y-2 transition-all ${col.enabled ? "border-border" : "border-border/30 opacity-40"}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-semibold text-muted-foreground uppercase">{col.key}</span>
+                      <button onClick={() => toggleColumn(col.key)} className={`text-[10px] px-2 py-0.5 rounded border font-medium ${col.enabled ? "bg-primary/10 border-primary/30 text-primary" : "border-border text-muted-foreground"}`}>
+                        {col.enabled ? "вкл" : "выкл"}
+                      </button>
+                    </div>
+                    <input value={col.label} onChange={e => setColumnLabel(col.key, e.target.value)} disabled={!col.enabled} className={inp} placeholder="Заголовок колонки" />
+                    <input type="number" value={col.width ?? ""} onChange={e => setColumnWidth(col.key, e.target.value)} disabled={!col.enabled} placeholder="авто" className={inp} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ТЕКСТЫ */}
+            {activePanel === "texts" && (<>
+              <p className="text-[10px] text-muted-foreground">Переменные: <code className="bg-secondary/60 px-1 rounded">{"{{companyName}}"}</code> <code className="bg-secondary/60 px-1 rounded">{"{{contractor}}"}</code> <code className="bg-secondary/60 px-1 rounded">{"{{replyEmail}}"}</code> <code className="bg-secondary/60 px-1 rounded">{"{{reportDeadline}}"}</code></p>
+              <div><label className={lbl}>Текст об экземплярах</label><textarea value={t.blockCopiesText} onChange={e => set("blockCopiesText", e.target.value)} className={inp + " resize-none"} rows={5} /></div>
+              <div><label className={lbl}>Текст об отчёте</label><textarea value={t.blockReportText} onChange={e => set("blockReportText", e.target.value)} className={inp + " resize-none"} rows={4} /></div>
+            </>)}
+
+            {/* ПОДПИСИ */}
+            {activePanel === "signatures" && (<>
+              <div><label className={lbl}>Метка «Выдал»</label><input value={t.sigIssuerLabel} onChange={e => set("sigIssuerLabel", e.target.value)} className={inp} /></div>
+              <div><label className={lbl}>Метка «Ознакомлен»</label><textarea value={t.sigReceiverLabel} onChange={e => set("sigReceiverLabel", e.target.value)} className={inp + " resize-none"} rows={2} /></div>
+            </>)}
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-border flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="isDefault" checked={t.isDefault} onChange={e => set("isDefault", e.target.checked)} className="rounded" />
-            <label htmlFor="isDefault" className="text-xs text-muted-foreground cursor-pointer">Использовать как шаблон по умолчанию</label>
+        {/* Правая часть — превью страницы */}
+        <div className="flex-1 overflow-auto bg-muted/30 flex flex-col items-center py-8 gap-4">
+          {/* Подсказка размера */}
+          <div className="text-xs text-muted-foreground flex items-center gap-3">
+            <span className="bg-card border border-border px-3 py-1 rounded-full">
+              {t.paperSize} · {t.orientation === "portrait" ? "Книжная" : "Альбомная"} · {paperW}×{paperH} мм
+            </span>
+            <span className="opacity-50">масштаб {Math.round(scale * 100)}%</span>
           </div>
-          <div className="flex gap-3">
-            <button onClick={onClose} className="text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">Отмена</button>
-            <button onClick={handleSave} disabled={saving} className="text-sm px-5 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
-              {saving ? "Сохранение..." : "Сохранить шаблон"}
-            </button>
+
+          {/* Лист бумаги */}
+          <div
+            style={{
+              width: pageWpx * scale,
+              height: pageHpx * scale,
+              position: "relative",
+              flexShrink: 0,
+            }}
+          >
+            <div
+              style={{
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+                width: pageWpx,
+                height: pageHpx,
+                boxShadow: "0 4px 32px rgba(0,0,0,0.25)",
+              }}
+              dangerouslySetInnerHTML={{ __html: pageHtml }}
+            />
           </div>
         </div>
       </div>

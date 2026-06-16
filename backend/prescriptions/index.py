@@ -57,6 +57,7 @@ def row_to_template(row):
         "blockReportText": row[12], "fontSize": row[13], "fontFamily": row[14],
         "marginTop": row[15], "marginRight": row[16], "marginBottom": row[17], "marginLeft": row[18],
         "sigIssuerLabel": row[19], "sigReceiverLabel": row[20], "isDefault": row[21],
+        "paperSize": row[22], "orientation": row[23],
     }
 
 
@@ -64,7 +65,7 @@ TEMPLATE_FIELDS = (
     "id, name, title, subtitle, company_name, table_columns, block_object_label, block_contractor_label, "
     "block_inspector_label, block_representative_label, block_violations_title, block_copies_text, "
     "block_report_text, font_size, font_family, margin_top, margin_right, margin_bottom, margin_left, "
-    "sig_issuer_label, sig_receiver_label, is_default"
+    "sig_issuer_label, sig_receiver_label, is_default, paper_size, orientation"
 )
 
 
@@ -81,8 +82,9 @@ def handle_templates(method, body, cur, conn):
             f"INSERT INTO {SCHEMA}.templates (id, name, title, subtitle, company_name, table_columns, "
             f"block_object_label, block_contractor_label, block_inspector_label, block_representative_label, "
             f"block_violations_title, block_copies_text, block_report_text, font_size, font_family, "
-            f"margin_top, margin_right, margin_bottom, margin_left, sig_issuer_label, sig_receiver_label, is_default) "
-            f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            f"margin_top, margin_right, margin_bottom, margin_left, sig_issuer_label, sig_receiver_label, "
+            f"is_default, paper_size, orientation) "
+            f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
             (tid, t["name"],
              t.get("title", "АКТ-ПРЕДПИСАНИЕ № {{number}}"),
              t.get("subtitle", "о нарушении требований охраны труда, пожарной, промышленной безопасности и экологии"),
@@ -100,7 +102,8 @@ def handle_templates(method, body, cur, conn):
              t.get("marginBottom", 15), t.get("marginLeft", 20),
              t.get("sigIssuerLabel", "Выдал:"),
              t.get("sigReceiverLabel", "С Актом ознакомлен, согласен и принял к исполнению:"),
-             t.get("isDefault", False))
+             t.get("isDefault", False),
+             t.get("paperSize", "A4"), t.get("orientation", "portrait"))
         )
         conn.commit()
         return ok({"ok": True, "id": tid})
@@ -113,7 +116,8 @@ def handle_templates(method, body, cur, conn):
             f"block_object_label=%s, block_contractor_label=%s, block_inspector_label=%s, block_representative_label=%s, "
             f"block_violations_title=%s, block_copies_text=%s, block_report_text=%s, font_size=%s, font_family=%s, "
             f"margin_top=%s, margin_right=%s, margin_bottom=%s, margin_left=%s, "
-            f"sig_issuer_label=%s, sig_receiver_label=%s, is_default=%s, updated_at=now() WHERE id=%s",
+            f"sig_issuer_label=%s, sig_receiver_label=%s, is_default=%s, "
+            f"paper_size=%s, orientation=%s, updated_at=now() WHERE id=%s",
             (t["name"], t.get("title"), t.get("subtitle"), t.get("companyName"),
              json.dumps(t.get("tableColumns", []), ensure_ascii=False),
              t.get("blockObjectLabel"), t.get("blockContractorLabel"), t.get("blockInspectorLabel"),
@@ -122,7 +126,8 @@ def handle_templates(method, body, cur, conn):
              t.get("fontSize"), t.get("fontFamily"),
              t.get("marginTop"), t.get("marginRight"), t.get("marginBottom"), t.get("marginLeft"),
              t.get("sigIssuerLabel"), t.get("sigReceiverLabel"),
-             t.get("isDefault", False), tid)
+             t.get("isDefault", False),
+             t.get("paperSize", "A4"), t.get("orientation", "portrait"), tid)
         )
         conn.commit()
         return ok({"ok": True})
