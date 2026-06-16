@@ -13,47 +13,50 @@ function toInstrumental(fullName: string): string {
 
   const declineWord = (word: string, isMale: boolean): string => {
     const w = word.toLowerCase();
-    // Окончания женских имён/отчеств
+
     if (!isMale) {
+      // Женские: -ья → -ьей, -ия → -ией, на гласную -а/-я → -ой/-ей
       if (w.endsWith("ья")) return word.slice(0, -2) + "ьей";
       if (w.endsWith("ия")) return word.slice(0, -2) + "ией";
-      if (w.endsWith("на")) return word.slice(0, -2) + "ной";
-      if (w.endsWith("ла")) return word.slice(0, -2) + "лой";
-      if (w.endsWith("ра")) return word.slice(0, -2) + "рой";
       if (w.endsWith("а"))  return word.slice(0, -1) + "ой";
       if (w.endsWith("я"))  return word.slice(0, -1) + "ей";
+      // Женские фамилии на согласную не склоняются
       return word;
     }
+
     // Мужские
+    // -ий → -им (Лаврентий → Лаврентием, Вячеслав → ...)
     if (w.endsWith("ий")) return word.slice(0, -2) + "им";
-    if (w.endsWith("ей")) return word.slice(0, -2) + "еем";
-    if (w.endsWith("ья")) return word.slice(0, -2) + "ьей";
-    if (w.endsWith("ия")) return word.slice(0, -2) + "ием";
+    // -й → -ем
     if (w.endsWith("й"))  return word.slice(0, -1) + "ем";
-    if (w.endsWith("ч"))  return word + "ем";
-    if (w.endsWith("ш"))  return word + "ем";
-    if (w.endsWith("щ"))  return word + "ем";
-    if (w.endsWith("ж"))  return word + "ем";
+    // -ья → -ьей
+    if (w.endsWith("ья")) return word.slice(0, -2) + "ьей";
+    // -ия → -ием
+    if (w.endsWith("ия")) return word.slice(0, -2) + "ием";
+    // -ь → -ем
     if (w.endsWith("ь"))  return word.slice(0, -1) + "ем";
-    // Согласная
+    // Шипящие + ц → -ем
+    if (/[жшщч]$/.test(w)) return word + "ем";
+    // -ов/-ев/-ёв/-ин/-ын → -ым (Лаврентьев, Козлов, Путин)
+    if (/[оеё]в$/.test(w)) return word + "ым";
+    if (/[иы]н$/.test(w)) return word + "ым";
+    // Прочие согласные → -ом (Петрос, Симон и т.д.)
     const consonants = "бвгджзклмнпрстфхцчшщ";
     if (consonants.includes(w.slice(-1))) return word + "ом";
     return word;
   };
 
   const [last, first, middle] = parts;
-  // Определяем пол по окончанию отчества (на «вна»/«чна» → женский)
+  // Определяем пол по отчеству (оканчивается на -вна/-чна → женский)
   const isMale = middle
     ? !(/вна$|чна$/i.test(middle))
-    : !(/вна$|чна$|на$|ья$/i.test(first));
+    : !(/вна$|чна$/i.test(first ?? ""));
 
-  const declined = [
+  return [
     declineWord(last, isMale),
-    first ? declineWord(first, isMale) : "",
+    first  ? declineWord(first,  isMale) : "",
     middle ? declineWord(middle, isMale) : "",
   ].filter(Boolean).join(" ");
-
-  return declined;
 }
 
 // --- Типы ---

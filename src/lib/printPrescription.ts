@@ -204,7 +204,7 @@ export function printPrescription(p: Prescription): void {
 
     @media print {
       body { padding: 10mm 10mm 10mm 15mm; }
-      @page { size: A4 portrait; margin: 0; }
+      @page { size: A4 landscape; margin: 0; }
     }
   </style>
 </head>
