@@ -1039,8 +1039,8 @@ function TemplateEditor({ template: initial, onClose, onSave }: {
 
               {/* Реквизиты */}
               <div style={{ fontSize: "10.5pt", lineHeight: 1.7, marginBottom: 10 }}>
-                <p><strong><E field="blockObjectLabel" /></strong> «<span style={fieldLine}>{sampleData.object}</span>».</p>
-                <p style={{ marginTop: 2 }}><strong><E field="blockContractorLabel" /></strong> «<span style={fieldLine}>{sampleData.contractor}</span>»</p>
+                <p><strong><E field="blockObjectLabel" /></strong> <span style={fieldLine}>{sampleData.object}</span>.</p>
+                <p style={{ marginTop: 2 }}><strong><E field="blockContractorLabel" /></strong> <span style={fieldLine}>{sampleData.contractor}</span></p>
                 <p style={{ marginTop: 2 }}>
                   <E field="blockInspectorLabel" /> <span style={fieldLine}>{sampleData.inspector}</span>
                   {" "}<E field="blockRepresentativeLabel" /> <span style={fieldLine}>{sampleData.representative}</span>

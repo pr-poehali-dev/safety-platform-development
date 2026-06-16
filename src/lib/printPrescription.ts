@@ -217,8 +217,8 @@ export function printPrescription(p: Prescription): void {
   <div class="doc-date-right">от ${p.date}</div>
 
   <div class="requisites">
-    <p><strong>Проверяемый объект:</strong> «<span class="underline-value">${p.object}</span>».</p>
-    <p><strong>Работы проводит подрядная организация:</strong> «<span class="underline-value">${p.contractor}</span>»</p>
+    <p><strong>Проверяемый объект:</strong> <span class="underline-value">${p.object}</span>.</p>
+    <p><strong>Работы проводит подрядная организация:</strong> <span class="underline-value">${p.contractor}</span></p>
     <p>Проверка проведена <span class="underline-value">${p.inspector || "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"}</span>
       в присутствии представителя подрядной организации <span class="underline-value">${p.representative || "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"}</span></p>
     <div style="display:flex; gap:40px; font-size:8pt; color:#555; padding-left:120px; margin-top:1px;">
