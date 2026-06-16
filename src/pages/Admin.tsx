@@ -801,7 +801,7 @@ function TemplateEditor({ template: initial, onClose, onSave }: {
     tableColumns: initial.tableColumns.map(c => ({ ...c })),
   });
   const [saving, setSaving] = useState(false);
-  const [activePanel, setActivePanel] = useState<"page" | "header" | "requisites" | "table" | "texts" | "signatures">("page");
+  const [activePanel, setActivePanel] = useState<"page" | "table">("page");
 
   const set = <K extends keyof Template>(key: K, val: Template[K]) => setT(prev => ({ ...prev, [key]: val }));
   const inp = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50";
@@ -811,23 +811,42 @@ function TemplateEditor({ template: initial, onClose, onSave }: {
 
   const toggleColumn = (key: string) =>
     set("tableColumns", t.tableColumns.map(c => c.key === key ? { ...c, enabled: !c.enabled } : c));
-  const setColumnLabel = (key: string, label: string) =>
-    set("tableColumns", t.tableColumns.map(c => c.key === key ? { ...c, label } : c));
   const setColumnWidth = (key: string, width: string) =>
     set("tableColumns", t.tableColumns.map(c => c.key === key ? { ...c, width: width ? Number(width) : null } : c));
 
-  // Размеры листа в пикселях для превью (96dpi / 25.4 * mm)
+  // px per mm at 96dpi
   const px = (mm: number) => Math.round(mm * 96 / 25.4);
   const paperW = t.orientation === "portrait" ? PAPER_SIZES[t.paperSize].w : PAPER_SIZES[t.paperSize].h;
   const paperH = t.orientation === "portrait" ? PAPER_SIZES[t.paperSize].h : PAPER_SIZES[t.paperSize].w;
   const pageWpx = px(paperW);
   const pageHpx = px(paperH);
 
-  // Масштаб: превью вписывается в контейнер ~680px шириной
-  const PREVIEW_CONTAINER = 580;
-  const scale = PREVIEW_CONTAINER / pageWpx;
+  // Масштаб чтобы лист влезал в правую область
+  const CANVAS_W = typeof window !== "undefined" ? Math.max(window.innerWidth - 290, 500) : 800;
+  const scale = Math.min(1, (CANVAS_W - 64) / pageWpx);
 
-  // Пример данных для превью
+  // Стиль редактируемой ячейки на листе
+  const editStyle: React.CSSProperties = {
+    outline: "none",
+    borderBottom: "1.5px dashed #3b82f6",
+    cursor: "text",
+    minWidth: 40,
+    display: "inline-block",
+  };
+
+  // Компонент: редактируемый span прямо на листе
+  const E = ({ field, style }: { field: keyof Template; style?: React.CSSProperties }) => (
+    <span
+      contentEditable
+      suppressContentEditableWarning
+      onBlur={e => set(field, e.currentTarget.textContent ?? "" as Template[typeof field])}
+      style={{ ...editStyle, ...style }}
+      title="Нажмите чтобы редактировать"
+    >
+      {String(t[field])}
+    </span>
+  );
+
   const sampleData = {
     number: "МАН-2026-01", date: "16.06.2026",
     object: "Цех сборки №3", contractor: "ООО «СтройПодряд»",
@@ -835,274 +854,291 @@ function TemplateEditor({ template: initial, onClose, onSave }: {
     replyEmail: "ot@sbd.ru", reportDeadline: "30.06.2026",
   };
 
-  const tableRowsHtml = `
-    <tr>
-      ${t.tableColumns.filter(c => c.enabled).map((c, i) => `<td style="border:1px solid #000;padding:4px 6px;font-size:9pt;vertical-align:top;">${
-        c.key === "num" ? "1" : c.key === "place" ? "Выход №2" : c.key === "description" ? "Захламление прохода посторонними предметами" : c.key === "normRef" ? "ППР п.24" : "20.06.2026"
-      }</td>`).join("")}
-    </tr>
-    <tr>${t.tableColumns.filter(c => c.enabled).map(() => `<td style="border:1px solid #000;padding:16px 6px;">&nbsp;</td>`).join("")}</tr>
-  `;
+  const docFont: React.CSSProperties = {
+    fontFamily: `'${t.fontFamily}', Times, serif`,
+    fontSize: `${t.fontSize}pt`,
+    color: "#000",
+    lineHeight: 1.5,
+  };
 
-  const pageHtml = `
-    <div style="
-      font-family:'${t.fontFamily}',Times,serif;
-      font-size:${t.fontSize}pt;
-      color:#000;background:#fff;
-      width:${pageWpx}px;min-height:${pageHpx}px;
-      padding:${px(t.marginTop)}px ${px(t.marginRight)}px ${px(t.marginBottom)}px ${px(t.marginLeft)}px;
-      box-sizing:border-box;line-height:1.5;
-    ">
-      <div style="text-align:center;margin-bottom:6px;">
-        <div style="font-weight:bold;text-transform:uppercase;font-size:13pt;">${t.title.replace("{{number}}", sampleData.number)}</div>
-        <div style="font-weight:bold;font-size:10pt;margin-top:3px;">${t.subtitle}</div>
-      </div>
-      <div style="text-align:right;font-size:10pt;margin-top:6px;margin-bottom:10px;">от ${sampleData.date}</div>
-      <div style="font-size:10.5pt;line-height:1.7;margin-bottom:10px;">
-        <p><strong>${t.blockObjectLabel}</strong> «<span style="border-bottom:1px solid #000;padding:0 4px;">${sampleData.object}</span>».</p>
-        <p><strong>${t.blockContractorLabel}</strong> «<span style="border-bottom:1px solid #000;padding:0 4px;">${sampleData.contractor}</span>»</p>
-        <p>${t.blockInspectorLabel} <span style="border-bottom:1px solid #000;padding:0 4px;font-weight:bold;">${sampleData.inspector}</span>
-          ${t.blockRepresentativeLabel} <span style="border-bottom:1px solid #000;padding:0 4px;font-weight:bold;">${sampleData.representative}</span></p>
-        <div style="display:flex;gap:40px;font-size:8pt;color:#555;padding-left:120px;margin-top:1px;">
-          <span>(Должность, ФИО представителя СОТ)</span><span>(Наименование организации)</span>
-        </div>
-      </div>
-      <p style="font-weight:bold;margin:10px 0 6px;">${t.blockViolationsTitle}</p>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
-        <thead><tr>${t.tableColumns.filter(c => c.enabled).map(c =>
-          `<th style="border:1px solid #000;padding:5px 6px;font-weight:bold;text-align:center;font-size:9.5pt;${c.width ? `width:${c.width}px` : ''}">${c.label}</th>`
-        ).join("")}</tr></thead>
-        <tbody>${tableRowsHtml}</tbody>
-      </table>
-      <div style="display:flex;gap:20px;align-items:flex-end;font-size:10pt;margin-bottom:16px;">
-        <div style="flex:1;border-bottom:1px solid #000;min-height:18px;">&nbsp;</div>
-        <div style="min-width:60px;text-align:center;"><div style="border-bottom:1px solid #000;">&nbsp;</div><div style="font-size:7.5pt;color:#444;">подпись</div></div>
-        <div style="text-align:right;"><div style="border-bottom:1px solid #000;min-width:120px;">&nbsp;</div><div style="font-size:7.5pt;color:#444;">Фамилия И.О.</div></div>
-      </div>
-      <div style="font-size:10pt;line-height:1.6;margin-bottom:14px;">
-        <p>${(t.blockCopiesText||'').replace(/{{companyName}}/g, t.companyName).replace(/{{contractor}}/g, sampleData.contractor)}</p>
-        <p style="margin-top:4px;">${(t.blockReportText||'').replace(/{{companyName}}/g, t.companyName).replace("{{replyEmail}}", sampleData.replyEmail).replace("{{reportDeadline}}", sampleData.reportDeadline)}</p>
-      </div>
-      <div style="margin-top:10px;font-size:10.5pt;">
-        <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:4px;">
-          <span style="font-weight:bold;white-space:nowrap;">${t.sigIssuerLabel}</span>
-          <div style="flex:1;border-bottom:1px solid #000;">&nbsp;</div>
-          <span>(</span><div style="flex:1;border-bottom:1px solid #000;">&nbsp;</div><span>)</span>
-          <div style="flex:1;border-bottom:1px solid #000;">&nbsp;</div>
-        </div>
-        <div style="display:flex;align-items:flex-start;gap:10px;margin-top:16px;">
-          <span style="font-size:10pt;min-width:130px;line-height:1.4;">${t.sigReceiverLabel}</span>
-          <div>
-            <div style="display:flex;align-items:flex-end;gap:8px;">
-              <div style="border-bottom:1px solid #000;min-width:100px;">&nbsp;</div>
-              <div style="border-bottom:1px solid #000;min-width:100px;">&nbsp;</div>
-              <span>(</span><div style="border-bottom:1px solid #000;min-width:120px;">&nbsp;</div><span>)</span>
-              <div style="border-bottom:1px solid #000;min-width:80px;">&nbsp;</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
+  const fieldLine: React.CSSProperties = {
+    borderBottom: "1px solid #000",
+    display: "inline-block",
+    padding: "0 4px",
+    fontWeight: "bold",
+  };
+
+  const sigLine: React.CSSProperties = {
+    flex: 1,
+    borderBottom: "1px solid #000",
+    minWidth: 80,
+    minHeight: 18,
+  };
 
   const PANELS = [
-    { key: "page",       label: "Страница",   icon: "FileText" },
-    { key: "header",     label: "Заголовок",  icon: "Heading" },
-    { key: "requisites", label: "Реквизиты",  icon: "AlignLeft" },
-    { key: "table",      label: "Таблица",    icon: "Table" },
-    { key: "texts",      label: "Тексты",     icon: "AlignJustify" },
-    { key: "signatures", label: "Подписи",    icon: "PenLine" },
+    { key: "page",  label: "Страница", icon: "SlidersHorizontal" },
+    { key: "table", label: "Колонки",  icon: "Table" },
   ] as const;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#1a1b1e]" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
 
       {/* Топ-бар */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-card flex-shrink-0">
+      <div className="flex items-center justify-between px-5 py-2.5 border-b border-white/10 bg-[#25262b] flex-shrink-0">
         <div className="flex items-center gap-3">
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors p-1">
+          <button onClick={onClose} className="text-white/50 hover:text-white transition-colors p-1">
             <Icon name="ArrowLeft" size={16} />
           </button>
-          <Icon name="FileText" size={15} className="text-primary" />
+          <Icon name="FileText" size={14} className="text-primary" />
           <input
             value={t.name}
             onChange={e => set("name", e.target.value)}
-            className="text-sm font-semibold bg-transparent border-none outline-none text-foreground w-56"
+            className="text-sm font-semibold bg-transparent border-none outline-none text-white w-56 placeholder:text-white/30"
             placeholder="Название шаблона"
           />
           {t.isDefault && <span className="text-[10px] text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-medium">По умолчанию</span>}
         </div>
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+          <span className="text-[11px] text-white/30 flex items-center gap-1.5">
+            <Icon name="MousePointerClick" size={11} />
+            Кликайте на синие поля чтобы редактировать
+          </span>
+          <label className="flex items-center gap-1.5 text-xs text-white/50 cursor-pointer">
             <input type="checkbox" checked={t.isDefault} onChange={e => set("isDefault", e.target.checked)} className="rounded" />
             По умолчанию
           </label>
-          <button onClick={onClose} className="text-sm px-4 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">Отмена</button>
+          <button onClick={onClose} className="text-sm px-3 py-1.5 rounded-lg border border-white/10 text-white/50 hover:text-white transition-colors">Отмена</button>
           <button onClick={handleSave} disabled={saving} className="text-sm px-5 py-1.5 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
             {saving ? "Сохранение..." : "Сохранить"}
           </button>
         </div>
       </div>
 
-      {/* Основная область: левая панель + предпросмотр */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* Левая панель настроек */}
-        <div className="w-72 flex-shrink-0 border-r border-border flex flex-col bg-card">
-          {/* Табы панели */}
-          <div className="flex flex-wrap gap-0 border-b border-border px-2 pt-2">
+        {/* Левая панель — только настройки страницы */}
+        <div className="w-64 flex-shrink-0 border-r border-white/10 flex flex-col bg-[#25262b]">
+          <div className="flex border-b border-white/10 px-2 pt-2">
             {PANELS.map(p => (
-              <button
-                key={p.key}
-                onClick={() => setActivePanel(p.key)}
-                className={`flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium rounded-t transition-colors mb-[-1px] border-b-2 ${activePanel === p.key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-              >
+              <button key={p.key} onClick={() => setActivePanel(p.key as typeof activePanel)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium border-b-2 transition-colors ${activePanel === p.key ? "border-primary text-white" : "border-transparent text-white/40 hover:text-white/70"}`}>
                 <Icon name={p.icon} size={11} />
                 {p.label}
               </button>
             ))}
           </div>
 
-          {/* Содержимое панели */}
-          <div className="overflow-y-auto flex-1 p-4 space-y-3">
-
-            {/* СТРАНИЦА */}
+          <div className="overflow-y-auto flex-1 p-4 space-y-4">
             {activePanel === "page" && (<>
               <div>
-                <label className={lbl}>Размер бумаги</label>
+                <label className={lbl + " text-white/40"}>Размер бумаги</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {(["A4","A3"] as const).map(size => (
-                    <button key={size} onClick={() => set("paperSize", size)}
-                      className={`py-2 rounded-lg border text-sm font-medium transition-colors ${t.paperSize === size ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
-                      {size}
+                  {(["A4","A3"] as const).map(s => (
+                    <button key={s} onClick={() => set("paperSize", s)}
+                      className={`py-2 rounded-lg border text-sm font-medium transition-colors ${t.paperSize === s ? "bg-primary/20 border-primary text-primary" : "border-white/10 text-white/40 hover:text-white"}`}>
+                      {s}
                     </button>
                   ))}
                 </div>
               </div>
               <div>
-                <label className={lbl}>Ориентация</label>
+                <label className={lbl + " text-white/40"}>Ориентация</label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => set("orientation", "portrait")}
-                    className={`py-2 rounded-lg border text-xs font-medium transition-colors flex flex-col items-center gap-1.5 ${t.orientation === "portrait" ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
-                    <div className={`border-2 rounded-sm ${t.orientation === "portrait" ? "border-primary" : "border-current"}`} style={{width:18,height:24}} />
-                    Книжная
-                  </button>
-                  <button onClick={() => set("orientation", "landscape")}
-                    className={`py-2 rounded-lg border text-xs font-medium transition-colors flex flex-col items-center gap-1.5 ${t.orientation === "landscape" ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
-                    <div className={`border-2 rounded-sm ${t.orientation === "landscape" ? "border-primary" : "border-current"}`} style={{width:24,height:18}} />
-                    Альбомная
-                  </button>
+                  {([["portrait","Книжная",18,24],["landscape","Альбомная",24,18]] as const).map(([val,label,w,h]) => (
+                    <button key={val} onClick={() => set("orientation", val)}
+                      className={`py-2.5 rounded-lg border text-[11px] font-medium flex flex-col items-center gap-1.5 transition-colors ${t.orientation === val ? "bg-primary/20 border-primary text-primary" : "border-white/10 text-white/40 hover:text-white"}`}>
+                      <div className={`border-2 rounded-sm ${t.orientation === val ? "border-primary" : "border-white/20"}`} style={{width:w,height:h}} />
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </div>
               <div>
-                <label className={lbl}>Шрифт</label>
-                <select value={t.fontFamily} onChange={e => set("fontFamily", e.target.value)} className={inp}>
-                  <option>Times New Roman</option>
-                  <option>Arial</option>
-                  <option>Calibri</option>
-                  <option>Georgia</option>
+                <label className={lbl + " text-white/40"}>Шрифт</label>
+                <select value={t.fontFamily} onChange={e => set("fontFamily", e.target.value)} className={inp + " bg-white/5 border-white/10 text-white"}>
+                  {["Times New Roman","Arial","Calibri","Georgia"].map(f => <option key={f}>{f}</option>)}
                 </select>
               </div>
               <div>
-                <label className={lbl}>Размер шрифта (pt)</label>
-                <input type="number" min={8} max={16} value={t.fontSize} onChange={e => set("fontSize", Number(e.target.value))} className={inp} />
+                <label className={lbl + " text-white/40"}>Размер (pt)</label>
+                <input type="number" min={8} max={16} value={t.fontSize} onChange={e => set("fontSize", Number(e.target.value))} className={inp + " bg-white/5 border-white/10 text-white"} />
               </div>
               <div>
-                <label className={lbl}>Поля документа (мм)</label>
+                <label className={lbl + " text-white/40"}>Поля (мм)</label>
                 <div className="grid grid-cols-2 gap-2">
                   {(["marginTop","marginRight","marginBottom","marginLeft"] as const).map((k,i) => (
-                    <div key={k} className="space-y-0.5">
-                      <span className="text-[10px] text-muted-foreground">{["Верхнее","Правое","Нижнее","Левое"][i]}</span>
-                      <input type="number" min={5} max={40} value={t[k]} onChange={e => set(k, Number(e.target.value))} className={inp} />
+                    <div key={k}>
+                      <div className="text-[10px] text-white/30 mb-0.5">{["Верх","Право","Низ","Лево"][i]}</div>
+                      <input type="number" min={5} max={40} value={t[k]} onChange={e => set(k, Number(e.target.value))} className={inp + " bg-white/5 border-white/10 text-white"} />
                     </div>
                   ))}
                 </div>
               </div>
               <div>
-                <label className={lbl}>Организация</label>
-                <input value={t.companyName} onChange={e => set("companyName", e.target.value)} className={inp} placeholder="СБД" />
+                <label className={lbl + " text-white/40"}>Организация</label>
+                <input value={t.companyName} onChange={e => set("companyName", e.target.value)} className={inp + " bg-white/5 border-white/10 text-white"} placeholder="СБД" />
               </div>
             </>)}
 
-            {/* ЗАГОЛОВОК */}
-            {activePanel === "header" && (<>
-              <p className="text-[10px] text-muted-foreground">Используйте <code className="bg-secondary/60 px-1 rounded">{"{{number}}"}</code> для номера предписания</p>
-              <div><label className={lbl}>Заголовок</label><input value={t.title} onChange={e => set("title", e.target.value)} className={inp} /></div>
-              <div><label className={lbl}>Подзаголовок</label><textarea value={t.subtitle} onChange={e => set("subtitle", e.target.value)} className={inp + " resize-none"} rows={2} /></div>
-            </>)}
-
-            {/* РЕКВИЗИТЫ */}
-            {activePanel === "requisites" && (<>
-              <div><label className={lbl}>Метка «Объект»</label><input value={t.blockObjectLabel} onChange={e => set("blockObjectLabel", e.target.value)} className={inp} /></div>
-              <div><label className={lbl}>Метка «Подрядчик»</label><input value={t.blockContractorLabel} onChange={e => set("blockContractorLabel", e.target.value)} className={inp} /></div>
-              <div><label className={lbl}>Метка «Проверка проведена»</label><input value={t.blockInspectorLabel} onChange={e => set("blockInspectorLabel", e.target.value)} className={inp} /></div>
-              <div><label className={lbl}>Метка «В присутствии»</label><input value={t.blockRepresentativeLabel} onChange={e => set("blockRepresentativeLabel", e.target.value)} className={inp} /></div>
-              <div><label className={lbl}>Заголовок раздела нарушений</label><input value={t.blockViolationsTitle} onChange={e => set("blockViolationsTitle", e.target.value)} className={inp} /></div>
-            </>)}
-
-            {/* ТАБЛИЦА */}
             {activePanel === "table" && (
               <div className="space-y-2">
-                <p className="text-[10px] text-muted-foreground">Нажмите на колонку чтобы включить/выключить. Ширина — в px, пусто = авто.</p>
+                <p className="text-[10px] text-white/30">Включайте/выключайте колонки. Ширина в px, пусто = авто.</p>
                 {t.tableColumns.map(col => (
-                  <div key={col.key} className={`border rounded-lg p-3 space-y-2 transition-all ${col.enabled ? "border-border" : "border-border/30 opacity-40"}`}>
+                  <div key={col.key} className={`border rounded-lg p-3 space-y-1.5 ${col.enabled ? "border-white/10" : "border-white/5 opacity-40"}`}>
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase">{col.key}</span>
-                      <button onClick={() => toggleColumn(col.key)} className={`text-[10px] px-2 py-0.5 rounded border font-medium ${col.enabled ? "bg-primary/10 border-primary/30 text-primary" : "border-border text-muted-foreground"}`}>
+                      <span className="text-[10px] font-semibold text-white/40 uppercase">{col.key}</span>
+                      <button onClick={() => toggleColumn(col.key)} className={`text-[10px] px-2 py-0.5 rounded border font-medium ${col.enabled ? "bg-primary/20 border-primary/40 text-primary" : "border-white/10 text-white/30"}`}>
                         {col.enabled ? "вкл" : "выкл"}
                       </button>
                     </div>
-                    <input value={col.label} onChange={e => setColumnLabel(col.key, e.target.value)} disabled={!col.enabled} className={inp} placeholder="Заголовок колонки" />
-                    <input type="number" value={col.width ?? ""} onChange={e => setColumnWidth(col.key, e.target.value)} disabled={!col.enabled} placeholder="авто" className={inp} />
+                    <div className="text-[10px] text-white/50">Ширина (px)</div>
+                    <input type="number" value={col.width ?? ""} onChange={e => setColumnWidth(col.key, e.target.value)} disabled={!col.enabled} placeholder="авто" className={inp + " bg-white/5 border-white/10 text-white"} />
                   </div>
                 ))}
               </div>
             )}
-
-            {/* ТЕКСТЫ */}
-            {activePanel === "texts" && (<>
-              <p className="text-[10px] text-muted-foreground">Переменные: <code className="bg-secondary/60 px-1 rounded">{"{{companyName}}"}</code> <code className="bg-secondary/60 px-1 rounded">{"{{contractor}}"}</code> <code className="bg-secondary/60 px-1 rounded">{"{{replyEmail}}"}</code> <code className="bg-secondary/60 px-1 rounded">{"{{reportDeadline}}"}</code></p>
-              <div><label className={lbl}>Текст об экземплярах</label><textarea value={t.blockCopiesText} onChange={e => set("blockCopiesText", e.target.value)} className={inp + " resize-none"} rows={5} /></div>
-              <div><label className={lbl}>Текст об отчёте</label><textarea value={t.blockReportText} onChange={e => set("blockReportText", e.target.value)} className={inp + " resize-none"} rows={4} /></div>
-            </>)}
-
-            {/* ПОДПИСИ */}
-            {activePanel === "signatures" && (<>
-              <div><label className={lbl}>Метка «Выдал»</label><input value={t.sigIssuerLabel} onChange={e => set("sigIssuerLabel", e.target.value)} className={inp} /></div>
-              <div><label className={lbl}>Метка «Ознакомлен»</label><textarea value={t.sigReceiverLabel} onChange={e => set("sigReceiverLabel", e.target.value)} className={inp + " resize-none"} rows={2} /></div>
-            </>)}
           </div>
         </div>
 
-        {/* Правая часть — превью страницы */}
-        <div className="flex-1 overflow-auto bg-muted/30 flex flex-col items-center py-8 gap-4">
-          {/* Подсказка размера */}
-          <div className="text-xs text-muted-foreground flex items-center gap-3">
-            <span className="bg-card border border-border px-3 py-1 rounded-full">
+        {/* Холст — лист документа */}
+        <div className="flex-1 overflow-auto flex flex-col items-center py-8 gap-3" style={{ background: "#2c2d32" }}>
+          <div className="text-[11px] text-white/30 flex items-center gap-4">
+            <span className="bg-white/5 border border-white/10 px-3 py-1 rounded-full">
               {t.paperSize} · {t.orientation === "portrait" ? "Книжная" : "Альбомная"} · {paperW}×{paperH} мм
             </span>
-            <span className="opacity-50">масштаб {Math.round(scale * 100)}%</span>
+            <span>масштаб {Math.round(scale * 100)}%</span>
           </div>
 
-          {/* Лист бумаги */}
-          <div
-            style={{
-              width: pageWpx * scale,
-              height: pageHpx * scale,
-              position: "relative",
-              flexShrink: 0,
-            }}
-          >
-            <div
-              style={{
-                transform: `scale(${scale})`,
-                transformOrigin: "top left",
-                width: pageWpx,
-                height: pageHpx,
-                boxShadow: "0 4px 32px rgba(0,0,0,0.25)",
-              }}
-              dangerouslySetInnerHTML={{ __html: pageHtml }}
-            />
+          {/* Лист */}
+          <div style={{ width: pageWpx * scale, height: pageHpx * scale, position: "relative", flexShrink: 0 }}>
+            <div style={{
+              transform: `scale(${scale})`,
+              transformOrigin: "top left",
+              width: pageWpx,
+              height: pageHpx,
+              background: "#fff",
+              boxShadow: "0 8px 48px rgba(0,0,0,0.5)",
+              ...docFont,
+              padding: `${px(t.marginTop)}px ${px(t.marginRight)}px ${px(t.marginBottom)}px ${px(t.marginLeft)}px`,
+              boxSizing: "border-box",
+            }}>
+
+              {/* Заголовок */}
+              <div style={{ textAlign: "center", marginBottom: 6 }}>
+                <div style={{ fontWeight: "bold", textTransform: "uppercase", fontSize: "13pt" }}>
+                  <E field="title" />
+                </div>
+                <div style={{ fontWeight: "bold", fontSize: "10.5pt", marginTop: 3 }}>
+                  <E field="subtitle" style={{ display: "block", textAlign: "center" }} />
+                </div>
+              </div>
+
+              <div style={{ textAlign: "right", fontSize: "10pt", marginTop: 6, marginBottom: 10 }}>
+                от {sampleData.date}
+              </div>
+
+              {/* Реквизиты */}
+              <div style={{ fontSize: "10.5pt", lineHeight: 1.7, marginBottom: 10 }}>
+                <p><strong><E field="blockObjectLabel" /></strong> «<span style={fieldLine}>{sampleData.object}</span>».</p>
+                <p style={{ marginTop: 2 }}><strong><E field="blockContractorLabel" /></strong> «<span style={fieldLine}>{sampleData.contractor}</span>»</p>
+                <p style={{ marginTop: 2 }}>
+                  <E field="blockInspectorLabel" /> <span style={fieldLine}>{sampleData.inspector}</span>
+                  {" "}<E field="blockRepresentativeLabel" /> <span style={fieldLine}>{sampleData.representative}</span>
+                </p>
+                <div style={{ display: "flex", gap: 40, fontSize: "8pt", color: "#555", paddingLeft: 120, marginTop: 1 }}>
+                  <span>(Должность, ФИО представителя СОТ)</span>
+                  <span>(Наименование организации)</span>
+                </div>
+              </div>
+
+              {/* Заголовок таблицы */}
+              <p style={{ fontWeight: "bold", margin: "10px 0 6px" }}>
+                <E field="blockViolationsTitle" />
+              </p>
+
+              {/* Таблица нарушений */}
+              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12 }}>
+                <thead>
+                  <tr>
+                    {t.tableColumns.filter(c => c.enabled).map(col => (
+                      <th key={col.key} style={{
+                        border: "1px solid #000", padding: "5px 6px",
+                        fontWeight: "bold", textAlign: "center", fontSize: "9.5pt",
+                        ...(col.width ? { width: col.width } : {}),
+                      }}>
+                        <span
+                          contentEditable suppressContentEditableWarning
+                          onBlur={e => set("tableColumns", t.tableColumns.map(c => c.key === col.key ? { ...c, label: e.currentTarget.textContent ?? "" } : c))}
+                          style={editStyle}
+                        >{col.label}</span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    {t.tableColumns.filter(c => c.enabled).map((col, i) => (
+                      <td key={col.key} style={{ border: "1px solid #000", padding: "4px 6px", fontSize: "9pt", verticalAlign: "top" }}>
+                        {i === 0 ? "1" : i === 1 ? "Выход №2" : i === 2 ? "Захламление прохода" : i === 3 ? "ППР п.24" : "20.06.2026"}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    {t.tableColumns.filter(c => c.enabled).map(col => (
+                      <td key={col.key} style={{ border: "1px solid #000", padding: "18px 6px" }}>&nbsp;</td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Блок подписи инспектора */}
+              <div style={{ display: "flex", gap: 20, alignItems: "flex-end", fontSize: "10pt", marginBottom: 16 }}>
+                <div style={sigLine} />
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ borderBottom: "1px solid #000", minWidth: 60 }}>&nbsp;</div>
+                  <div style={{ fontSize: "7.5pt", color: "#444" }}>подпись</div>
+                </div>
+                <div>
+                  <div style={{ borderBottom: "1px solid #000", minWidth: 120 }}>&nbsp;</div>
+                  <div style={{ fontSize: "7.5pt", color: "#444" }}>Фамилия И.О.</div>
+                </div>
+              </div>
+
+              {/* Тексты */}
+              <div style={{ fontSize: "10pt", lineHeight: 1.6, marginBottom: 14 }}>
+                <p>
+                  <E field="blockCopiesText" style={{ display: "block" }} />
+                </p>
+                <p style={{ marginTop: 6 }}>
+                  <E field="blockReportText" style={{ display: "block" }} />
+                </p>
+              </div>
+
+              {/* Подписи */}
+              <div style={{ marginTop: 10, fontSize: "10.5pt" }}>
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 10, marginBottom: 4 }}>
+                  <strong style={{ whiteSpace: "nowrap" }}>
+                    <E field="sigIssuerLabel" />
+                  </strong>
+                  <div style={sigLine} />
+                  <span>(</span><div style={sigLine} /><span>)</span>
+                  <div style={sigLine} />
+                </div>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 16 }}>
+                  <span style={{ fontSize: "10pt", minWidth: 130, lineHeight: 1.4 }}>
+                    <E field="sigReceiverLabel" style={{ display: "block" }} />
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+                      <div style={sigLine} />
+                      <div style={sigLine} />
+                      <span>(</span><div style={sigLine} /><span>)</span>
+                      <div style={sigLine} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
