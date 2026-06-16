@@ -961,13 +961,13 @@ export default function Index({ user, onLogout }: IndexProps) {
                           {p.responsible && <div className="text-[11px] text-muted-foreground mt-0.5">{p.responsible}</div>}
                         </td>
                         <td className="px-5 py-4">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
                             <span className="text-sm font-medium text-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{p.remarks.length}</span>
                             <span className="text-xs text-muted-foreground">
                               {p.remarks.length === 1 ? "замечание" : p.remarks.length < 5 ? "замечания" : "замечаний"}
                             </span>
+                            {(() => { const ov = p.remarks.filter(r => effectiveStatus(r) === "Просрочено").length; return ov > 0 ? <span className="text-[10px] text-red-400 bg-red-400/10 border border-red-400/20 px-1.5 py-0.5 rounded font-medium">{ov} просрочено</span> : null; })()}
                           </div>
-                          <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{p.remarks[0]?.description}</p>
                         </td>
                         <td className="px-5 py-4">
                           <span className={`text-sm ${status === "Просрочено" ? "text-red-400 font-medium" : "text-foreground"}`} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
