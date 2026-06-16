@@ -8,7 +8,7 @@ interface Remark { id: string; place: string; description: string; normRef: stri
 interface Prescription { id: string; number: string; date: string; object: string; contractor: string; inspector: string; representative: string; responsible: string; replyEmail: string; reportDeadline: string; remarks: Remark[]; comments: unknown[]; }
 
 const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
-const TEMPLATES_API = PRESCRIPTIONS_API + "/templates";
+const TEMPLATES_API = PRESCRIPTIONS_API + "?type=templates";
 
 // --- Тип шаблона ---
 interface TemplateColumn { key: string; label: string; width: number | null; enabled: boolean; }
@@ -149,7 +149,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
     }
     if (tab === "templates" && templates.length === 0) {
       setTLoading(true);
-      fetch(TEMPLATES_API).then(r => r.json()).then(setTemplates).finally(() => setTLoading(false));
+      fetch(TEMPLATES_API).then(r => r.json()).then(data => setTemplates(Array.isArray(data) ? data : [])).finally(() => setTLoading(false));
     }
   }, [tab]);
 
@@ -159,7 +159,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
     await fetch(TEMPLATES_API, {
       method: isNew ? "POST" : "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(t),
+      body: JSON.stringify({ ...t, _type: "templates" }),
     });
     if (isNew) {
       setTemplates(prev => [...prev, t]);
@@ -170,7 +170,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
   };
 
   const handleDeleteTemplate = async (id: string) => {
-    await fetch(TEMPLATES_API, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    await fetch(TEMPLATES_API, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, _type: "templates" }) });
     setTemplates(prev => prev.filter(t => t.id !== id));
     setTDeleteConfirm(null);
   };

@@ -158,8 +158,9 @@ def handler(event: dict, context) -> dict:
     cur = conn.cursor()
 
     try:
-        # Роутинг по path
-        if path.rstrip("/").endswith("/templates"):
+        # Роутинг по query-параметру ?type=templates
+        qs = event.get("queryStringParameters") or {}
+        if qs.get("type") == "templates" or body.get("_type") == "templates":
             return handle_templates(method, body, cur, conn)
 
         # --- ПРЕДПИСАНИЯ ---
