@@ -87,64 +87,6 @@ function newRemark(): Remark {
   return { id: Date.now().toString() + Math.random(), place: "", description: "", normRef: "", deadline: "", status: "Выдано" };
 }
 
-// --- Начальные данные ---
-const INITIAL: Prescription[] = [
-  {
-    id: "1",
-    number: "П-2024-089",
-    date: "05.06.2024",
-    object: "Цех №3",
-    contractor: "ООО «СтройПодряд»",
-    inspector: "Алексеев С.Н.",
-    representative: "Козлов А.В.",
-    responsible: "Козлов А.В.",
-    replyEmail: "ot@sbd.ru",
-    reportDeadline: "12.06.2024",
-    remarks: [
-      { id: "r1", place: "Эвакуационный выход №2", description: "Захламление эвакуационного выхода посторонними предметами", normRef: "ППР РФ п. 24", deadline: "14.06.2024", status: "Просрочено" },
-      { id: "r2", place: "Коридор 1-го этажа", description: "Отсутствует план эвакуации на видном месте", normRef: "ГОСТ 12.1.004-91", deadline: "20.06.2024", status: "Выдано" },
-    ],
-    comments: [
-      { id: 1, author: "Алексеев С.Н.", role: "Специалист ОТ", text: "Выдано предписание. Прошу устранить в указанный срок.", time: "05.06.2024 10:00" },
-      { id: 2, author: "Козлов А.В.", role: "Подрядчик", text: "Принято, начинаем работы.", time: "06.06.2024 09:15" },
-    ],
-  },
-  {
-    id: "2",
-    number: "П-2024-088",
-    date: "07.06.2024",
-    object: "Склад А",
-    contractor: "ИП Морозов В.П.",
-    inspector: "Алексеев С.Н.",
-    representative: "Морозов В.П.",
-    responsible: "Морозов В.П.",
-    replyEmail: "ot@sbd.ru",
-    reportDeadline: "18.06.2024",
-    remarks: [
-      { id: "r3", place: "Помещение склада", description: "Отсутствует принудительная вытяжка в помещении склада", normRef: "СП 60.13330.2020 п. 8.2", deadline: "20.06.2024", status: "Выдано" },
-    ],
-    comments: [],
-  },
-  {
-    id: "3",
-    number: "П-2024-086",
-    date: "01.06.2024",
-    object: "Линия сборки",
-    contractor: "ООО «МонтажГрупп»",
-    inspector: "Алексеев С.Н.",
-    representative: "Иванов Д.К.",
-    responsible: "Иванов Д.К.",
-    replyEmail: "ot@sbd.ru",
-    reportDeadline: "09.06.2024",
-    remarks: [
-      { id: "r4", place: "Конвейер №2", description: "Отсутствует ограждение опасной зоны около конвейера №2", normRef: "ГОСТ 12.2.062-81 п. 4.1", deadline: "10.06.2024", status: "Устранено" },
-    ],
-    comments: [
-      { id: 1, author: "Иванов Д.К.", role: "Подрядчик", text: "Ограждение установлено, прикладываю фото.", time: "09.06.2024 14:30" },
-      { id: 2, author: "Алексеев С.Н.", role: "Специалист ОТ", text: "Устранение подтверждено. Предписание закрыто.", time: "10.06.2024 09:00" },
-    ],
-  },
-];
 
 // --- UI-компоненты ---
 function StatusBadge({ status }: { status: Status }) {
@@ -330,7 +272,7 @@ function RemarkRow({
   );
 }
 
-function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave: (p: Prescription) => void; user: AppUser }) {
+function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave: (p: Prescription) => Promise<void>; user: AppUser }) {
   const inspectorLabel = [user.position, user.name].filter(Boolean).join(", ");
 
   const [form, setForm] = useState<FormState>({
@@ -360,11 +302,11 @@ function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave: (p: P
     form.reportDeadline &&
     form.remarks.every(r => r.description.trim() && r.deadline);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!isValid) return;
     const now = new Date();
     const num = "П-" + now.getFullYear() + "-" + String(Math.floor(Math.random() * 900) + 100);
-    onSave({
+    await onSave({
       id: Date.now().toString(),
       number: num,
       date: now.toLocaleDateString("ru-RU"),
@@ -523,7 +465,7 @@ function PrescriptionDetail({
 }: {
   prescription: Prescription;
   onClose: () => void;
-  onUpdate: (p: Prescription) => void;
+  onUpdate: (p: Prescription) => Promise<void>;
   user: AppUser;
   canEdit: boolean;
 }) {
@@ -786,12 +728,22 @@ interface IndexProps {
   onLogout: () => void;
 }
 
+const API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
+
 export default function Index({ user, onLogout }: IndexProps) {
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>(INITIAL);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [selected, setSelected] = useState<Prescription | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("Все");
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    fetch(API)
+      .then(r => r.json())
+      .then(data => setPrescriptions(data))
+      .finally(() => setLoading(false));
+  }, []);
 
   const isContractor = user.role === "contractor";
   const canEdit = user.role === "admin" || user.role === "specialist";
@@ -810,9 +762,13 @@ export default function Index({ user, onLogout }: IndexProps) {
     return matchStatus && matchSearch;
   });
 
-  const addPrescription = (p: Prescription) => setPrescriptions(prev => [p, ...prev]);
+  const addPrescription = async (p: Prescription) => {
+    await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) });
+    setPrescriptions(prev => [p, ...prev]);
+  };
 
-  const updatePrescription = (updated: Prescription) => {
+  const updatePrescription = async (updated: Prescription) => {
+    await fetch(API, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
     setPrescriptions(prev => prev.map(p => p.id === updated.id ? updated : p));
     setSelected(updated);
   };
@@ -894,7 +850,12 @@ export default function Index({ user, onLogout }: IndexProps) {
 
         {/* Таблица */}
         <div className="bg-card border border-border rounded-xl overflow-hidden">
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Icon name="Loader" size={28} className="text-primary animate-spin mb-3" />
+              <p className="text-sm text-muted-foreground">Загрузка предписаний...</p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Icon name="ClipboardList" size={40} className="text-muted-foreground/30 mb-3" />
               <p className="text-sm text-muted-foreground">Предписания не найдены</p>
