@@ -5,6 +5,7 @@ import { format, parse, isValid } from "date-fns";
 import { ru } from "date-fns/locale";
 import { AppUser, ROLE_LABELS, ROLE_COLORS } from "@/lib/auth";
 import { printPrescription } from "@/lib/printPrescription";
+import { Template, DEFAULT_TEMPLATE } from "@/lib/template";
 
 // --- Склонение слова в творительный падеж ---
 function declineWordInstr(word: string, isMale: boolean): string {
@@ -525,13 +526,14 @@ function InfoRow({ icon, label, value, highlight }: { icon: string; label: strin
 }
 
 function PrescriptionDetail({
-  prescription, onClose, onUpdate, user, canEdit,
+  prescription, onClose, onUpdate, user, canEdit, template,
 }: {
   prescription: Prescription;
   onClose: () => void;
   onUpdate: (p: Prescription) => Promise<void>;
   user: AppUser;
   canEdit: boolean;
+  template: Template;
 }) {
   const [p, setP] = useState(prescription);
   const [newComment, setNewComment] = useState("");
@@ -603,7 +605,7 @@ function PrescriptionDetail({
           </div>
           <div className="flex items-center gap-2 ml-4 flex-shrink-0">
             <button
-              onClick={() => printPrescription(p)}
+              onClick={() => printPrescription(p, template)}
               className="flex items-center gap-1.5 text-xs border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 rounded-lg px-3 py-1.5 transition-colors"
               title="Сформировать PDF для печати"
             >
@@ -801,12 +803,24 @@ export default function Index({ user, onLogout }: IndexProps) {
   const [selected, setSelected] = useState<Prescription | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("Все");
   const [search, setSearch] = useState("");
+  const [activeTemplate, setActiveTemplate] = useState<Template>({ ...DEFAULT_TEMPLATE, id: "default", name: "По умолчанию", isDefault: true });
 
   useEffect(() => {
     fetch(API)
       .then(r => r.json())
       .then(data => setPrescriptions(data))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    fetch(`${API}?type=templates`)
+      .then(r => r.json())
+      .then((data: Template[]) => {
+        const parsed = typeof data === "string" ? JSON.parse(data) : data;
+        const def = parsed.find((t: Template) => t.isDefault) ?? parsed[0];
+        if (def) setActiveTemplate(def);
+      })
+      .catch(() => {});
   }, []);
 
   const isContractor = user.role === "contractor";
@@ -1008,6 +1022,7 @@ export default function Index({ user, onLogout }: IndexProps) {
           onUpdate={updatePrescription}
           user={user}
           canEdit={canEdit}
+          template={activeTemplate}
         />
       )}
     </div>
