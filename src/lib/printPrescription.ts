@@ -23,7 +23,7 @@ export function printPrescription(p: PrescriptionData, tmpl?: Template): void {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #fff; }
     @media print {
-      @page { size: ${pw}mm ${ph}mm; margin: 0; }
+      @page { size: ${pw}mm ${ph}mm ${t.orientation === "landscape" ? "landscape" : "portrait"}; margin: 0; }
       body { margin: 0; }
     }
   </style>

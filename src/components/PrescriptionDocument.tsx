@@ -152,7 +152,7 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
       <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12, fontSize: `${t.fontSize - 1}pt` }}>
         <colgroup>
           {cols.map(col => (
-            <col key={col.key} style={col.width ? { width: col.width } : {}} />
+            <col key={col.key} style={col.width ? { width: `${col.width}px` } : {}} />
           ))}
         </colgroup>
         <thead>
