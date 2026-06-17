@@ -14,6 +14,8 @@ export function printPrescription(p: PrescriptionData, tmpl?: Template): void {
     React.createElement(PrescriptionDocument, { template: t, prescription: p, forPrint: true })
   );
 
+  const orientation = t.orientation === "landscape" ? "landscape" : "portrait";
+
   const html = `<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -22,9 +24,9 @@ export function printPrescription(p: PrescriptionData, tmpl?: Template): void {
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #fff; }
-    @media print {
-      @page { size: ${pw}mm ${ph}mm ${t.orientation === "landscape" ? "landscape" : "portrait"}; margin: 0; }
-      body { margin: 0; }
+    @page {
+      size: ${t.paperSize} ${orientation};
+      margin: 0;
     }
   </style>
 </head>

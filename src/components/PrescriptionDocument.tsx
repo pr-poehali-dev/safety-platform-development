@@ -148,11 +148,16 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
         {t.blockViolationsTitle}
       </p>
 
-      {/* Таблица нарушений */}
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12, fontSize: `${t.fontSize - 1}pt` }}>
+      {/* Таблица нарушений — ширины как проценты (пропорциональные) */}
+      {(() => {
+        const totalW = cols.reduce((s, c) => s + (c.width ?? 0), 0);
+        const getW = (col: typeof cols[0]) =>
+          totalW > 0 && col.width ? `${((col.width / totalW) * 100).toFixed(2)}%` : undefined;
+        return (
+      <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", marginBottom: 12, fontSize: `${t.fontSize - 1}pt` }}>
         <colgroup>
           {cols.map(col => (
-            <col key={col.key} style={col.width ? { width: `${col.width}px` } : {}} />
+            <col key={col.key} style={getW(col) ? { width: getW(col) } : {}} />
           ))}
         </colgroup>
         <thead>
@@ -193,6 +198,8 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
           </tr>
         </tbody>
       </table>
+        );
+      })()}
 
       {/* Подпись инспектора */}
       <div style={{ display: "flex", gap: 20, alignItems: "flex-end", fontSize: `${t.fontSize - 1}pt`, marginBottom: 16 }}>
