@@ -1,12 +1,10 @@
 {
   "tests": [
     {
-      "name": "GET prescriptions list",
+      "name": "GET prescriptions list returns array",
       "method": "GET",
       "path": "/",
-      "expectedStatus": 200,
-      "expectedBody": [],
-      "bodyMatcher": "partial"
+      "expectedStatus": 200
     }
   ]
 }

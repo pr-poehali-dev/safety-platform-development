@@ -36,13 +36,6 @@ def row_to_prescription(row, remarks):
     }
 
 
-def fetch_remarks(cur, prescription_id):
-    cur.execute(
-        f"SELECT id, place, description, norm_ref, deadline, status FROM {SCHEMA}.remarks "
-        f"WHERE prescription_id = '{prescription_id}' ORDER BY sort_order, id"
-    )
-    return [{"id": r[0], "place": r[1], "description": r[2], "normRef": r[3], "deadline": r[4], "status": r[5]} for r in cur.fetchall()]
-
 
 def row_to_template(row):
     cols = row[5]
@@ -175,11 +168,18 @@ def handler(event: dict, context) -> dict:
                 f"FROM {SCHEMA}.prescriptions ORDER BY created_at DESC"
             )
             rows = cur.fetchall()
-            result = []
-            for row in rows:
-                remarks = fetch_remarks(cur, row[0])
-                result.append(row_to_prescription(row, remarks))
-            return ok(result)
+            if not rows:
+                return ok([])
+            ids = [row[0] for row in rows]
+            ids_list = ",".join(f"'{i}'" for i in ids)
+            cur.execute(
+                f"SELECT prescription_id, id, place, description, norm_ref, deadline, status "
+                f"FROM {SCHEMA}.remarks WHERE prescription_id IN ({ids_list}) ORDER BY prescription_id, sort_order, id"
+            )
+            remarks_map: dict = {pid: [] for pid in ids}
+            for r in cur.fetchall():
+                remarks_map[r[0]].append({"id": r[1], "place": r[2], "description": r[3], "normRef": r[4], "deadline": r[5], "status": r[6]})
+            return ok([row_to_prescription(row, remarks_map[row[0]]) for row in rows])
 
         if method == "POST":
             from datetime import datetime
