@@ -20,6 +20,7 @@ const App = () => {
   useEffect(() => {
     fetchUsers()
       .then(setUsers)
+      .catch(() => setUsers([]))
       .finally(() => setUsersLoading(false));
   }, []);
 
