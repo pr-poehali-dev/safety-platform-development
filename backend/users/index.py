@@ -46,7 +46,7 @@ def handler(event: dict, context) -> dict:
                 f"SELECT id, login, password, name, position, role, contractor FROM {SCHEMA}.users ORDER BY created_at"
             )
             users = [row_to_user(r) for r in cur.fetchall()]
-            return {"statusCode": 200, "headers": CORS, "body": json.dumps(users, ensure_ascii=False)}
+            return {"statusCode": 200, "headers": {**CORS, "Content-Type": "application/json"}, "body": json.dumps(users, ensure_ascii=False)}
 
         if method == "POST":
             u = body
