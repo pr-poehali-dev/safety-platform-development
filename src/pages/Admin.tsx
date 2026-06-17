@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import { AppUser, UserRole, ROLE_LABELS, ROLE_COLORS, apiCreateUser, apiUpdateUser, apiDeleteUser } from "@/lib/auth";
 import { Template, TemplateColumn, DEFAULT_TEMPLATE } from "@/lib/template";
+import PrescriptionDocument from "@/components/PrescriptionDocument";
 
 // --- Типы предписаний (дублируем здесь, чтобы не создавать зависимости от Index) ---
 type Status = "Черновик" | "Выдано" | "Устранено" | "Просрочено";
@@ -772,54 +773,15 @@ function TemplateEditor({ template: initial, onClose, onSave }: {
   const CANVAS_W = typeof window !== "undefined" ? Math.max(window.innerWidth - 290, 500) : 800;
   const scale = Math.min(1, (CANVAS_W - 64) / pageWpx);
 
-  // Стиль редактируемой ячейки на листе
-  const editStyle: React.CSSProperties = {
-    outline: "none",
-    borderBottom: "1.5px dashed #3b82f6",
-    cursor: "text",
-    minWidth: 40,
-    display: "inline-block",
-  };
-
-  // Компонент: редактируемый span прямо на листе
-  const E = ({ field, style }: { field: keyof Template; style?: React.CSSProperties }) => (
-    <span
-      contentEditable
-      suppressContentEditableWarning
-      onBlur={e => set(field, e.currentTarget.textContent ?? "" as Template[typeof field])}
-      style={{ ...editStyle, ...style }}
-      title="Нажмите чтобы редактировать"
-    >
-      {String(t[field])}
-    </span>
-  );
-
   const sampleData = {
+    id: "sample",
     number: "МАН-2026-01", date: "16.06.2026",
     object: "Цех сборки №3", contractor: "ООО «СтройПодряд»",
     inspector: "Алексеев Сергей Николаевич", representative: "Козлов А.В.",
-    replyEmail: "ot@sbd.ru", reportDeadline: "30.06.2026",
-  };
-
-  const docFont: React.CSSProperties = {
-    fontFamily: `'${t.fontFamily}', Times, serif`,
-    fontSize: `${t.fontSize}pt`,
-    color: "#000",
-    lineHeight: 1.5,
-  };
-
-  const fieldLine: React.CSSProperties = {
-    borderBottom: "1px solid #000",
-    display: "inline-block",
-    padding: "0 4px",
-    fontWeight: "bold",
-  };
-
-  const sigLine: React.CSSProperties = {
-    flex: 1,
-    borderBottom: "1px solid #000",
-    minWidth: 80,
-    minHeight: 18,
+    responsible: "Алексеев С.Н.", replyEmail: "ot@sbd.ru", reportDeadline: "30.06.2026",
+    remarks: [
+      { id: "1", place: "Выход №2", description: "Захламление прохода посторонними предметами", normRef: "ППР п.24", deadline: "20.06.2026", status: "Выдано" },
+    ],
   };
 
   const PANELS = [
@@ -965,126 +927,12 @@ function TemplateEditor({ template: initial, onClose, onSave }: {
               height: pageHpx,
               background: "#fff",
               boxShadow: "0 8px 48px rgba(0,0,0,0.5)",
-              ...docFont,
-              padding: `${px(t.marginTop)}px ${px(t.marginRight)}px ${px(t.marginBottom)}px ${px(t.marginLeft)}px`,
-              boxSizing: "border-box",
+              overflow: "hidden",
             }}>
-
-              {/* Заголовок */}
-              <div style={{ textAlign: "center", marginBottom: 6 }}>
-                <div style={{ fontWeight: "bold", textTransform: "uppercase", fontSize: "13pt" }}>
-                  <E field="title" />
-                </div>
-                <div style={{ fontWeight: "bold", fontSize: "10.5pt", marginTop: 3 }}>
-                  <E field="subtitle" style={{ display: "block", textAlign: "center" }} />
-                </div>
-              </div>
-
-              <div style={{ textAlign: "right", fontSize: "10pt", marginTop: 6, marginBottom: 10 }}>
-                от {sampleData.date}
-              </div>
-
-              {/* Реквизиты */}
-              <div style={{ fontSize: "10.5pt", lineHeight: 1.7, marginBottom: 10 }}>
-                <p><strong><E field="blockObjectLabel" /></strong> <span style={fieldLine}>{sampleData.object}</span>.</p>
-                <p style={{ marginTop: 2 }}><strong><E field="blockContractorLabel" /></strong> <span style={fieldLine}>{sampleData.contractor}</span></p>
-                <p style={{ marginTop: 2 }}>
-                  <E field="blockInspectorLabel" /> <span style={fieldLine}>{sampleData.inspector}</span>
-                  {" "}<E field="blockRepresentativeLabel" /> <span style={fieldLine}>{sampleData.representative}</span>
-                </p>
-                <div style={{ display: "flex", gap: 40, fontSize: "8pt", color: "#555", paddingLeft: 120, marginTop: 1 }}>
-                  <span>(Должность, ФИО представителя СОТ)</span>
-                  <span>(Наименование организации)</span>
-                </div>
-              </div>
-
-              {/* Заголовок таблицы */}
-              <p style={{ fontWeight: "bold", margin: "10px 0 6px" }}>
-                <E field="blockViolationsTitle" />
-              </p>
-
-              {/* Таблица нарушений */}
-              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12 }}>
-                <thead>
-                  <tr>
-                    {t.tableColumns.filter(c => c.enabled).map(col => (
-                      <th key={col.key} style={{
-                        border: "1px solid #000", padding: "5px 6px",
-                        fontWeight: "bold", textAlign: "center", fontSize: "9.5pt",
-                        ...(col.width ? { width: col.width } : {}),
-                      }}>
-                        <span
-                          contentEditable suppressContentEditableWarning
-                          onBlur={e => set("tableColumns", t.tableColumns.map(c => c.key === col.key ? { ...c, label: e.currentTarget.textContent ?? "" } : c))}
-                          style={editStyle}
-                        >{col.label}</span>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    {t.tableColumns.filter(c => c.enabled).map((col, i) => (
-                      <td key={col.key} style={{ border: "1px solid #000", padding: "4px 6px", fontSize: "9pt", verticalAlign: "top" }}>
-                        {i === 0 ? "1" : i === 1 ? "Выход №2" : i === 2 ? "Захламление прохода" : i === 3 ? "ППР п.24" : "20.06.2026"}
-                      </td>
-                    ))}
-                  </tr>
-                  <tr>
-                    {t.tableColumns.filter(c => c.enabled).map(col => (
-                      <td key={col.key} style={{ border: "1px solid #000", padding: "18px 6px" }}>&nbsp;</td>
-                    ))}
-                  </tr>
-                </tbody>
-              </table>
-
-              {/* Блок подписи инспектора */}
-              <div style={{ display: "flex", gap: 20, alignItems: "flex-end", fontSize: "10pt", marginBottom: 16 }}>
-                <div style={sigLine} />
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ borderBottom: "1px solid #000", minWidth: 60 }}>&nbsp;</div>
-                  <div style={{ fontSize: "7.5pt", color: "#444" }}>подпись</div>
-                </div>
-                <div>
-                  <div style={{ borderBottom: "1px solid #000", minWidth: 120 }}>&nbsp;</div>
-                  <div style={{ fontSize: "7.5pt", color: "#444" }}>Фамилия И.О.</div>
-                </div>
-              </div>
-
-              {/* Тексты */}
-              <div style={{ fontSize: "10pt", lineHeight: 1.6, marginBottom: 14 }}>
-                <p>
-                  <E field="blockCopiesText" style={{ display: "block" }} />
-                </p>
-                <p style={{ marginTop: 6 }}>
-                  <E field="blockReportText" style={{ display: "block" }} />
-                </p>
-              </div>
-
-              {/* Подписи */}
-              <div style={{ marginTop: 10, fontSize: "10.5pt" }}>
-                <div style={{ display: "flex", alignItems: "flex-end", gap: 10, marginBottom: 4 }}>
-                  <strong style={{ whiteSpace: "nowrap" }}>
-                    <E field="sigIssuerLabel" />
-                  </strong>
-                  <div style={sigLine} />
-                  <span>(</span><div style={sigLine} /><span>)</span>
-                  <div style={sigLine} />
-                </div>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 16 }}>
-                  <span style={{ fontSize: "10pt", minWidth: 130, lineHeight: 1.4 }}>
-                    <E field="sigReceiverLabel" style={{ display: "block" }} />
-                  </span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
-                      <div style={sigLine} />
-                      <div style={sigLine} />
-                      <span>(</span><div style={sigLine} /><span>)</span>
-                      <div style={sigLine} />
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <PrescriptionDocument
+                template={t}
+                prescription={sampleData}
+              />
             </div>
           </div>
         </div>
