@@ -1,7 +1,6 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
 import { Template, DEFAULT_TEMPLATE } from "@/lib/template";
-import PrescriptionDocument from "@/components/PrescriptionDocument";
 
 const TEMPLATES_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69?type=templates";
 
@@ -196,9 +195,104 @@ function TemplateEditor({ template: initial, onClose, onSave }: {
               height: pageHpx,
               background: "#fff",
               boxShadow: "0 8px 48px rgba(0,0,0,0.5)",
+              fontFamily: `'${t.fontFamily}', Times, serif`,
+              fontSize: `${t.fontSize}pt`,
+              color: "#000",
+              lineHeight: 1.5,
+              padding: `${px(t.marginTop)}px ${px(t.marginRight)}px ${px(t.marginBottom)}px ${px(t.marginLeft)}px`,
+              boxSizing: "border-box" as const,
               overflow: "hidden",
             }}>
-              <PrescriptionDocument template={t} prescription={sampleData} />
+              {/* Редактируемый span */}
+              {(() => {
+                const editStyle: React.CSSProperties = { outline: "none", borderBottom: "1.5px dashed #3b82f6", cursor: "text", minWidth: 40, display: "inline-block" };
+                const fieldLine: React.CSSProperties = { borderBottom: "1px solid #000", display: "inline-block", padding: "0 4px", fontWeight: "bold" };
+                const sigLine: React.CSSProperties = { flex: 1, borderBottom: "1px solid #000", minWidth: 80, minHeight: 18 };
+                const E = ({ field, style }: { field: keyof Template; style?: React.CSSProperties }) => (
+                  <span contentEditable suppressContentEditableWarning onBlur={e => set(field, e.currentTarget.textContent ?? "" as Template[typeof field])} style={{ ...editStyle, ...style }} title="Нажмите чтобы редактировать">{String(t[field])}</span>
+                );
+                const cols = t.tableColumns.filter(c => c.enabled);
+                const totalW = cols.reduce((s, c) => s + (c.width ?? 0), 0);
+                const getW = (col: typeof cols[0]) => totalW > 0 && col.width ? `${((col.width / totalW) * 100).toFixed(2)}%` : undefined;
+                return (
+                  <>
+                    {/* Заголовок */}
+                    <div style={{ textAlign: "center", marginBottom: 6 }}>
+                      <div style={{ fontWeight: "bold", textTransform: "uppercase", fontSize: `${t.fontSize + 2}pt` }}>
+                        <E field="title" />
+                      </div>
+                      <div style={{ fontWeight: "bold", fontSize: `${t.fontSize - 0.5}pt`, marginTop: 3 }}>
+                        <E field="subtitle" style={{ display: "block", textAlign: "center" }} />
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right", fontSize: `${t.fontSize - 1}pt`, marginTop: 6, marginBottom: 10 }}>от {sampleData.date}</div>
+                    {/* Реквизиты */}
+                    <div style={{ fontSize: `${t.fontSize - 0.5}pt`, lineHeight: 1.7, marginBottom: 10 }}>
+                      <p><strong><E field="blockObjectLabel" /></strong> <span style={fieldLine}>{sampleData.object}</span>.</p>
+                      <p style={{ marginTop: 2 }}><strong><E field="blockContractorLabel" /></strong> <span style={fieldLine}>{sampleData.contractor}</span></p>
+                      <p style={{ marginTop: 2 }}>
+                        <E field="blockInspectorLabel" /> <span style={fieldLine}>{sampleData.inspector}</span>
+                        {" "}<E field="blockRepresentativeLabel" /> <span style={fieldLine}>{sampleData.representative}</span>
+                      </p>
+                      <div style={{ display: "flex", gap: 40, fontSize: "8pt", color: "#555", paddingLeft: 120, marginTop: 1 }}>
+                        <span>(Должность, ФИО представителя СОТ)</span>
+                        <span>(Наименование организации)</span>
+                      </div>
+                    </div>
+                    {/* Заголовок таблицы */}
+                    <p style={{ fontWeight: "bold", margin: "10px 0 6px" }}><E field="blockViolationsTitle" /></p>
+                    {/* Таблица */}
+                    <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", marginBottom: 12 }}>
+                      <colgroup>{cols.map(col => <col key={col.key} style={getW(col) ? { width: getW(col) } : {}} />)}</colgroup>
+                      <thead>
+                        <tr>
+                          {cols.map(col => (
+                            <th key={col.key} style={{ border: "1px solid #000", padding: "5px 6px", fontWeight: "bold", textAlign: "center", fontSize: `${t.fontSize - 1.5}pt` }}>
+                              <span contentEditable suppressContentEditableWarning onBlur={e => set("tableColumns", t.tableColumns.map(c => c.key === col.key ? { ...c, label: e.currentTarget.textContent ?? "" } : c))} style={editStyle}>{col.label}</span>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>{cols.map((col, i) => <td key={col.key} style={{ border: "1px solid #000", padding: "4px 6px", fontSize: `${t.fontSize - 1}pt`, verticalAlign: "top" }}>{i === 0 ? "1" : i === 1 ? "Выход №2" : i === 2 ? "Захламление прохода" : i === 3 ? "ППР п.24" : "20.06.2026"}</td>)}</tr>
+                        <tr>{cols.map(col => <td key={col.key} style={{ border: "1px solid #000", padding: "18px 6px" }}>&nbsp;</td>)}</tr>
+                      </tbody>
+                    </table>
+                    {/* Подпись инспектора */}
+                    <div style={{ display: "flex", gap: 20, alignItems: "flex-end", fontSize: `${t.fontSize - 1}pt`, marginBottom: 16 }}>
+                      <div style={sigLine} />
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ borderBottom: "1px solid #000", minWidth: 60 }}>&nbsp;</div>
+                        <div style={{ fontSize: "7.5pt", color: "#444" }}>подпись</div>
+                      </div>
+                      <div>
+                        <div style={{ borderBottom: "1px solid #000", minWidth: 120 }}>&nbsp;</div>
+                        <div style={{ fontSize: "7.5pt", color: "#444" }}>Фамилия И.О.</div>
+                      </div>
+                    </div>
+                    {/* Тексты */}
+                    <div style={{ fontSize: `${t.fontSize - 1}pt`, lineHeight: 1.6, marginBottom: 14 }}>
+                      <p><E field="blockCopiesText" style={{ display: "block" }} /></p>
+                      <p style={{ marginTop: 6 }}><E field="blockReportText" style={{ display: "block" }} /></p>
+                    </div>
+                    {/* Подписи */}
+                    <div style={{ marginTop: 10, fontSize: `${t.fontSize - 0.5}pt` }}>
+                      <div style={{ display: "flex", alignItems: "flex-end", gap: 10, marginBottom: 4 }}>
+                        <strong style={{ whiteSpace: "nowrap" }}><E field="sigIssuerLabel" /></strong>
+                        <div style={sigLine} /><span>(</span><div style={sigLine} /><span>)</span><div style={sigLine} />
+                      </div>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 16 }}>
+                        <span style={{ fontSize: `${t.fontSize - 1}pt`, minWidth: 130, lineHeight: 1.4 }}><E field="sigReceiverLabel" style={{ display: "block" }} /></span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+                            <div style={sigLine} /><div style={sigLine} /><span>(</span><div style={sigLine} /><span>)</span><div style={sigLine} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
