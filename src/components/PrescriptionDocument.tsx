@@ -191,11 +191,7 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
               ))}
             </tr>
           ))}
-          <tr>
-            {cols.map(col => (
-              <td key={col.key} style={{ border: "1px solid #000", padding: "18px 6px" }}>&nbsp;</td>
-            ))}
-          </tr>
+
         </tbody>
       </table>
         );

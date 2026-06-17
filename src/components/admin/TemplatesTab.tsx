@@ -255,7 +255,6 @@ function TemplateEditor({ template: initial, onClose, onSave }: {
                       </thead>
                       <tbody>
                         <tr>{cols.map((col, i) => <td key={col.key} style={{ border: "1px solid #000", padding: "4px 6px", fontSize: `${t.fontSize - 1}pt`, verticalAlign: "top" }}>{i === 0 ? "1" : i === 1 ? "Выход №2" : i === 2 ? "Захламление прохода" : i === 3 ? "ППР п.24" : "20.06.2026"}</td>)}</tr>
-                        <tr>{cols.map(col => <td key={col.key} style={{ border: "1px solid #000", padding: "18px 6px" }}>&nbsp;</td>)}</tr>
                       </tbody>
                     </table>
                     {/* Подпись инспектора */}
