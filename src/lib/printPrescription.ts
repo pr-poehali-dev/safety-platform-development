@@ -25,8 +25,13 @@ export function printPrescription(p: PrescriptionData, tmpl?: Template): void {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #fff; }
     @page {
-      size: ${t.paperSize} ${orientation};
-      margin: 0;
+      size: ${pw}mm ${ph}mm;
+      margin: ${t.marginTop}mm ${t.marginRight}mm ${t.marginBottom}mm ${t.marginLeft}mm;
+    }
+    @media print {
+      thead { display: table-header-group; }
+      tfoot { display: table-footer-group; }
+      tr    { page-break-inside: avoid; }
     }
   </style>
 </head>

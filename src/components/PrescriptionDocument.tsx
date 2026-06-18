@@ -85,15 +85,12 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
   const px = (mm: number) => Math.round(mm * 96 / 25.4);
 
   const pageStyle: React.CSSProperties = forPrint ? {
-    width: `${paperW}mm`,
-    minHeight: `${paperH}mm`,
-    padding: `${t.marginTop}mm ${t.marginRight}mm ${t.marginBottom}mm ${t.marginLeft}mm`,
-    boxSizing: "border-box",
     fontFamily: `'${t.fontFamily}', Times, serif`,
     fontSize: `${t.fontSize}pt`,
     color: "#000",
     background: "#fff",
     lineHeight: 1.5,
+    // Поля управляются через @page в printPrescription.ts — не дублируем padding
   } : {
     padding: `${px(t.marginTop)}px ${px(t.marginRight)}px ${px(t.marginBottom)}px ${px(t.marginLeft)}px`,
     boxSizing: "border-box",
@@ -107,6 +104,8 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
 
   return (
     <div style={pageStyle}>
+      {/* Стили печати: повтор шапки таблицы и корректные поля всех страниц */}
+
       {/* Заголовок */}
       <div style={{ textAlign: "center", marginBottom: 6 }}>
         <div style={{ fontWeight: "bold", textTransform: "uppercase", fontSize: `${t.fontSize + 2}pt` }}>
