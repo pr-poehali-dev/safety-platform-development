@@ -46,8 +46,8 @@ function getCellValue(key: string, r: Remark, idx: number): React.ReactNode {
                 style={{
                   width: photos.length === 1 ? "100%" : `calc(${100 / photos.length}% - ${(photos.length - 1) * 4 / photos.length}px)`,
                   boxSizing: "border-box",
-                  breakInside: "avoid",
-                  pageBreakInside: "avoid",
+                  overflow: "hidden",
+                  lineHeight: 0,
                 }}
               >
                 <img
@@ -55,10 +55,9 @@ function getCellValue(key: string, r: Remark, idx: number): React.ReactNode {
                   alt={`Фото ${i + 1}`}
                   style={{
                     width: "100%",
-                    maxWidth: "100%",
-                    maxHeight: "180mm",
-                    height: "auto",
-                    objectFit: "contain",
+                    height: "90mm",
+                    objectFit: "cover",
+                    objectPosition: "center top",
                     display: "block",
                     border: "1px solid #ccc",
                     boxSizing: "border-box",
