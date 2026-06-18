@@ -53,6 +53,7 @@ function getCellValue(key: string, r: Remark, idx: number): React.ReactNode {
                 <img
                   src={url}
                   alt={`Фото ${i + 1}`}
+                  data-photo="1"
                   style={{
                     width: "100%",
                     height: "auto",

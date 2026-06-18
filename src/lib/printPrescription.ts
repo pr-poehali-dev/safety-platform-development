@@ -16,6 +16,11 @@ export function printPrescription(p: PrescriptionData, tmpl?: Template): void {
 
   const orientation = t.orientation === "landscape" ? "landscape" : "portrait";
 
+  // Доступная высота страницы в мм (за вычетом полей)
+  const pageH = ph - t.marginTop - t.marginBottom;
+  // Оставляем запас ~15мм на текст замечания и отступы внутри строки
+  const maxImgH = pageH - 15;
+
   const html = `<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -33,14 +38,65 @@ export function printPrescription(p: PrescriptionData, tmpl?: Template): void {
       tfoot { display: table-footer-group; }
       tr { page-break-inside: auto; }
       thead tr { page-break-inside: avoid; page-break-after: avoid; }
-      img { page-break-inside: avoid; break-inside: avoid; max-width: 100%; }
     }
   </style>
+  <script>
+    // Подбираем ширину каждого фото так, чтобы оно целиком влезло на страницу
+    var MAX_IMG_H_MM = ${maxImgH};
+    var MM_PER_PX; // будет вычислено через ruler
+
+    function fitImages() {
+      // Создаём линейку 10mm для вычисления px/mm
+      var ruler = document.createElement('div');
+      ruler.style.cssText = 'position:absolute;top:-9999px;left:-9999px;width:10mm;height:1px;';
+      document.body.appendChild(ruler);
+      MM_PER_PX = 10 / ruler.offsetWidth;
+      document.body.removeChild(ruler);
+
+      var maxHpx = MAX_IMG_H_MM / MM_PER_PX;
+
+      var imgs = document.querySelectorAll('img[data-photo]');
+      imgs.forEach(function(img) {
+        var naturalW = img.naturalWidth;
+        var naturalH = img.naturalHeight;
+        if (!naturalW || !naturalH) return;
+
+        var ratio = naturalH / naturalW; // высота / ширина
+        var containerW = img.parentElement ? img.parentElement.offsetWidth : img.offsetWidth;
+
+        // Высота при текущей ширине контейнера
+        var renderedH = containerW * ratio;
+
+        if (renderedH > maxHpx) {
+          // Нужная ширина чтобы высота = maxHpx
+          var neededW = maxHpx / ratio;
+          img.style.width = Math.floor(neededW) + 'px';
+        } else {
+          img.style.width = '100%';
+        }
+        img.style.height = 'auto';
+      });
+    }
+
+    window.addEventListener('load', function() {
+      var imgs = document.querySelectorAll('img[data-photo]');
+      var loaded = 0;
+      var total = imgs.length;
+      if (total === 0) { return; }
+      function onLoad() {
+        loaded++;
+        if (loaded === total) fitImages();
+      }
+      imgs.forEach(function(img) {
+        if (img.complete) { onLoad(); }
+        else { img.addEventListener('load', onLoad); img.addEventListener('error', onLoad); }
+      });
+    });
+  </script>
 </head>
 <body>${bodyHtml}</body>
 </html>`;
 
-  // Используем blob URL чтобы избежать "about:blank" в заголовке
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const w = window.open(url, "_blank");
@@ -49,5 +105,5 @@ export function printPrescription(p: PrescriptionData, tmpl?: Template): void {
     w.focus();
     w.print();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
-  }, 400);
+  }, 1200);
 }
