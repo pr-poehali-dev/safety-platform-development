@@ -39,14 +39,14 @@ function getCellValue(key: string, r: Remark, idx: number): React.ReactNode {
       <>
         <span>{r.description || "—"}</span>
         {photos.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6, width: "100%" }}>
+          <div style={{ display: "block", marginTop: 6, width: "100%" }}>
             {photos.map((url, i) => (
               <div
                 key={i}
                 style={{
-                  width: photos.length === 1 ? "100%" : `calc(${100 / photos.length}% - ${(photos.length - 1) * 4 / photos.length}px)`,
+                  width: "100%",
                   boxSizing: "border-box",
-                  overflow: "hidden",
+                  marginTop: i > 0 ? 4 : 0,
                   lineHeight: 0,
                 }}
               >
@@ -55,9 +55,7 @@ function getCellValue(key: string, r: Remark, idx: number): React.ReactNode {
                   alt={`Фото ${i + 1}`}
                   style={{
                     width: "100%",
-                    height: "90mm",
-                    objectFit: "cover",
-                    objectPosition: "center top",
+                    height: "auto",
                     display: "block",
                     border: "1px solid #ccc",
                     boxSizing: "border-box",
