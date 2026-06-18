@@ -92,6 +92,7 @@ export function DatePicker({ value, onChange, placeholder }: { value: string; on
 
 const UPLOAD_URL = "https://functions.poehali.dev/b1d2899a-a609-43c1-81e8-34e4c4922136";
 const MAX_PHOTOS = 3;
+const MAX_PHOTO_SIZE = 1.5 * 1024 * 1024;
 
 // --- Строка замечания ---
 function RemarkRow({
@@ -109,6 +110,12 @@ function RemarkRow({
     if (!files || !files.length) return;
     const remaining = MAX_PHOTOS - photos.length;
     if (remaining <= 0) return;
+    const oversized = Array.from(files).filter(f => f.size > MAX_PHOTO_SIZE);
+    if (oversized.length > 0) {
+      alert(`Файл "${oversized[0].name}" превышает допустимый размер 1,5 МБ.`);
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
     setUploading(true);
     const toUpload = Array.from(files).slice(0, remaining);
     const urls: string[] = [];

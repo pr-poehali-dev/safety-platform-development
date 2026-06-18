@@ -10,6 +10,7 @@ import {
 
 const UPLOAD_URL = "https://functions.poehali.dev/b1d2899a-a609-43c1-81e8-34e4c4922136";
 const MAX_PHOTOS = 3;
+const MAX_PHOTO_SIZE = 1.5 * 1024 * 1024;
 
 function StatusBadge({ status }: { status: Status }) {
   return (
@@ -56,6 +57,13 @@ export function PrescriptionDetail({
     const existing = remark.photos ?? [];
     const remaining = MAX_PHOTOS - existing.length;
     if (remaining <= 0) return;
+    const oversized = Array.from(files).filter(f => f.size > MAX_PHOTO_SIZE);
+    if (oversized.length > 0) {
+      alert(`Файл "${oversized[0].name}" превышает допустимый размер 1,5 МБ.`);
+      const input = photoInputRefs.current[remarkId];
+      if (input) input.value = "";
+      return;
+    }
     setUploadingRemarkId(remarkId);
     const toUpload = Array.from(files).slice(0, remaining);
     const urls: string[] = [];
