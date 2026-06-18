@@ -8,6 +8,9 @@ import {
   ALL_STATUSES, STATUS_STYLE, isOverdue, effectiveStatus, overallStatus,
 } from "@/lib/prescriptionTypes";
 
+const UPLOAD_URL = "https://functions.poehali.dev/b1d2899a-a609-43c1-81e8-34e4c4922136";
+const MAX_PHOTOS = 3;
+
 function StatusBadge({ status }: { status: Status }) {
   return (
     <span className={`inline-flex items-center border text-[11px] font-medium px-2 py-0.5 rounded whitespace-nowrap ${STATUS_STYLE[status]}`}>
@@ -42,7 +45,54 @@ export function PrescriptionDetail({
   const [newComment, setNewComment] = useState("");
   const [activeTab, setActiveTab] = useState<"remarks" | "chat">("remarks");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploadingRemarkId, setUploadingRemarkId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const handleRemarkPhotos = async (remarkId: string, files: FileList | null) => {
+    if (!files || !files.length) return;
+    const remark = p.remarks.find(r => r.id === remarkId);
+    if (!remark) return;
+    const existing = remark.photos ?? [];
+    const remaining = MAX_PHOTOS - existing.length;
+    if (remaining <= 0) return;
+    setUploadingRemarkId(remarkId);
+    const toUpload = Array.from(files).slice(0, remaining);
+    const urls: string[] = [];
+    for (const file of toUpload) {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target?.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch(UPLOAD_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataUrl }),
+      });
+      const data = await res.json();
+      if (data.url) urls.push(data.url);
+    }
+    const remarks = p.remarks.map(r =>
+      r.id === remarkId ? { ...r, photos: [...existing, ...urls] } : r
+    );
+    const updated = { ...p, remarks };
+    setP(updated);
+    onUpdate(updated);
+    setUploadingRemarkId(null);
+    const input = photoInputRefs.current[remarkId];
+    if (input) input.value = "";
+  };
+
+  const removeRemarkPhoto = (remarkId: string, photoIdx: number) => {
+    const remarks = p.remarks.map(r =>
+      r.id === remarkId ? { ...r, photos: (r.photos ?? []).filter((_, i) => i !== photoIdx) } : r
+    );
+    const updated = { ...p, remarks };
+    setP(updated);
+    onUpdate(updated);
+  };
 
   const isContractor = user.role === "contractor";
   const myRole = isContractor ? "Подрядчик" : "Специалист ОТ";
@@ -161,6 +211,54 @@ export function PrescriptionDetail({
                     <StatusBadge status={effectiveStatus(r)} />
                   </div>
                   <p className="text-sm text-foreground leading-relaxed bg-secondary/40 rounded-lg p-3">{r.description}</p>
+
+                  {/* Фото нарушения */}
+                  <div>
+                    {((r.photos ?? []).length > 0 || canEdit) && (
+                      <div className="flex flex-wrap gap-2 items-center">
+                        {(r.photos ?? []).map((url, pi) => (
+                          <div key={pi} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-border flex-shrink-0">
+                            <img src={url} alt={`Фото ${pi + 1}`} className="w-full h-full object-cover" />
+                            {canEdit && (
+                              <button
+                                type="button"
+                                onClick={() => removeRemarkPhoto(r.id, pi)}
+                                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                              >
+                                <Icon name="X" size={14} className="text-white" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        {canEdit && (r.photos ?? []).length < MAX_PHOTOS && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => photoInputRefs.current[r.id]?.click()}
+                              disabled={uploadingRemarkId === r.id}
+                              className="w-16 h-16 rounded-lg border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary flex-shrink-0"
+                            >
+                              {uploadingRemarkId === r.id
+                                ? <Icon name="Loader2" size={16} className="animate-spin" />
+                                : <Icon name="Camera" size={16} />}
+                              <span className="text-[10px] leading-tight text-center">
+                                {uploadingRemarkId === r.id ? "Загрузка" : `${(r.photos ?? []).length}/${MAX_PHOTOS}`}
+                              </span>
+                            </button>
+                            <input
+                              ref={el => { photoInputRefs.current[r.id] = el; }}
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              className="hidden"
+                              onChange={e => handleRemarkPhotos(r.id, e.target.files)}
+                            />
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   {r.normRef && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Icon name="BookOpen" size={12} />
