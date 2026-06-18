@@ -140,26 +140,16 @@ export function PrescriptionList({
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1100px]">
-                <colgroup>
-                  <col style={{ width: "90px" }} />
-                  <col style={{ width: "270px" }} />
-                  <col style={{ width: "180px" }} />
-                  <col style={{ width: "180px" }} />
-                  <col style={{ width: "110px" }} />
-                  <col style={{ width: "110px" }} />
-                  <col style={{ width: "100px" }} />
-                  <col style={{ width: "90px" }} />
-                </colgroup>
+              <table style={{ tableLayout: "fixed", width: "100%", minWidth: "1100px" }}>
                 <thead>
                   <tr className="border-b border-border bg-secondary/20">
-                    <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Номер</th>
-                    <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Объект</th>
-                    <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Подрядчик</th>
-                    <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Выдал</th>
-                    <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Замечания</th>
-                    <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Ближайший срок</th>
-                    <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Статус</th>
+                    <th style={{ width: "90px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Номер</th>
+                    <th style={{ width: "270px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Объект</th>
+                    <th style={{ width: "180px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Подрядчик</th>
+                    <th style={{ width: "180px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Выдал</th>
+                    <th style={{ width: "110px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Замечания</th>
+                    <th style={{ width: "110px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Ближайший срок</th>
+                    <th style={{ width: "100px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Статус</th>
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
