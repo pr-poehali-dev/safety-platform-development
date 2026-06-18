@@ -29,14 +29,11 @@ export function printPrescription(p: PrescriptionData, tmpl?: Template): void {
       margin: ${t.marginTop}mm ${t.marginRight}mm ${t.marginBottom}mm ${t.marginLeft}mm;
     }
     @media print {
-      /* Шапка таблицы повторяется на каждой странице */
       thead { display: table-header-group; }
       tfoot { display: table-footer-group; }
-      /* Позволяем строкам переноситься — не запрещаем разрыв внутри tr,
-         иначе браузер выносит всю таблицу на новую страницу */
       tr { page-break-inside: auto; }
-      /* Но шапку не разрываем */
       thead tr { page-break-inside: avoid; page-break-after: avoid; }
+      img { page-break-inside: avoid; break-inside: avoid; max-width: 100%; }
     }
   </style>
 </head>
