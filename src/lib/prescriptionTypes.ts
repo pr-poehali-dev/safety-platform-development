@@ -27,10 +27,15 @@ export function declineWordInstr(word: string, isMale: boolean): string {
 export const STOP_WORDS = new Set(["и", "или", "по", "на", "в", "за", "с", "от", "для", "при", "к", "а", "но"]);
 
 // Склонение произвольной фразы-должности (каждое слово отдельно)
+// После предлога (стоп-слова) все последующие слова не склоняются — они входят в предложную группу
 export function declinePosition(position: string, isMale: boolean): string {
-  return position.split(/\s+/).map(word => {
+  const words = position.split(/\s+/);
+  let stopDecline = false;
+  return words.map(word => {
     const clean = word.toLowerCase().replace(/[^а-яё]/g, "");
-    if (!clean || STOP_WORDS.has(clean)) return word;
+    if (!clean) return word;
+    if (STOP_WORDS.has(clean)) { stopDecline = true; return word; }
+    if (stopDecline) return word;
     return declineWordInstr(word, isMale);
   }).join(" ");
 }

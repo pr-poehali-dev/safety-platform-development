@@ -1,5 +1,6 @@
 import React from "react";
 import { Template } from "@/lib/template";
+import { toInstrumental, declinePosition, detectGenderFromName } from "@/lib/prescriptionTypes";
 
 interface Remark {
   id: string;
@@ -81,6 +82,36 @@ interface Props {
   template: Template;
   prescription: PrescriptionData;
   forPrint?: boolean;
+}
+
+// Проверяет, что строка уже в творительном падеже (по типичным окончаниям последнего слова)
+function isInstrumental(str: string): boolean {
+  const last = str.trim().split(/\s+/).pop()?.toLowerCase() ?? "";
+  return /ым$|им$|ой$|ей$|ом$|ем$|ью$/.test(last);
+}
+
+// Склоняет строку "Должность Фамилия Имя Отчество" в творительный падеж
+// если она ещё не в творительном
+function toInstrumentalFull(str: string): string {
+  if (!str.trim()) return str;
+  if (isInstrumental(str)) return str;
+  // Определяем границу ФИО: последние слова начинающиеся с заглавной буквы
+  // Должность — всё до первого слова с заглавной буквы после первого слова
+  const words = str.trim().split(/\s+/);
+  // Ищем начало ФИО: 2 или 3 слова подряд с заглавной буквы в конце строки
+  let nameStart = words.length;
+  for (let i = words.length - 1; i >= 1; i--) {
+    if (/^[А-ЯЁ]/.test(words[i])) nameStart = i;
+    else break;
+  }
+  const positionPart = words.slice(0, nameStart).join(" ");
+  const namePart = words.slice(nameStart).join(" ");
+  const isMale = namePart ? detectGenderFromName(namePart) : true;
+  const declined = [
+    positionPart ? declinePosition(positionPart, isMale) : "",
+    namePart ? toInstrumental(namePart) : "",
+  ].filter(Boolean).join(" ");
+  return declined || str;
 }
 
 export default function PrescriptionDocument({ template: t, prescription: p, forPrint }: Props) {
@@ -168,7 +199,7 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
         </p>
         <p style={{ marginTop: 2 }}>
           {t.blockInspectorLabel}{" "}
-          <span style={fieldLine}>{p.inspector || "\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0"}</span>
+          <span style={fieldLine}>{toInstrumentalFull(p.inspector) || "\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0"}</span>
           {" "}{t.blockRepresentativeLabel}{" "}
           <span style={fieldLine}>{p.representative || "\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0"}</span>
         </p>
