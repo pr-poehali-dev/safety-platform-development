@@ -8,6 +8,7 @@ interface Remark {
   normRef: string;
   deadline: string;
   status: string;
+  photos?: string[];
 }
 
 export interface PrescriptionData {
@@ -29,10 +30,29 @@ function fill(text: string, vars: Record<string, string>): string {
   return text.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
 }
 
-function getCellValue(key: string, r: Remark, idx: number): string {
+function getCellValue(key: string, r: Remark, idx: number): React.ReactNode {
   if (key === "num") return String(idx + 1);
   if (key === "place") return r.place || "—";
-  if (key === "description") return r.description || "—";
+  if (key === "description") {
+    const photos = r.photos ?? [];
+    return (
+      <>
+        <span>{r.description || "—"}</span>
+        {photos.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+            {photos.map((url, i) => (
+              <img
+                key={i}
+                src={url}
+                alt={`Фото ${i + 1}`}
+                style={{ width: "calc(33% - 3px)", maxWidth: 120, height: "auto", objectFit: "cover", display: "block", border: "1px solid #ccc" }}
+              />
+            ))}
+          </div>
+        )}
+      </>
+    );
+  }
   if (key === "normRef") return r.normRef || "—";
   if (key === "deadline") return r.deadline || "—";
   if (key === "status") return r.status || "—";

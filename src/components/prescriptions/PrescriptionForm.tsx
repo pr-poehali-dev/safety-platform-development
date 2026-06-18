@@ -90,6 +90,9 @@ export function DatePicker({ value, onChange, placeholder }: { value: string; on
   );
 }
 
+const UPLOAD_URL = "https://functions.poehali.dev/b1d2899a-a609-43c1-81e8-34e4c4922136";
+const MAX_PHOTOS = 3;
+
 // --- Строка замечания ---
 function RemarkRow({
   remark, index, onChange, onRemove, canRemove,
@@ -97,6 +100,41 @@ function RemarkRow({
   remark: Remark; index: number; onChange: (r: Remark) => void; onRemove: () => void; canRemove: boolean;
 }) {
   const set = (key: keyof Remark, val: string) => onChange({ ...remark, [key]: val });
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const photos = remark.photos ?? [];
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || !files.length) return;
+    const remaining = MAX_PHOTOS - photos.length;
+    if (remaining <= 0) return;
+    setUploading(true);
+    const toUpload = Array.from(files).slice(0, remaining);
+    const urls: string[] = [];
+    for (const file of toUpload) {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target?.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch(UPLOAD_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataUrl }),
+      });
+      const data = await res.json();
+      if (data.url) urls.push(data.url);
+    }
+    onChange({ ...remark, photos: [...photos, ...urls] });
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const removePhoto = (idx: number) => {
+    onChange({ ...remark, photos: photos.filter((_, i) => i !== idx) });
+  };
 
   return (
     <div className="border border-border rounded-xl p-4 space-y-3 bg-secondary/20 relative">
@@ -114,6 +152,48 @@ function RemarkRow({
       <Field label="Описание нарушения *">
         <TextareaBase value={remark.description} onChange={e => set("description", e.target.value)} placeholder="Опишите выявленное нарушение" rows={2} />
       </Field>
+
+      {/* Фото нарушения */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          {photos.map((url, i) => (
+            <div key={i} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-border flex-shrink-0">
+              <img src={url} alt={`Фото ${i + 1}`} className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => removePhoto(i)}
+                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+              >
+                <Icon name="X" size={14} className="text-white" />
+              </button>
+            </div>
+          ))}
+          {photos.length < MAX_PHOTOS && (
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="w-16 h-16 rounded-lg border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary flex-shrink-0"
+            >
+              {uploading
+                ? <Icon name="Loader2" size={16} className="animate-spin" />
+                : <Icon name="Camera" size={16} />}
+              <span className="text-[10px] leading-tight text-center">
+                {uploading ? "Загрузка" : `Фото\n${photos.length}/${MAX_PHOTOS}`}
+              </span>
+            </button>
+          )}
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={e => handleFiles(e.target.files)}
+        />
+      </div>
+
       <Field label="Ссылка на нормативный документ">
         <InputBase value={remark.normRef} onChange={e => set("normRef", e.target.value)} placeholder="Например: ППР РФ п. 24" />
       </Field>

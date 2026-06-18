@@ -69,6 +69,7 @@ export interface Remark {
   normRef: string;
   deadline: string;
   status: Status;
+  photos?: string[];
 }
 
 export interface Prescription {
@@ -139,4 +140,3 @@ export function overallStatus(remarks: Remark[]): Status {
 export function newRemark(): Remark {
   return { id: Date.now().toString() + Math.random(), place: "", description: "", normRef: "", deadline: "", status: "Выдано" };
 }
-
