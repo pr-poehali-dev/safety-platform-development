@@ -23,24 +23,34 @@ export function printPrescription(p: PrescriptionData, tmpl?: Template): void {
   <title>АКТ-ПРЕДПИСАНИЕ № ${p.number}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #fff; }
+    html, body { background: #fff; }
     @page {
       size: ${pw}mm ${ph}mm;
       margin: ${t.marginTop}mm ${t.marginRight}mm ${t.marginBottom}mm ${t.marginLeft}mm;
     }
     @media print {
+      /* Шапка таблицы повторяется на каждой странице */
       thead { display: table-header-group; }
       tfoot { display: table-footer-group; }
-      tr    { page-break-inside: avoid; }
+      /* Позволяем строкам переноситься — не запрещаем разрыв внутри tr,
+         иначе браузер выносит всю таблицу на новую страницу */
+      tr { page-break-inside: auto; }
+      /* Но шапку не разрываем */
+      thead tr { page-break-inside: avoid; page-break-after: avoid; }
     }
   </style>
 </head>
 <body>${bodyHtml}</body>
 </html>`;
 
-  const w = window.open("", "_blank");
-  if (!w) return;
-  w.document.write(html);
-  w.document.close();
-  setTimeout(() => { w.focus(); w.print(); }, 300);
+  // Используем blob URL чтобы избежать "about:blank" в заголовке
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url, "_blank");
+  if (!w) { URL.revokeObjectURL(url); return; }
+  setTimeout(() => {
+    w.focus();
+    w.print();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }, 400);
 }
