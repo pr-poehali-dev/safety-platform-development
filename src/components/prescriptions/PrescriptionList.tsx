@@ -140,7 +140,17 @@ export function PrescriptionList({
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px]">
+              <table className="w-full min-w-[1100px]">
+                <colgroup>
+                  <col style={{ width: "90px" }} />
+                  <col style={{ width: "270px" }} />
+                  <col style={{ width: "180px" }} />
+                  <col style={{ width: "180px" }} />
+                  <col style={{ width: "110px" }} />
+                  <col style={{ width: "110px" }} />
+                  <col style={{ width: "100px" }} />
+                  <col style={{ width: "90px" }} />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-border bg-secondary/20">
                     <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Номер</th>
