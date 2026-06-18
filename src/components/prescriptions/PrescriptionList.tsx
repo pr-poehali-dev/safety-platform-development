@@ -146,6 +146,7 @@ export function PrescriptionList({
                     <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Номер</th>
                     <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Объект</th>
                     <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Подрядчик</th>
+                    <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Выдал</th>
                     <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Замечания</th>
                     <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Ближайший срок</th>
                     <th className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Статус</th>
@@ -170,6 +171,21 @@ export function PrescriptionList({
                         <td className="px-5 py-4">
                           <span className="text-sm text-foreground">{p.contractor}</span>
                           {p.responsible && <div className="text-[11px] text-muted-foreground mt-0.5">{p.responsible}</div>}
+                        </td>
+                        <td className="px-5 py-4 max-w-[180px]">
+                          {p.inspector ? (() => {
+                            const parts = p.inspector.trim().split(/\s+/);
+                            let nameStart = parts.length;
+                            for (let i = parts.length - 1; i >= 1; i--) {
+                              if (/^[А-ЯЁ]/.test(parts[i])) nameStart = i; else break;
+                            }
+                            const position = parts.slice(0, nameStart).join(" ");
+                            const name = parts.slice(nameStart).join(" ");
+                            return <>
+                              {name && <div className="text-sm text-foreground">{name}</div>}
+                              {position && <div className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{position}</div>}
+                            </>;
+                          })() : <span className="text-muted-foreground text-sm">—</span>}
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-1.5">
