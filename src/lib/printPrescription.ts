@@ -32,7 +32,13 @@ export function printPrescription(p: PrescriptionData, tmpl?: Template): void {
     @page {
       size: ${pw}mm ${ph}mm;
       margin: ${t.marginTop}mm ${t.marginRight}mm ${t.marginBottom}mm ${t.marginLeft}mm;
+      margin-header: 0;
+      margin-footer: 0;
     }
+    @page :first { margin-top: ${t.marginTop}mm; }
+    html { -webkit-print-color-adjust: exact; }
+    /* Скрываем системные колонтитулы браузера */
+    head, header, footer { display: none !important; }
     @media print {
       thead { display: table-header-group; }
       tfoot { display: table-footer-group; }
