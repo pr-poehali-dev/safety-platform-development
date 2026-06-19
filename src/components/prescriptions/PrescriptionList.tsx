@@ -140,11 +140,11 @@ export function PrescriptionList({
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table style={{ tableLayout: "fixed", width: "1240px", minWidth: "1240px" }}>
+              <table style={{ tableLayout: "fixed", width: "1320px", minWidth: "1320px" }}>
                 <thead>
                   <tr className="border-b border-border bg-secondary/20">
                     <th style={{ width: "90px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Номер</th>
-                    <th style={{ width: "270px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Объект</th>
+                    <th style={{ width: "350px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Объект</th>
                     <th style={{ width: "180px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Подрядчик</th>
                     <th style={{ width: "180px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Выдал</th>
                     <th style={{ width: "120px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Замечания</th>
