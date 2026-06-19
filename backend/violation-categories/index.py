@@ -24,10 +24,10 @@ def handler(event: dict, context) -> dict:
     if method == "GET":
         conn = get_conn()
         cur = conn.cursor()
-        cur.execute(f"SELECT id, name, sort_order FROM {SCHEMA}.violation_categories ORDER BY sort_order, id")
+        cur.execute(f"SELECT id, name, sort_order, is_spb FROM {SCHEMA}.violation_categories ORDER BY sort_order, id")
         rows = cur.fetchall()
         conn.close()
-        categories = [{"id": r[0], "name": r[1], "sort_order": r[2]} for r in rows]
+        categories = [{"id": r[0], "name": r[1], "sort_order": r[2], "is_spb": r[3]} for r in rows]
         return {"statusCode": 200, "headers": cors, "body": json.dumps(categories, ensure_ascii=False)}
 
     body = json.loads(event.get("body") or "{}")
@@ -41,14 +41,15 @@ def handler(event: dict, context) -> dict:
         cur = conn.cursor()
         cur.execute(f"SELECT COALESCE(MAX(sort_order), 0) + 1 FROM {SCHEMA}.violation_categories")
         next_order = cur.fetchone()[0]
+        is_spb = bool(body.get("is_spb", False))
         cur.execute(
-            f"INSERT INTO {SCHEMA}.violation_categories (name, sort_order) VALUES (%s, %s) RETURNING id, name, sort_order",
-            (name, next_order)
+            f"INSERT INTO {SCHEMA}.violation_categories (name, sort_order, is_spb) VALUES (%s, %s, %s) RETURNING id, name, sort_order, is_spb",
+            (name, next_order, is_spb)
         )
         row = cur.fetchone()
         conn.commit()
         conn.close()
-        return {"statusCode": 200, "headers": cors, "body": json.dumps({"id": row[0], "name": row[1], "sort_order": row[2]}, ensure_ascii=False)}
+        return {"statusCode": 200, "headers": cors, "body": json.dumps({"id": row[0], "name": row[1], "sort_order": row[2], "is_spb": row[3]}, ensure_ascii=False)}
 
     # PUT — обновить категорию
     if method == "PUT":
@@ -58,7 +59,8 @@ def handler(event: dict, context) -> dict:
             return {"statusCode": 400, "headers": cors, "body": json.dumps({"error": "id and name required"})}
         conn = get_conn()
         cur = conn.cursor()
-        cur.execute(f"UPDATE {SCHEMA}.violation_categories SET name = %s WHERE id = %s", (name, cat_id))
+        is_spb = bool(body.get("is_spb", False))
+        cur.execute(f"UPDATE {SCHEMA}.violation_categories SET name = %s, is_spb = %s WHERE id = %s", (name, is_spb, cat_id))
         conn.commit()
         conn.close()
         return {"statusCode": 200, "headers": cors, "body": json.dumps({"ok": True})}

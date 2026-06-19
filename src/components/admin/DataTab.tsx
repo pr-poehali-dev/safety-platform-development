@@ -7,6 +7,7 @@ interface Category {
   id: number;
   name: string;
   sort_order: number;
+  is_spb: boolean;
 }
 
 // --- Редактор списка (открывается поверх, как TemplateEditor) ---
@@ -14,9 +15,11 @@ function ListEditor({ onClose }: { onClose: () => void }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState("");
+  const [newSpb, setNewSpb] = useState(false);
   const [adding, setAdding] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
+  const [editSpb, setEditSpb] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
@@ -34,8 +37,13 @@ function ListEditor({ onClose }: { onClose: () => void }) {
     const name = newName.trim();
     if (!name) return;
     setAdding(true);
-    await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+    await fetch(API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, is_spb: newSpb }),
+    });
     setNewName("");
+    setNewSpb(false);
     setAdding(false);
     load();
   };
@@ -43,15 +51,29 @@ function ListEditor({ onClose }: { onClose: () => void }) {
   const startEdit = (cat: Category) => {
     setEditId(cat.id);
     setEditName(cat.name);
+    setEditSpb(cat.is_spb);
     setDeleteConfirm(null);
   };
 
   const handleSaveEdit = async () => {
     if (!editName.trim() || editId === null) return;
     setSaving(true);
-    await fetch(API, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editId, name: editName.trim() }) });
+    await fetch(API, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editId, name: editName.trim(), is_spb: editSpb }),
+    });
     setSaving(false);
     setEditId(null);
+    load();
+  };
+
+  const handleToggleSpb = async (cat: Category) => {
+    await fetch(API, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: cat.id, name: cat.name, is_spb: !cat.is_spb }),
+    });
     load();
   };
 
@@ -89,7 +111,7 @@ function ListEditor({ onClose }: { onClose: () => void }) {
           </p>
 
           {/* Добавить новую категорию */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <input
               value={newName}
               onChange={e => setNewName(e.target.value)}
@@ -97,6 +119,15 @@ function ListEditor({ onClose }: { onClose: () => void }) {
               placeholder="Новый вид нарушения..."
               className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
             />
+            <label className="flex items-center gap-1.5 cursor-pointer flex-shrink-0 select-none" title="Стратегический приоритет безопасности">
+              <input
+                type="checkbox"
+                checked={newSpb}
+                onChange={e => setNewSpb(e.target.checked)}
+                className="w-3.5 h-3.5 accent-primary"
+              />
+              <span className="text-xs font-semibold text-muted-foreground">СПБ</span>
+            </label>
             <button
               onClick={handleAdd}
               disabled={adding || !newName.trim()}
@@ -105,6 +136,12 @@ function ListEditor({ onClose }: { onClose: () => void }) {
               {adding ? <Icon name="Loader2" size={14} className="animate-spin" /> : <Icon name="Plus" size={14} />}
               Добавить
             </button>
+          </div>
+
+          {/* Легенда */}
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1 bg-primary/10 text-primary border border-primary/20 rounded px-1.5 py-0.5 font-semibold text-[10px]">СПБ</span>
+            <span>— стратегический приоритет безопасности</span>
           </div>
 
           {/* Список категорий */}
@@ -130,6 +167,15 @@ function ListEditor({ onClose }: { onClose: () => void }) {
                         onKeyDown={e => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") setEditId(null); }}
                         className="flex-1 bg-background border border-primary/50 rounded px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
                       />
+                      <label className="flex items-center gap-1.5 cursor-pointer flex-shrink-0 select-none" title="Стратегический приоритет безопасности">
+                        <input
+                          type="checkbox"
+                          checked={editSpb}
+                          onChange={e => setEditSpb(e.target.checked)}
+                          className="w-3.5 h-3.5 accent-primary"
+                        />
+                        <span className="text-xs font-semibold text-muted-foreground">СПБ</span>
+                      </label>
                       <button onClick={handleSaveEdit} disabled={saving || !editName.trim()} className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 transition-colors">
                         {saving ? "..." : "Сохранить"}
                       </button>
@@ -146,6 +192,20 @@ function ListEditor({ onClose }: { onClose: () => void }) {
                   ) : (
                     <>
                       <span className="flex-1 text-sm">{cat.name}</span>
+                      {/* Чек-бокс СПБ — всегда виден */}
+                      <label
+                        className="flex items-center gap-1.5 cursor-pointer flex-shrink-0 select-none"
+                        title="Стратегический приоритет безопасности"
+                        onClick={e => { e.stopPropagation(); handleToggleSpb(cat); }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={cat.is_spb}
+                          onChange={() => {}}
+                          className="w-3.5 h-3.5 accent-primary pointer-events-none"
+                        />
+                        <span className={`text-xs font-semibold ${cat.is_spb ? "text-primary" : "text-muted-foreground"}`}>СПБ</span>
+                      </label>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => startEdit(cat)} className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Редактировать">
                           <Icon name="Pencil" size={13} />
@@ -180,7 +240,6 @@ export function DataTab() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Карточка «Вид нарушения» */}
         <button
           onClick={() => setOpenEditor(true)}
           className="bg-card border border-border rounded-xl p-5 space-y-3 hover:border-primary/40 transition-colors text-left w-full"
