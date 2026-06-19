@@ -144,12 +144,12 @@ function RemarkRow({
   };
 
   return (
-    <div className="border border-border rounded-xl p-4 space-y-3 bg-secondary/20 relative">
+    <div className="border border-border rounded-xl p-8 space-y-6 bg-secondary/20 relative">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-semibold text-primary uppercase tracking-wider">Замечание #{index + 1}</span>
+        <span className="text-sm font-semibold text-primary uppercase tracking-wider">Замечание #{index + 1}</span>
         {canRemove && (
           <button onClick={onRemove} className="text-muted-foreground hover:text-red-400 transition-colors">
-            <Icon name="Trash2" size={14} />
+            <Icon name="Trash2" size={18} />
           </button>
         )}
       </div>
@@ -157,21 +157,21 @@ function RemarkRow({
         <InputBase value={remark.place} onChange={e => set("place", e.target.value)} placeholder="Например: Эвакуационный выход №2" />
       </Field>
       <Field label="Описание нарушения *">
-        <TextareaBase value={remark.description} onChange={e => set("description", e.target.value)} placeholder="Опишите выявленное нарушение" rows={2} />
+        <TextareaBase value={remark.description} onChange={e => set("description", e.target.value)} placeholder="Опишите выявленное нарушение" rows={4} />
       </Field>
 
       {/* Фото нарушения */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
           {photos.map((url, i) => (
-            <div key={i} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-border flex-shrink-0">
+            <div key={i} className="relative group w-28 h-28 rounded-lg overflow-hidden border border-border flex-shrink-0">
               <img src={url} alt={`Фото ${i + 1}`} className="w-full h-full object-cover" />
               <button
                 type="button"
                 onClick={() => removePhoto(i)}
                 className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
               >
-                <Icon name="X" size={14} className="text-white" />
+                <Icon name="X" size={18} className="text-white" />
               </button>
             </div>
           ))}
@@ -180,12 +180,12 @@ function RemarkRow({
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="w-16 h-16 rounded-lg border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary flex-shrink-0"
+              className="w-28 h-28 rounded-lg border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary flex-shrink-0"
             >
               {uploading
-                ? <Icon name="Loader2" size={16} className="animate-spin" />
-                : <Icon name="Camera" size={16} />}
-              <span className="text-[10px] leading-tight text-center">
+                ? <Icon name="Loader2" size={22} className="animate-spin" />
+                : <Icon name="Camera" size={22} />}
+              <span className="text-xs leading-tight text-center">
                 {uploading ? "Загрузка" : `Фото\n${photos.length}/${MAX_PHOTOS}`}
               </span>
             </button>
@@ -204,7 +204,7 @@ function RemarkRow({
       <Field label="Ссылка на нормативный документ">
         <InputBase value={remark.normRef} onChange={e => set("normRef", e.target.value)} placeholder="Например: ППР РФ п. 24" />
       </Field>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-6">
         <Field label="Срок устранения *">
           <DatePicker value={remark.deadline} onChange={v => set("deadline", v)} placeholder="Выбрать дату" />
         </Field>
@@ -279,17 +279,17 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-fade-in flex flex-col max-h-[92vh]">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
-          <h2 className="text-base font-semibold">Новое предписание</h2>
+      <div className="relative bg-card border border-border rounded-xl w-full max-w-[1344px] shadow-2xl animate-fade-in flex flex-col max-h-[92vh]">
+        <div className="flex items-center justify-between px-12 py-8 border-b border-border flex-shrink-0">
+          <h2 className="text-xl font-semibold">Новое предписание</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
-            <Icon name="X" size={18} />
+            <Icon name="X" size={22} />
           </button>
         </div>
-        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
-          <div className="space-y-3">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Общие сведения</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="overflow-y-auto flex-1 px-12 py-10 space-y-10">
+          <div className="space-y-6">
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Общие сведения</p>
+            <div className="grid grid-cols-2 gap-6">
               <Field label="Объект *">
                 <InputBase value={form.object} onChange={e => setField("object", e.target.value)} placeholder="Например: Цех №3" />
               </Field>
@@ -297,22 +297,22 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
                 <InputBase value={form.contractor} onChange={e => setField("contractor", e.target.value)} placeholder="Название организации или ИП" />
               </Field>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-6">
               <Field label="Проверка проведена">
-                <div className="flex items-center gap-2 bg-secondary/40 border border-border rounded-lg px-3 py-2 text-sm text-foreground min-h-[38px]">
-                  <Icon name="UserCheck" size={13} className="text-primary flex-shrink-0" />
+                <div className="flex items-center gap-2 bg-secondary/40 border border-border rounded-lg px-4 py-3 text-sm text-foreground min-h-[44px]">
+                  <Icon name="UserCheck" size={15} className="text-primary flex-shrink-0" />
                   <span className="truncate">{inspectorLabel || <span className="text-muted-foreground italic">Заполните профиль</span>}</span>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-1">Заполняется автоматически из вашей учётной записи</p>
+                <p className="text-xs text-muted-foreground mt-1">Заполняется автоматически из вашей учётной записи</p>
               </Field>
               <Field label="В присутствии представителя подрядчика">
                 <InputBase value={form.representative} onChange={e => setField("representative", e.target.value)} placeholder="ФИО представителя подрядчика" />
               </Field>
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                 Замечания <span className="text-primary ml-1">{form.remarks.length}</span>
               </p>
             </div>
@@ -326,14 +326,14 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
             ))}
             <button
               onClick={addRemark}
-              className="w-full flex items-center justify-center gap-2 border border-dashed border-border rounded-xl py-3 text-sm text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors"
+              className="w-full flex items-center justify-center gap-2 border border-dashed border-border rounded-xl py-5 text-sm text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors"
             >
-              <Icon name="Plus" size={14} />
+              <Icon name="Plus" size={16} />
               Добавить замечание
             </button>
           </div>
-          <div className="border-t border-border pt-5 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="border-t border-border pt-8 space-y-6">
+            <div className="grid grid-cols-2 gap-6">
               <Field label="Срок предоставления отчёта *">
                 <DatePicker value={form.reportDeadline} onChange={v => setField("reportDeadline", v)} placeholder="Выбрать дату" />
               </Field>
@@ -343,14 +343,14 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border flex-shrink-0">
-          <button onClick={onClose} className="text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">
+        <div className="flex items-center justify-end gap-4 px-12 py-6 border-t border-border flex-shrink-0">
+          <button onClick={onClose} className="text-base px-8 py-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">
             Отмена
           </button>
           <button
             onClick={handleSave}
             disabled={!isValid}
-            className="text-sm px-5 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="text-base px-10 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             Создать предписание
           </button>
