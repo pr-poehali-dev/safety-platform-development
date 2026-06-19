@@ -202,7 +202,7 @@ function RemarkRow({
       </div>
 
       <Field label="Ссылка на нормативный документ">
-        <TextareaBase value={remark.normRef} onChange={e => set("normRef", e.target.value)} placeholder="Например: ППР РФ п. 24" rows={8} />
+        <TextareaBase value={remark.normRef} onChange={e => set("normRef", e.target.value)} placeholder="Например: ППР РФ п. 24" rows={4} />
       </Field>
       <div className="grid grid-cols-2 gap-6">
         <Field label="Срок устранения *">
