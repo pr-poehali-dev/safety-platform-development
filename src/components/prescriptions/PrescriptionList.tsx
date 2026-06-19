@@ -108,12 +108,13 @@ interface PrescriptionListProps {
   onFilterChange: (v: string) => void;
   onSelect: (p: Prescription) => void;
   onAddClick: () => void;
+  onInspectionsClick?: () => void;
 }
 
 export function PrescriptionList({
   user, onLogout, prescriptions, loading, search, filterStatus,
   canEdit, isContractor, activeTemplate,
-  onSearchChange, onFilterChange, onSelect, onAddClick,
+  onSearchChange, onFilterChange, onSelect, onAddClick, onInspectionsClick,
 }: PrescriptionListProps) {
 
   const [colFilters, setColFilters] = useState({
@@ -178,6 +179,25 @@ export function PrescriptionList({
           </button>
         </div>
       </header>
+
+      {/* Навигационные вкладки */}
+      {onInspectionsClick && (
+        <div className="border-b border-border bg-background">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 flex gap-1 pt-2">
+            <button className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 border-primary text-foreground transition-colors">
+              <Icon name="ClipboardList" size={14} />
+              Предписания
+            </button>
+            <button
+              onClick={onInspectionsClick}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Icon name="TableProperties" size={14} />
+              Проверки
+            </button>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-5">
 

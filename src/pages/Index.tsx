@@ -5,6 +5,7 @@ import { Prescription, overallStatus } from "@/lib/prescriptionTypes";
 import { AddForm } from "@/components/prescriptions/PrescriptionForm";
 import { PrescriptionDetail } from "@/components/prescriptions/PrescriptionDetail";
 import { PrescriptionList } from "@/components/prescriptions/PrescriptionList";
+import Inspections from "@/pages/Inspections";
 
 interface IndexProps {
   user: AppUser;
@@ -14,6 +15,7 @@ interface IndexProps {
 const API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
 
 export default function Index({ user, onLogout }: IndexProps) {
+  const [tab, setTab] = useState<"prescriptions" | "inspections">("prescriptions");
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -57,6 +59,16 @@ export default function Index({ user, onLogout }: IndexProps) {
     setSelected(updated);
   };
 
+  if (tab === "inspections") {
+    return (
+      <Inspections
+        user={user}
+        onLogout={onLogout}
+        onBack={() => setTab("prescriptions")}
+      />
+    );
+  }
+
   return (
     <>
       <PrescriptionList
@@ -73,6 +85,7 @@ export default function Index({ user, onLogout }: IndexProps) {
         onFilterChange={setFilterStatus}
         onSelect={setSelected}
         onAddClick={() => setShowAdd(true)}
+        onInspectionsClick={canEdit ? () => setTab("inspections") : undefined}
       />
 
       {showAdd && canEdit && (
