@@ -153,10 +153,10 @@ function RemarkRow({
           </button>
         )}
       </div>
-      <Field label="Место нарушения">
+      <Field label="Место нарушения *">
         <InputBase value={remark.place} onChange={e => set("place", e.target.value)} placeholder="Например: Эвакуационный выход №2" />
       </Field>
-      <Field label="Вид нарушения">
+      <Field label="Вид нарушения *">
         <SelectBase value={remark.category} onChange={e => set("category", e.target.value)}>
           <option value="">— Выберите вид нарушения —</option>
           {VIOLATION_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -207,7 +207,7 @@ function RemarkRow({
         />
       </div>
 
-      <Field label="Ссылка на нормативный документ">
+      <Field label="Ссылка на нормативный документ *">
         <TextareaBase value={remark.normRef} onChange={e => set("normRef", e.target.value)} placeholder="Например: ППР РФ п. 24" rows={4} />
       </Field>
       <div className="grid grid-cols-2 gap-6">
@@ -260,7 +260,13 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
     form.object.trim() &&
     form.contractor.trim() &&
     form.reportDeadline &&
-    form.remarks.every(r => r.description.trim() && r.deadline);
+    form.replyEmail.trim() &&
+    form.remarks.every(r =>
+      r.category.trim() &&
+      r.description.trim() &&
+      r.normRef.trim() &&
+      r.deadline
+    );
 
   const handleSave = async () => {
     if (!isValid) return;
@@ -343,7 +349,7 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
               <Field label="Срок предоставления отчёта *">
                 <DatePicker value={form.reportDeadline} onChange={v => setField("reportDeadline", v)} placeholder="Выбрать дату" />
               </Field>
-              <Field label="Электронная почта для ответа">
+              <Field label="Электронная почта для ответа *">
                 <InputBase type="email" value={form.replyEmail} onChange={e => setField("replyEmail", e.target.value)} placeholder="example@company.ru" />
               </Field>
             </div>
