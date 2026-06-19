@@ -188,12 +188,14 @@ export function PrescriptionList({
                           })() : <span className="text-muted-foreground text-sm">—</span>}
                         </td>
                         <td className="px-5 py-4">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-medium text-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{p.remarks.length}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {p.remarks.length === 1 ? "замечание" : p.remarks.length < 5 ? "замечания" : "замечаний"}
-                            </span>
-                            {(() => { const ov = p.remarks.filter(r => effectiveStatus(r) === "Просрочено").length; return ov > 0 ? <span className="text-[10px] text-red-400 bg-red-400/10 border border-red-400/20 px-1.5 py-0.5 rounded font-medium">{ov} просрочено</span> : null; })()}
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-medium text-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{p.remarks.length}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {p.remarks.length === 1 ? "замечание" : p.remarks.length < 5 ? "замечания" : "замечаний"}
+                              </span>
+                            </div>
+                            {(() => { const ov = p.remarks.filter(r => effectiveStatus(r) === "Просрочено").length; return ov > 0 ? <span className="text-[10px] text-red-400 bg-red-400/10 border border-red-400/20 px-1.5 py-0.5 rounded font-medium w-fit">{ov} просрочено</span> : null; })()}
                           </div>
                         </td>
                         <td className="px-5 py-4">
