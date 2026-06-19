@@ -67,9 +67,27 @@ export function detectGenderFromName(fullName: string): boolean {
 // --- Типы ---
 export type Status = "Черновик" | "Выдано" | "Устранено" | "Просрочено";
 
+export const VIOLATION_CATEGORIES = [
+  "Работы на высоте",
+  "Грузоподъёмные операции",
+  "Алкогольное, наркотическое опьянение",
+  "Земляные работы",
+  "Замкнутые пространства",
+  "Огневые работы",
+  "Электробезопасность",
+  "Пожарная безопасность",
+  "Территория/пути передвижения",
+  "БДД",
+  "Документация (НД, ППР, и т.п.)",
+  "СИЗ",
+  "Газобалонное оборудование",
+  "Прочее",
+] as const;
+
 export interface Remark {
   id: string;
   place: string;
+  category: string;
   description: string;
   normRef: string;
   deadline: string;
@@ -143,5 +161,5 @@ export function overallStatus(remarks: Remark[]): Status {
 }
 
 export function newRemark(): Remark {
-  return { id: Date.now().toString() + Math.random(), place: "", description: "", normRef: "", deadline: "", status: "Выдано" };
+  return { id: Date.now().toString() + Math.random(), place: "", category: "", description: "", normRef: "", deadline: "", status: "Выдано" };
 }

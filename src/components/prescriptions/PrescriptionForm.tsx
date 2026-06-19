@@ -5,7 +5,7 @@ import { format, parse, isValid } from "date-fns";
 import { ru } from "date-fns/locale";
 import { AppUser } from "@/lib/auth";
 import {
-  Remark, Prescription, Status, ALL_STATUSES,
+  Remark, Prescription, Status, ALL_STATUSES, VIOLATION_CATEGORIES,
   newRemark, detectGenderFromName, declinePosition, toInstrumental,
 } from "@/lib/prescriptionTypes";
 
@@ -155,6 +155,12 @@ function RemarkRow({
       </div>
       <Field label="Место нарушения">
         <InputBase value={remark.place} onChange={e => set("place", e.target.value)} placeholder="Например: Эвакуационный выход №2" />
+      </Field>
+      <Field label="Вид нарушения">
+        <SelectBase value={remark.category} onChange={e => set("category", e.target.value)}>
+          <option value="">— Выберите вид нарушения —</option>
+          {VIOLATION_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+        </SelectBase>
       </Field>
       <Field label="Описание нарушения *">
         <TextareaBase value={remark.description} onChange={e => set("description", e.target.value)} placeholder="Опишите выявленное нарушение" rows={4} />
