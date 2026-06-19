@@ -6,12 +6,58 @@ import {
   Prescription, Status, ALL_STATUSES, STATUS_STYLE,
   effectiveStatus, overallStatus,
 } from "@/lib/prescriptionTypes";
+import { useState, useRef, useEffect } from "react";
 
 function StatusBadge({ status }: { status: Status }) {
   return (
     <span className={`inline-flex items-center border text-[11px] font-medium px-2 py-0.5 rounded whitespace-nowrap ${STATUS_STYLE[status]}`}>
       {status}
     </span>
+  );
+}
+
+function ColumnFilter({ label, options, value, onChange }: {
+  label: string;
+  options: string[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const active = value !== "Все";
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={`flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider transition-colors ${active ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+      >
+        {label}
+        <Icon name={active ? "FilterX" : "ChevronDown"} size={11} />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[160px] max-h-60 overflow-y-auto">
+          {["Все", ...options].map(opt => (
+            <button
+              key={opt}
+              onClick={() => { onChange(opt); setOpen(false); }}
+              className={`w-full text-left px-3 py-1.5 text-xs transition-colors hover:bg-secondary/50 ${value === opt ? "text-primary font-medium" : "text-foreground"}`}
+            >
+              {opt === "Все" ? `Все ${label.toLowerCase()}` : opt}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -37,6 +83,22 @@ export function PrescriptionList({
   onSearchChange, onFilterChange, onSelect, onAddClick,
 }: PrescriptionListProps) {
 
+  const [colFilters, setColFilters] = useState({
+    object: "Все",
+    contractor: "Все",
+    inspector: "Все",
+    status: "Все",
+    deadline: "Все",
+  });
+
+  const setColFilter = (key: keyof typeof colFilters) => (v: string) =>
+    setColFilters(prev => ({ ...prev, [key]: v }));
+
+  const uniqueObjects = [...new Set(prescriptions.map(p => p.object))].sort();
+  const uniqueContractors = [...new Set(prescriptions.map(p => p.contractor).filter(Boolean))].sort();
+  const uniqueInspectors = [...new Set(prescriptions.map(p => p.inspector).filter(Boolean))].sort();
+  const uniqueDeadlines = [...new Set(prescriptions.flatMap(p => p.remarks.map(r => r.deadline)).filter(Boolean))].sort();
+
   const filtered = prescriptions.filter(p => {
     if (isContractor && user.contractor && p.contractor !== user.contractor) return false;
     const status = overallStatus(p.remarks);
@@ -47,7 +109,13 @@ export function PrescriptionList({
       p.object.toLowerCase().includes(q) ||
       p.contractor.toLowerCase().includes(q) ||
       p.remarks.some(r => r.description.toLowerCase().includes(q));
-    return matchStatus && matchSearch;
+    const nearestDeadline = p.remarks.map(r => r.deadline).sort()[0];
+    const matchColObject = colFilters.object === "Все" || p.object === colFilters.object;
+    const matchColContractor = colFilters.contractor === "Все" || p.contractor === colFilters.contractor;
+    const matchColInspector = colFilters.inspector === "Все" || p.inspector === colFilters.inspector;
+    const matchColStatus = colFilters.status === "Все" || status === colFilters.status;
+    const matchColDeadline = colFilters.deadline === "Все" || nearestDeadline === colFilters.deadline;
+    return matchStatus && matchSearch && matchColObject && matchColContractor && matchColInspector && matchColStatus && matchColDeadline;
   });
 
   return (
@@ -144,12 +212,22 @@ export function PrescriptionList({
                 <thead>
                   <tr className="border-b border-border bg-secondary/20">
                     <th style={{ width: "90px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Номер</th>
-                    <th style={{ width: "350px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Объект</th>
-                    <th style={{ width: "180px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Подрядчик</th>
-                    <th style={{ width: "180px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Выдал</th>
+                    <th style={{ width: "350px" }} className="text-left px-5 py-3">
+                      <ColumnFilter label="Объект" options={uniqueObjects} value={colFilters.object} onChange={setColFilter("object")} />
+                    </th>
+                    <th style={{ width: "180px" }} className="text-left px-5 py-3">
+                      <ColumnFilter label="Подрядчик" options={uniqueContractors} value={colFilters.contractor} onChange={setColFilter("contractor")} />
+                    </th>
+                    <th style={{ width: "180px" }} className="text-left px-5 py-3">
+                      <ColumnFilter label="Выдал" options={uniqueInspectors} value={colFilters.inspector} onChange={setColFilter("inspector")} />
+                    </th>
                     <th style={{ width: "120px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Замечания</th>
-                    <th style={{ width: "130px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Ближайший срок</th>
-                    <th style={{ width: "110px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Статус</th>
+                    <th style={{ width: "130px" }} className="text-left px-5 py-3">
+                      <ColumnFilter label="Ближайший срок" options={uniqueDeadlines} value={colFilters.deadline} onChange={setColFilter("deadline")} />
+                    </th>
+                    <th style={{ width: "110px" }} className="text-left px-5 py-3">
+                      <ColumnFilter label="Статус" options={ALL_STATUSES} value={colFilters.status} onChange={setColFilter("status")} />
+                    </th>
                     <th style={{ width: "160px" }} className="px-5 py-3" />
                   </tr>
                 </thead>
