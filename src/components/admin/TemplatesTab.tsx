@@ -350,7 +350,25 @@ function TemplateEditor({ template: initial, onClose, onSave }: {
                         <tr>
                           {cols.map(col => (
                             <th key={col.key} style={{ border: "1px solid #000", padding: "5px 6px", fontWeight: "bold", textAlign: "center", fontSize: `${t.fontSize - 1.5}pt` }}>
-                              <span contentEditable suppressContentEditableWarning onBlur={e => set("tableColumns", t.tableColumns.map(c => c.key === col.key ? { ...c, label: e.currentTarget.textContent ?? "" } : c))} style={editStyle}>{col.label}</span>
+                              {(() => {
+                                const isRich = /<[a-z]/i.test(col.label);
+                                return isRich ? (
+                                  <span
+                                    contentEditable suppressContentEditableWarning
+                                    onFocus={() => setActiveField(`col_${col.key}`)}
+                                    onBlur={e => { set("tableColumns", t.tableColumns.map(c => c.key === col.key ? { ...c, label: e.currentTarget.innerHTML } : c)); setActiveField(null); }}
+                                    dangerouslySetInnerHTML={{ __html: col.label }}
+                                    style={editStyle}
+                                  />
+                                ) : (
+                                  <span
+                                    contentEditable suppressContentEditableWarning
+                                    onFocus={() => setActiveField(`col_${col.key}`)}
+                                    onBlur={e => { set("tableColumns", t.tableColumns.map(c => c.key === col.key ? { ...c, label: e.currentTarget.innerHTML } : c)); setActiveField(null); }}
+                                    style={editStyle}
+                                  >{col.label}</span>
+                                );
+                              })()}
                             </th>
                           ))}
                         </tr>

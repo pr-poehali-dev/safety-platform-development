@@ -114,6 +114,14 @@ function toInstrumentalFull(str: string): string {
   return declined || str;
 }
 
+// Рендерит поле шаблона: если содержит HTML-теги — через dangerouslySetInnerHTML, иначе как текст
+function H({ v, style }: { v: string; style?: React.CSSProperties }) {
+  const isRich = /<[a-z]/i.test(v);
+  return isRich
+    ? <span dangerouslySetInnerHTML={{ __html: v }} style={style} />
+    : <span style={style}>{v}</span>;
+}
+
 export default function PrescriptionDocument({ template: t, prescription: p, forPrint }: Props) {
   const cols = t.tableColumns.filter(c => c.enabled);
 
@@ -176,10 +184,10 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
       {/* Заголовок */}
       <div style={{ textAlign: "center", marginBottom: 6 }}>
         <div style={{ fontWeight: "bold", textTransform: "uppercase", fontSize: `${t.fontSize + 2}pt` }}>
-          {title}
+          <H v={title} />
         </div>
         <div style={{ fontWeight: "bold", fontSize: `${t.fontSize - 0.5}pt`, marginTop: 3 }}>
-          {t.subtitle}
+          <H v={t.subtitle} />
         </div>
       </div>
 
@@ -190,17 +198,17 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
       {/* Реквизиты */}
       <div style={{ fontSize: `${t.fontSize - 0.5}pt`, lineHeight: 1.7, marginBottom: 10 }}>
         <p>
-          <strong>{t.blockObjectLabel}</strong>{" "}
+          <strong><H v={t.blockObjectLabel} /></strong>{" "}
           <span style={fieldLine}>{p.object}</span>.
         </p>
         <p style={{ marginTop: 2 }}>
-          <strong>{t.blockContractorLabel}</strong>{" "}
+          <strong><H v={t.blockContractorLabel} /></strong>{" "}
           <span style={fieldLine}>{p.contractor}</span>
         </p>
         <p style={{ marginTop: 2 }}>
-          {t.blockInspectorLabel}{" "}
+          <H v={t.blockInspectorLabel} />{" "}
           <span style={fieldLine}>{toInstrumentalFull(p.inspector) || "\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0"}</span>
-          {" "}{t.blockRepresentativeLabel}{" "}
+          {" "}<H v={t.blockRepresentativeLabel} />{" "}
           <span style={fieldLine}>{p.representative || "\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0"}</span>
         </p>
         <div style={{ display: "flex", gap: 40, fontSize: "8pt", color: "#555", paddingLeft: 120, marginTop: 1 }}>
@@ -211,7 +219,7 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
 
       {/* Заголовок таблицы */}
       <p style={{ fontWeight: "bold", margin: "10px 0 6px", fontSize: `${t.fontSize}pt` }}>
-        {t.blockViolationsTitle}
+        <H v={t.blockViolationsTitle} />
       </p>
 
       {/* Таблица нарушений — ширины как проценты (пропорциональные) */}
@@ -237,7 +245,7 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
                 fontSize: `${t.fontSize - 1.5}pt`,
                 background: "#fff",
               }}>
-                {col.label}
+                <H v={col.label} />
               </th>
             ))}
           </tr>
@@ -281,8 +289,8 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
 
       {/* Тексты */}
       <div style={{ fontSize: `${t.fontSize - 1}pt`, lineHeight: 1.6, marginBottom: 14 }}>
-        <p>{fill(t.blockCopiesText, vars)}</p>
-        <p style={{ marginTop: 6 }}>{fill(t.blockReportText, vars)}</p>
+        <p><H v={fill(t.blockCopiesText, vars)} /></p>
+        <p style={{ marginTop: 6 }}><H v={fill(t.blockReportText, vars)} /></p>
       </div>
 
       {/* Подписи */}
@@ -290,7 +298,7 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
         <p style={{ marginTop: 8 }}>Акт-предписание.</p>
 
         <div style={{ display: "flex", alignItems: "flex-end", gap: 10, marginBottom: 4, marginTop: 8 }}>
-          <strong style={{ whiteSpace: "nowrap" }}>{t.sigIssuerLabel}</strong>
+          <strong style={{ whiteSpace: "nowrap" }}><H v={t.sigIssuerLabel} /></strong>
           <div style={sigLine} />
           <span>(</span>
           <div style={sigLine} />
@@ -300,7 +308,7 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
 
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 16 }}>
           <span style={{ fontSize: `${t.fontSize - 1}pt`, minWidth: 130, lineHeight: 1.4 }}>
-            {t.sigReceiverLabel}
+            <H v={t.sigReceiverLabel} />
           </span>
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
