@@ -5,7 +5,7 @@ import { format, parse, isValid } from "date-fns";
 import { ru } from "date-fns/locale";
 import { AppUser } from "@/lib/auth";
 import {
-  Remark, Prescription, Status, ALL_STATUSES, VIOLATION_CATEGORIES,
+  Remark, Prescription, Status, ALL_STATUSES,
   newRemark, detectGenderFromName, declinePosition, toInstrumental,
 } from "@/lib/prescriptionTypes";
 
@@ -91,14 +91,15 @@ export function DatePicker({ value, onChange, placeholder }: { value: string; on
 }
 
 const UPLOAD_URL = "https://functions.poehali.dev/b1d2899a-a609-43c1-81e8-34e4c4922136";
+const CATEGORIES_URL = "https://functions.poehali.dev/ea358d23-fa1e-4907-88c0-87cd78732293";
 const MAX_PHOTOS = 3;
 const MAX_PHOTO_SIZE = 1.5 * 1024 * 1024;
 
 // --- Строка замечания ---
 function RemarkRow({
-  remark, index, onChange, onRemove, canRemove,
+  remark, index, onChange, onRemove, canRemove, categories,
 }: {
-  remark: Remark; index: number; onChange: (r: Remark) => void; onRemove: () => void; canRemove: boolean;
+  remark: Remark; index: number; onChange: (r: Remark) => void; onRemove: () => void; canRemove: boolean; categories: string[];
 }) {
   const set = (key: keyof Remark, val: string) => onChange({ ...remark, [key]: val });
   const [uploading, setUploading] = useState(false);
@@ -159,7 +160,7 @@ function RemarkRow({
       <Field label="Вид нарушения *">
         <SelectBase value={remark.category} onChange={e => set("category", e.target.value)}>
           <option value="">— Выберите вид нарушения —</option>
-          {VIOLATION_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
         </SelectBase>
       </Field>
       <Field label="Описание нарушения *">
@@ -239,6 +240,13 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
   const inspectorPosition = user.position ? declinePosition(user.position, isMale) : "";
   const inspectorName = user.name ? toInstrumental(user.name) : "";
   const inspectorLabel = [inspectorPosition, inspectorName].filter(Boolean).join(" ");
+
+  const [categories, setCategories] = useState<string[]>([]);
+  useEffect(() => {
+    fetch(CATEGORIES_URL)
+      .then(r => r.json())
+      .then(data => setCategories(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
+  }, []);
 
   const [form, setForm] = useState<FormState>({
     object: "", contractor: "", representative: "", replyEmail: "", reportDeadline: "", remarks: [newRemark()],
@@ -334,6 +342,7 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
                 onChange={updated => updateRemark(i, updated)}
                 onRemove={() => removeRemark(i)}
                 canRemove={form.remarks.length > 1}
+                categories={categories}
               />
             ))}
             <button
