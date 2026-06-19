@@ -1,6 +1,85 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import { Template, DEFAULT_TEMPLATE } from "@/lib/template";
+
+const FONTS = ["Times New Roman", "Arial", "Calibri", "Georgia", "Courier New", "Verdana"];
+const FONT_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24];
+
+function RichToolbar({ activeField }: { activeField: string | null }) {
+  const [bold, setBold] = useState(false);
+  const [italic, setItalic] = useState(false);
+  const [underline, setUnderline] = useState(false);
+  const [font, setFont] = useState("Times New Roman");
+  const [size, setSize] = useState(12);
+
+  const updateState = useCallback(() => {
+    setBold(document.queryCommandState("bold"));
+    setItalic(document.queryCommandState("italic"));
+    setUnderline(document.queryCommandState("underline"));
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener("selectionchange", updateState);
+    return () => document.removeEventListener("selectionchange", updateState);
+  }, [updateState]);
+
+  const exec = (cmd: string, value?: string) => {
+    document.execCommand(cmd, false, value);
+  };
+
+  const applyFont = (f: string) => {
+    setFont(f);
+    exec("fontName", f);
+  };
+
+  const applySize = (s: number) => {
+    setSize(s);
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+    const range = sel.getRangeAt(0);
+    const span = document.createElement("span");
+    span.style.fontSize = `${s}pt`;
+    try { range.surroundContents(span); } catch { exec("insertHTML", `<span style="font-size:${s}pt">${sel.toString()}</span>`); }
+  };
+
+  if (!activeField) return null;
+
+  return (
+    <div className="flex items-center gap-1 px-3 py-1.5 bg-[#1e1f23] border border-white/10 rounded-lg shadow-lg flex-wrap">
+      <select
+        value={font}
+        onChange={e => applyFont(e.target.value)}
+        onMouseDown={e => e.stopPropagation()}
+        className="bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary/50 max-w-[140px]"
+      >
+        {FONTS.map(f => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
+      </select>
+      <select
+        value={size}
+        onChange={e => applySize(Number(e.target.value))}
+        onMouseDown={e => e.stopPropagation()}
+        className="bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary/50 w-16"
+      >
+        {FONT_SIZES.map(s => <option key={s} value={s}>{s} pt</option>)}
+      </select>
+      <div className="w-px h-5 bg-white/10 mx-0.5" />
+      {([
+        ["bold", "Bold", "B", bold],
+        ["italic", "Italic", "I", italic],
+        ["underline", "Underline", "U", underline],
+      ] as [string, string, string, boolean][]).map(([cmd, , label, active]) => (
+        <button
+          key={cmd}
+          onMouseDown={e => { e.preventDefault(); exec(cmd); updateState(); }}
+          className={`w-7 h-7 rounded text-sm font-medium transition-colors ${active ? "bg-primary text-primary-foreground" : "text-white/50 hover:text-white hover:bg-white/10"}`}
+          style={{ fontStyle: cmd === "italic" ? "italic" : undefined, textDecoration: cmd === "underline" ? "underline" : undefined, fontWeight: cmd === "bold" ? "bold" : undefined }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 const TEMPLATES_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69?type=templates";
 
@@ -22,6 +101,7 @@ function TemplateEditor({ template: initial, onClose, onSave }: {
   });
   const [saving, setSaving] = useState(false);
   const [activePanel, setActivePanel] = useState<"page" | "table">("page");
+  const [activeField, setActiveField] = useState<string | null>(null);
 
   const set = <K extends keyof Template>(key: K, val: Template[K]) => setT(prev => ({ ...prev, [key]: val }));
   const inp = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50";
@@ -78,6 +158,7 @@ function TemplateEditor({ template: initial, onClose, onSave }: {
           {t.isDefault && <span className="text-[10px] text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-medium">По умолчанию</span>}
         </div>
         <div className="flex items-center gap-3">
+          <RichToolbar activeField={activeField} />
           <span className="text-[11px] text-white/30 flex items-center gap-1.5">
             <Icon name="MousePointerClick" size={11} />
             Кликайте на синие поля чтобы редактировать
@@ -208,9 +289,30 @@ function TemplateEditor({ template: initial, onClose, onSave }: {
                 const editStyle: React.CSSProperties = { outline: "none", borderBottom: "1.5px dashed #3b82f6", cursor: "text", minWidth: 40, display: "inline-block" };
                 const fieldLine: React.CSSProperties = { borderBottom: "1px solid #000", display: "inline-block", padding: "0 4px", fontWeight: "bold" };
                 const sigLine: React.CSSProperties = { flex: 1, borderBottom: "1px solid #000", minWidth: 80, minHeight: 18 };
-                const E = ({ field, style }: { field: keyof Template; style?: React.CSSProperties }) => (
-                  <span contentEditable suppressContentEditableWarning onBlur={e => set(field, e.currentTarget.textContent ?? "" as Template[typeof field])} style={{ ...editStyle, ...style }} title="Нажмите чтобы редактировать">{String(t[field])}</span>
-                );
+                const E = ({ field, style }: { field: keyof Template; style?: React.CSSProperties }) => {
+                  const val = String(t[field]);
+                  const isRich = val.includes("<");
+                  return isRich ? (
+                    <span
+                      contentEditable
+                      suppressContentEditableWarning
+                      onFocus={() => setActiveField(String(field))}
+                      onBlur={e => { set(field, e.currentTarget.innerHTML as Template[typeof field]); setActiveField(null); }}
+                      dangerouslySetInnerHTML={{ __html: val }}
+                      style={{ ...editStyle, ...style }}
+                      title="Нажмите чтобы редактировать"
+                    />
+                  ) : (
+                    <span
+                      contentEditable
+                      suppressContentEditableWarning
+                      onFocus={() => setActiveField(String(field))}
+                      onBlur={e => { set(field, e.currentTarget.innerHTML as Template[typeof field]); setActiveField(null); }}
+                      style={{ ...editStyle, ...style }}
+                      title="Нажмите чтобы редактировать"
+                    >{val}</span>
+                  );
+                };
                 const cols = t.tableColumns.filter(c => c.enabled);
                 const totalW = cols.reduce((s, c) => s + (c.width ?? 0), 0);
                 const getW = (col: typeof cols[0]) => totalW > 0 && col.width ? `${((col.width / totalW) * 100).toFixed(2)}%` : undefined;
