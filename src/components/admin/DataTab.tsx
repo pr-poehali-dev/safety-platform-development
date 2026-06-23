@@ -370,15 +370,21 @@ function ObjectsEditor({ onClose }: { onClose: () => void }) {
 }
 
 // --- Редактор подрядчиков ---
+interface Contractor { id: number; name: string; sort_order: number; contract_number: string | null; }
+
 function ContractorsEditor({ onClose }: { onClose: () => void }) {
-  const [items, setItems] = useState<{ id: number; name: string; sort_order: number }[]>([]);
+  const [items, setItems] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState("");
+  const [newContract, setNewContract] = useState("");
   const [adding, setAdding] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
+  const [editContract, setEditContract] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+
+  const inp = "bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50";
 
   const load = () => {
     setLoading(true);
@@ -394,16 +400,32 @@ function ContractorsEditor({ onClose }: { onClose: () => void }) {
     const name = newName.trim();
     if (!name) return;
     setAdding(true);
-    await fetch(CONTRACTORS_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+    await fetch(CONTRACTORS_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, contract_number: newContract.trim() || null }),
+    });
     setNewName("");
+    setNewContract("");
     setAdding(false);
     load();
+  };
+
+  const startEdit = (item: Contractor) => {
+    setEditId(item.id);
+    setEditName(item.name);
+    setEditContract(item.contract_number || "");
+    setDeleteConfirm(null);
   };
 
   const handleSaveEdit = async () => {
     if (!editName.trim() || editId === null) return;
     setSaving(true);
-    await fetch(CONTRACTORS_API, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editId, name: editName.trim() }) });
+    await fetch(CONTRACTORS_API, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editId, name: editName.trim(), contract_number: editContract.trim() || null }),
+    });
     setSaving(false);
     setEditId(null);
     load();
@@ -437,24 +459,36 @@ function ContractorsEditor({ onClose }: { onClose: () => void }) {
         <div className="max-w-2xl mx-auto px-6 py-8 space-y-6">
           <p className="text-xs text-muted-foreground">Изменения отображаются в формах добавления предписания и проверки.</p>
 
-          <div className="flex gap-2">
+          {/* Форма добавления */}
+          <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Новый подрядчик</p>
             <input
               value={newName}
               onChange={e => setNewName(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleAdd()}
-              placeholder="Название подрядной организации..."
-              className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+              placeholder="Название подрядной организации *"
+              className={inp + " w-full"}
             />
-            <button
-              onClick={handleAdd}
-              disabled={adding || !newName.trim()}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              {adding ? <Icon name="Loader2" size={14} className="animate-spin" /> : <Icon name="Plus" size={14} />}
-              Добавить
-            </button>
+            <div className="flex gap-2">
+              <input
+                value={newContract}
+                onChange={e => setNewContract(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleAdd()}
+                placeholder="№ договора (необязательно)"
+                className={inp + " flex-1"}
+              />
+              <button
+                onClick={handleAdd}
+                disabled={adding || !newName.trim()}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+              >
+                {adding ? <Icon name="Loader2" size={14} className="animate-spin" /> : <Icon name="Plus" size={14} />}
+                Добавить
+              </button>
+            </div>
           </div>
 
+          {/* Список */}
           {loading ? (
             <div className="flex items-center justify-center py-10 text-muted-foreground gap-2">
               <Icon name="Loader2" size={16} className="animate-spin" />
@@ -465,40 +499,57 @@ function ContractorsEditor({ onClose }: { onClose: () => void }) {
           ) : (
             <div className="space-y-2">
               {items.map((item, idx) => (
-                <div key={item.id} className="flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-lg group">
-                  <span className="text-xs text-muted-foreground w-5 text-right flex-shrink-0">{idx + 1}.</span>
+                <div key={item.id} className="bg-card border border-border rounded-lg group overflow-hidden">
                   {editId === item.id ? (
-                    <>
+                    <div className="px-4 py-3 space-y-2">
                       <input
                         autoFocus
                         value={editName}
                         onChange={e => setEditName(e.target.value)}
-                        onKeyDown={e => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") setEditId(null); }}
-                        className="flex-1 bg-background border border-primary/50 rounded px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                        placeholder="Название *"
+                        className={inp + " w-full"}
                       />
-                      <button onClick={handleSaveEdit} disabled={saving || !editName.trim()} className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 transition-colors">
-                        {saving ? "..." : "Сохранить"}
-                      </button>
-                      <button onClick={() => setEditId(null)} className="text-xs px-2 py-1 rounded border border-border text-muted-foreground hover:text-foreground transition-colors">Отмена</button>
-                    </>
+                      <div className="flex gap-2">
+                        <input
+                          value={editContract}
+                          onChange={e => setEditContract(e.target.value)}
+                          onKeyDown={e => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") setEditId(null); }}
+                          placeholder="№ договора"
+                          className={inp + " flex-1"}
+                        />
+                        <button onClick={handleSaveEdit} disabled={saving || !editName.trim()} className="text-xs px-3 py-1.5 rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 transition-colors whitespace-nowrap">
+                          {saving ? "..." : "Сохранить"}
+                        </button>
+                        <button onClick={() => setEditId(null)} className="text-xs px-2 py-1.5 rounded border border-border text-muted-foreground hover:text-foreground transition-colors">Отмена</button>
+                      </div>
+                    </div>
                   ) : deleteConfirm === item.id ? (
-                    <>
+                    <div className="flex items-center gap-3 px-4 py-3">
                       <span className="flex-1 text-sm text-red-400">Удалить «{item.name}»?</span>
                       <button onClick={() => handleDelete(item.id)} className="text-xs px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600 transition-colors">Да, удалить</button>
                       <button onClick={() => setDeleteConfirm(null)} className="text-xs px-2 py-1 rounded border border-border text-muted-foreground hover:text-foreground transition-colors">Отмена</button>
-                    </>
+                    </div>
                   ) : (
-                    <>
-                      <span className="flex-1 text-sm">{item.name}</span>
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <span className="text-xs text-muted-foreground w-5 text-right flex-shrink-0">{idx + 1}.</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{item.name}</p>
+                        {item.contract_number && (
+                          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                            <Icon name="FileText" size={11} />
+                            № {item.contract_number}
+                          </p>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => { setEditId(item.id); setEditName(item.name); setDeleteConfirm(null); }} className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Редактировать">
+                        <button onClick={() => startEdit(item)} className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Редактировать">
                           <Icon name="Pencil" size={13} />
                         </button>
                         <button onClick={() => setDeleteConfirm(item.id)} className="p-1.5 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors" title="Удалить">
                           <Icon name="Trash2" size={13} />
                         </button>
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
               ))}
