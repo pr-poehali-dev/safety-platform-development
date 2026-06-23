@@ -18,6 +18,7 @@ export interface PrescriptionData {
   date: string;
   object: string;
   contractor: string;
+  contractNumber?: string;
   inspector: string;
   representative: string;
   responsible: string;
@@ -204,6 +205,9 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
         <p style={{ marginTop: 2 }}>
           <strong><H v={t.blockContractorLabel} /></strong>{" "}
           <span style={fieldLine}>{p.contractor}</span>
+          {p.contractNumber && (
+            <>{" "}<span>по договору №</span>{" "}<span style={fieldLine}>{p.contractNumber}</span></>
+          )}
         </p>
         <p style={{ marginTop: 2 }}>
           <H v={t.blockInspectorLabel} />{" "}

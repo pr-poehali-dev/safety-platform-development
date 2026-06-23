@@ -231,6 +231,7 @@ function RemarkRow({
 interface FormState {
   object: string;
   contractor: string;
+  contractNumber: string;
   representative: string;
   replyEmail: string;
   reportDeadline: string;
@@ -259,13 +260,17 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
   }, []);
 
   const [form, setForm] = useState<FormState>({
-    object: "", contractor: "", representative: "", replyEmail: "", reportDeadline: "", remarks: [newRemark()],
+    object: "", contractor: "", contractNumber: "", representative: "", replyEmail: "", reportDeadline: "", remarks: [newRemark()],
   });
 
   const selectedContractor = contractorsList.find(c => c.name === form.contractor);
 
   const setField = (key: keyof Omit<FormState, "remarks">, val: string) =>
-    setForm(prev => ({ ...prev, [key]: val }));
+    setForm(prev => ({
+      ...prev,
+      [key]: val,
+      ...(key === "contractor" ? { contractNumber: "" } : {}),
+    }));
 
   const updateRemark = (index: number, r: Remark) =>
     setForm(prev => ({ ...prev, remarks: prev.remarks.map((x, i) => i === index ? r : x) }));
@@ -297,6 +302,7 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
       date: now.toLocaleDateString("ru-RU"),
       object: form.object,
       contractor: form.contractor,
+      contractNumber: form.contractNumber || undefined,
       inspector: inspectorLabel,
       representative: form.representative,
       responsible: "",
@@ -335,13 +341,29 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
                 </SelectBase>
                 {selectedContractor && selectedContractor.contracts.length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {selectedContractor.contracts.map(c => (
-                      <span key={c.id} className="inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary border border-primary/20 rounded px-1.5 py-0.5">
-                        <Icon name="FileText" size={10} />
-                        № {c.contract_number}
-                      </span>
-                    ))}
+                    {selectedContractor.contracts.map(c => {
+                      const isSelected = form.contractNumber === c.contract_number;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setField("contractNumber", isSelected ? "" : c.contract_number)}
+                          className={`inline-flex items-center gap-1 text-[10px] border rounded px-1.5 py-0.5 transition-colors ${
+                            isSelected
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+                          }`}
+                        >
+                          <Icon name="FileText" size={10} />
+                          № {c.contract_number}
+                          {isSelected && <Icon name="Check" size={10} />}
+                        </button>
+                      );
+                    })}
                   </div>
+                )}
+                {form.contractNumber && (
+                  <p className="text-[10px] text-muted-foreground mt-1">Выбран договор № {form.contractNumber} — будет указан в печатной форме</p>
                 )}
               </Field>
             </div>
