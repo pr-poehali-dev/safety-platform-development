@@ -46,6 +46,8 @@ const inp = "w-full bg-background border border-border rounded-lg px-3 py-2 text
 const lbl = "text-xs font-medium text-muted-foreground block mb-1";
 
 // --- Форма добавления/редактирования ---
+interface ContractorItem { name: string; contracts: { id: number; contract_number: string }[]; }
+
 function InspectionForm({
   initial, inspectorName, categories, objects, contractors, onSave, onCancel, saving,
 }: {
@@ -53,7 +55,7 @@ function InspectionForm({
   inspectorName: string;
   categories: string[];
   objects: string[];
-  contractors: string[];
+  contractors: ContractorItem[];
   onSave: (data: InspectionFormData) => void;
   onCancel: () => void;
   saving: boolean;
@@ -63,6 +65,7 @@ function InspectionForm({
     setForm(prev => ({ ...prev, [key]: val }));
 
   const isValid = form.inspection_date && form.contractor.trim() && form.violation_type && form.object_name.trim();
+  const selectedContractor = contractors.find(c => c.name === form.contractor);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -95,8 +98,18 @@ function InspectionForm({
               <label className={lbl}>ПО (подрядчик) *</label>
               <select value={form.contractor} onChange={e => set("contractor", e.target.value)} className={inp}>
                 <option value="">— Выберите подрядчика —</option>
-                {contractors.map(c => <option key={c} value={c}>{c}</option>)}
+                {contractors.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
               </select>
+              {selectedContractor && selectedContractor.contracts.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {selectedContractor.contracts.map(c => (
+                    <span key={c.id} className="inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary border border-primary/20 rounded px-1.5 py-0.5">
+                      <Icon name="FileText" size={10} />
+                      № {c.contract_number}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label className={lbl}>Проверяемый объект *</label>
@@ -217,7 +230,7 @@ export default function Inspections({ user, onLogout, onBack }: InspectionsProps
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<string[]>([]);
   const [objects, setObjects] = useState<string[]>([]);
-  const [contractors, setContractors] = useState<string[]>([]);
+  const [contractors, setContractors] = useState<ContractorItem[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
@@ -254,7 +267,7 @@ export default function Inspections({ user, onLogout, onBack }: InspectionsProps
       .then(data => setObjects(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
     fetch(CONTRACTORS_API)
       .then(r => r.json())
-      .then(data => setContractors(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
+      .then(data => setContractors(Array.isArray(data) ? data : []));
   }, []);
 
   const handleSave = async (form: InspectionFormData) => {

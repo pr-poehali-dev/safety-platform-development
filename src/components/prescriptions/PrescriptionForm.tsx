@@ -245,7 +245,7 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
 
   const [categories, setCategories] = useState<string[]>([]);
   const [objects, setObjects] = useState<string[]>([]);
-  const [contractors, setContractors] = useState<string[]>([]);
+  const [contractorsList, setContractorsList] = useState<{ name: string; contracts: { id: number; contract_number: string }[] }[]>([]);
   useEffect(() => {
     fetch(CATEGORIES_URL)
       .then(r => r.json())
@@ -255,8 +255,10 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
       .then(data => setObjects(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
     fetch(CONTRACTORS_URL)
       .then(r => r.json())
-      .then(data => setContractors(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
+      .then(data => setContractorsList(Array.isArray(data) ? data : []));
   }, []);
+
+  const selectedContractor = contractorsList.find(c => c.name === form.contractor);
 
   const [form, setForm] = useState<FormState>({
     object: "", contractor: "", representative: "", replyEmail: "", reportDeadline: "", remarks: [newRemark()],
@@ -329,8 +331,18 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
               <Field label="Подрядчик *">
                 <SelectBase value={form.contractor} onChange={e => setField("contractor", e.target.value)}>
                   <option value="">— Выберите подрядчика —</option>
-                  {contractors.map(c => <option key={c} value={c}>{c}</option>)}
+                  {contractorsList.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
                 </SelectBase>
+                {selectedContractor && selectedContractor.contracts.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {selectedContractor.contracts.map(c => (
+                      <span key={c.id} className="inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary border border-primary/20 rounded px-1.5 py-0.5">
+                        <Icon name="FileText" size={10} />
+                        № {c.contract_number}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-6">
