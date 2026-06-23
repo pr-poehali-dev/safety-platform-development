@@ -6,6 +6,7 @@ import { ru } from "date-fns/locale";
 
 const API = "https://functions.poehali.dev/b2222d00-a1b0-43fd-966d-3f39732867c3";
 const CATEGORIES_API = "https://functions.poehali.dev/ea358d23-fa1e-4907-88c0-87cd78732293";
+const OBJECTS_API = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
 
 interface Inspection {
   id: number;
@@ -45,11 +46,12 @@ const lbl = "text-xs font-medium text-muted-foreground block mb-1";
 
 // --- Форма добавления/редактирования ---
 function InspectionForm({
-  initial, inspectorName, categories, onSave, onCancel, saving,
+  initial, inspectorName, categories, objects, onSave, onCancel, saving,
 }: {
   initial: InspectionFormData;
   inspectorName: string;
   categories: string[];
+  objects: string[];
   onSave: (data: InspectionFormData) => void;
   onCancel: () => void;
   saving: boolean;
@@ -93,7 +95,10 @@ function InspectionForm({
             </div>
             <div>
               <label className={lbl}>Проверяемый объект *</label>
-              <input value={form.object_name} onChange={e => set("object_name", e.target.value)} placeholder="Название объекта" className={inp} />
+              <select value={form.object_name} onChange={e => set("object_name", e.target.value)} className={inp}>
+                <option value="">— Выберите объект —</option>
+                {objects.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
             </div>
           </div>
 
@@ -206,6 +211,7 @@ export default function Inspections({ user, onLogout, onBack }: InspectionsProps
   const [rows, setRows] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<string[]>([]);
+  const [objects, setObjects] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
@@ -237,6 +243,9 @@ export default function Inspections({ user, onLogout, onBack }: InspectionsProps
     fetch(CATEGORIES_API)
       .then(r => r.json())
       .then(data => setCategories(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
+    fetch(OBJECTS_API)
+      .then(r => r.json())
+      .then(data => setObjects(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
   }, []);
 
   const handleSave = async (form: InspectionFormData) => {
@@ -432,6 +441,7 @@ export default function Inspections({ user, onLogout, onBack }: InspectionsProps
           initial={emptyForm()}
           inspectorName={inspectorName}
           categories={categories}
+          objects={objects}
           onSave={handleSave}
           onCancel={() => setShowForm(false)}
           saving={saving}
