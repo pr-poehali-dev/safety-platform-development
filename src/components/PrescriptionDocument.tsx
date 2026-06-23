@@ -50,8 +50,7 @@ function getCellValue(key: string, r: Remark, idx: number): React.ReactNode {
                   data-photo="1"
                   style={{
                     maxWidth: "100%",
-                    maxHeight: "160px",
-                    width: "auto",
+                    width: "100%",
                     height: "auto",
                     display: "block",
                     border: "1px solid #ccc",
