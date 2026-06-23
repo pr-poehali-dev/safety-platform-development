@@ -6,6 +6,16 @@ export function declineWordInstr(word: string, isMale: boolean): string {
     if (w.endsWith("ия")) return word.slice(0, -2) + "ией";
     if (w.endsWith("а"))  return word.slice(0, -1) + "ой";
     if (w.endsWith("я"))  return word.slice(0, -1) + "ей";
+    // слова на согласную не меняются по роду (специалист, инспектор, начальник…)
+    if (w.endsWith("ий")) return word.slice(0, -2) + "им";
+    if (w.endsWith("ый")) return word.slice(0, -2) + "ым";
+    if (w.endsWith("ой")) return word.slice(0, -2) + "ой";
+    if (w.endsWith("ь"))  return word.slice(0, -1) + "ем";
+    if (/[жшщч]$/.test(w)) return word + "ем";
+    if (/[оеё]в$/.test(w)) return word + "ым";
+    if (/[иы]н$/.test(w)) return word + "ым";
+    const consonants = "бвгджзклмнпрстфхцчшщ";
+    if (consonants.includes(w.slice(-1))) return word + "ом";
     return word;
   }
   if (w.endsWith("ий")) return word.slice(0, -2) + "им";
