@@ -92,6 +92,7 @@ export function DatePicker({ value, onChange, placeholder }: { value: string; on
 
 const UPLOAD_URL = "https://functions.poehali.dev/b1d2899a-a609-43c1-81e8-34e4c4922136";
 const CATEGORIES_URL = "https://functions.poehali.dev/ea358d23-fa1e-4907-88c0-87cd78732293";
+const OBJECTS_URL = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
 const MAX_PHOTOS = 3;
 const MAX_PHOTO_SIZE = 1.5 * 1024 * 1024;
 
@@ -242,10 +243,14 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
   const inspectorLabel = [inspectorPosition, inspectorName].filter(Boolean).join(" ");
 
   const [categories, setCategories] = useState<string[]>([]);
+  const [objects, setObjects] = useState<string[]>([]);
   useEffect(() => {
     fetch(CATEGORIES_URL)
       .then(r => r.json())
       .then(data => setCategories(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
+    fetch(OBJECTS_URL)
+      .then(r => r.json())
+      .then(data => setObjects(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
   }, []);
 
   const [form, setForm] = useState<FormState>({
@@ -310,8 +315,11 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
           <div className="space-y-6">
             <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Общие сведения</p>
             <div className="grid grid-cols-2 gap-6">
-              <Field label="Объект *">
-                <InputBase value={form.object} onChange={e => setField("object", e.target.value)} placeholder="Например: Цех №3" />
+              <Field label="Проверяемый объект *">
+                <SelectBase value={form.object} onChange={e => setField("object", e.target.value)}>
+                  <option value="">— Выберите объект —</option>
+                  {objects.map(o => <option key={o} value={o}>{o}</option>)}
+                </SelectBase>
               </Field>
               <Field label="Подрядчик *">
                 <InputBase value={form.contractor} onChange={e => setField("contractor", e.target.value)} placeholder="Название организации или ИП" />
