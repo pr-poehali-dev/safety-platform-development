@@ -41,27 +41,21 @@ function getCellValue(key: string, r: Remark, idx: number): React.ReactNode {
       <>
         <span>{r.description || "—"}</span>
         {photos.length > 0 && (
-          <div style={{ display: "block", marginTop: 6, width: "100%" }}>
+          <div style={{ marginTop: 6 }}>
             {photos.map((url, i) => (
-              <div
-                key={i}
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  marginTop: i > 0 ? 4 : 0,
-                  lineHeight: 0,
-                }}
-              >
+              <div key={i} style={{ marginTop: i > 0 ? 4 : 0, lineHeight: 0 }}>
                 <img
                   src={url}
                   alt={`Фото ${i + 1}`}
                   data-photo="1"
                   style={{
-                    width: "100%",
+                    maxWidth: "100%",
+                    maxHeight: "160px",
+                    width: "auto",
                     height: "auto",
                     display: "block",
                     border: "1px solid #ccc",
-                    boxSizing: "border-box",
+                    objectFit: "contain",
                   }}
                 />
               </div>
