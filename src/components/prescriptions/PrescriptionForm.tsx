@@ -258,11 +258,11 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
       .then(data => setContractorsList(Array.isArray(data) ? data : []));
   }, []);
 
-  const selectedContractor = contractorsList.find(c => c.name === form.contractor);
-
   const [form, setForm] = useState<FormState>({
     object: "", contractor: "", representative: "", replyEmail: "", reportDeadline: "", remarks: [newRemark()],
   });
+
+  const selectedContractor = contractorsList.find(c => c.name === form.contractor);
 
   const setField = (key: keyof Omit<FormState, "remarks">, val: string) =>
     setForm(prev => ({ ...prev, [key]: val }));
