@@ -96,6 +96,28 @@ const OBJECTS_URL = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af
 const CONTRACTORS_URL = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
 const MAX_PHOTOS = 3;
 const MAX_PHOTO_SIZE = 1.5 * 1024 * 1024;
+const MAX_PHOTO_WIDTH = 300;
+
+function resizeImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = e => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = img.width > MAX_PHOTO_WIDTH ? MAX_PHOTO_WIDTH / img.width : 1;
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 // --- Строка замечания ---
 function RemarkRow({
@@ -123,12 +145,7 @@ function RemarkRow({
     const toUpload = Array.from(files).slice(0, remaining);
     const urls: string[] = [];
     for (const file of toUpload) {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = e => resolve(e.target?.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      const dataUrl = await resizeImage(file);
       const res = await fetch(UPLOAD_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

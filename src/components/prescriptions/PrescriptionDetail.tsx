@@ -11,6 +11,28 @@ import {
 const UPLOAD_URL = "https://functions.poehali.dev/b1d2899a-a609-43c1-81e8-34e4c4922136";
 const MAX_PHOTOS = 3;
 const MAX_PHOTO_SIZE = 1.5 * 1024 * 1024;
+const MAX_PHOTO_WIDTH = 300;
+
+function resizeImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = e => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = img.width > MAX_PHOTO_WIDTH ? MAX_PHOTO_WIDTH / img.width : 1;
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 function StatusBadge({ status }: { status: Status }) {
   return (
@@ -68,12 +90,7 @@ export function PrescriptionDetail({
     const toUpload = Array.from(files).slice(0, remaining);
     const urls: string[] = [];
     for (const file of toUpload) {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = e => resolve(e.target?.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      const dataUrl = await resizeImage(file);
       const res = await fetch(UPLOAD_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
