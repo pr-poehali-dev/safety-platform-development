@@ -7,6 +7,7 @@ import { ru } from "date-fns/locale";
 const API = "https://functions.poehali.dev/b2222d00-a1b0-43fd-966d-3f39732867c3";
 const CATEGORIES_API = "https://functions.poehali.dev/ea358d23-fa1e-4907-88c0-87cd78732293";
 const OBJECTS_API = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
+const CONTRACTORS_API = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
 
 interface Inspection {
   id: number;
@@ -46,12 +47,13 @@ const lbl = "text-xs font-medium text-muted-foreground block mb-1";
 
 // --- Форма добавления/редактирования ---
 function InspectionForm({
-  initial, inspectorName, categories, objects, onSave, onCancel, saving,
+  initial, inspectorName, categories, objects, contractors, onSave, onCancel, saving,
 }: {
   initial: InspectionFormData;
   inspectorName: string;
   categories: string[];
   objects: string[];
+  contractors: string[];
   onSave: (data: InspectionFormData) => void;
   onCancel: () => void;
   saving: boolean;
@@ -91,7 +93,10 @@ function InspectionForm({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={lbl}>ПО (подрядчик) *</label>
-              <input value={form.contractor} onChange={e => set("contractor", e.target.value)} placeholder="Название организации" className={inp} />
+              <select value={form.contractor} onChange={e => set("contractor", e.target.value)} className={inp}>
+                <option value="">— Выберите подрядчика —</option>
+                {contractors.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
             <div>
               <label className={lbl}>Проверяемый объект *</label>
@@ -212,6 +217,7 @@ export default function Inspections({ user, onLogout, onBack }: InspectionsProps
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<string[]>([]);
   const [objects, setObjects] = useState<string[]>([]);
+  const [contractors, setContractors] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
@@ -246,6 +252,9 @@ export default function Inspections({ user, onLogout, onBack }: InspectionsProps
     fetch(OBJECTS_API)
       .then(r => r.json())
       .then(data => setObjects(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
+    fetch(CONTRACTORS_API)
+      .then(r => r.json())
+      .then(data => setContractors(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
   }, []);
 
   const handleSave = async (form: InspectionFormData) => {
@@ -442,6 +451,7 @@ export default function Inspections({ user, onLogout, onBack }: InspectionsProps
           inspectorName={inspectorName}
           categories={categories}
           objects={objects}
+          contractors={contractors}
           onSave={handleSave}
           onCancel={() => setShowForm(false)}
           saving={saving}
