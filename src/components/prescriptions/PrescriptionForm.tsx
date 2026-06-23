@@ -96,7 +96,7 @@ const OBJECTS_URL = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af
 const CONTRACTORS_URL = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
 const MAX_PHOTOS = 3;
 const MAX_PHOTO_SIZE = 1.5 * 1024 * 1024;
-const MAX_PHOTO_WIDTH = 300;
+const MAX_PHOTO_WIDTH = 600;
 
 function resizeImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {

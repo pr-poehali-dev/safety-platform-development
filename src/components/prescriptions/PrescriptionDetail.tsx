@@ -11,7 +11,7 @@ import {
 const UPLOAD_URL = "https://functions.poehali.dev/b1d2899a-a609-43c1-81e8-34e4c4922136";
 const MAX_PHOTOS = 3;
 const MAX_PHOTO_SIZE = 1.5 * 1024 * 1024;
-const MAX_PHOTO_WIDTH = 300;
+const MAX_PHOTO_WIDTH = 600;
 
 function resizeImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
