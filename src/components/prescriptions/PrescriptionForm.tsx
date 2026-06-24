@@ -253,6 +253,7 @@ interface FormState {
   contractor: string;
   contractNumber: string;
   representative: string;
+  representativeEnabled: boolean;
   replyEmail: string;
   reportDeadline: string;
   remarks: Remark[];
@@ -280,7 +281,7 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
   }, []);
 
   const [form, setForm] = useState<FormState>({
-    object: "", contractor: "", contractNumber: "", representative: "", replyEmail: "", reportDeadline: "", remarks: [newRemark()],
+    object: "", contractor: "", contractNumber: "", representative: "", representativeEnabled: false, replyEmail: "", reportDeadline: "", remarks: [newRemark()],
   });
 
   const selectedContractor = contractorsList.find(c => c.name === form.contractor);
@@ -399,9 +400,23 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Заполняется автоматически из вашей учётной записи</p>
               </Field>
-              <Field label="В присутствии представителя подрядчика">
-                <InputBase value={form.representative} onChange={e => setField("representative", e.target.value)} placeholder="ФИО представителя подрядчика" />
-              </Field>
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={!!form.representative || form.representativeEnabled}
+                    onChange={e => {
+                      if (!e.target.checked) setField("representative", "");
+                      setForm(prev => ({ ...prev, representativeEnabled: e.target.checked }));
+                    }}
+                    className="w-4 h-4 rounded border border-border accent-primary cursor-pointer"
+                  />
+                  <span className="text-xs text-muted-foreground font-medium">В присутствии представителя подрядчика</span>
+                </label>
+                {(form.representativeEnabled || !!form.representative) && (
+                  <InputBase value={form.representative} onChange={e => setField("representative", e.target.value)} placeholder="ФИО представителя подрядчика" autoFocus />
+                )}
+              </div>
             </div>
           </div>
           <div className="space-y-6">
