@@ -94,6 +94,7 @@ const UPLOAD_URL = "https://functions.poehali.dev/b1d2899a-a609-43c1-81e8-34e4c4
 const CATEGORIES_URL = "https://functions.poehali.dev/ea358d23-fa1e-4907-88c0-87cd78732293";
 const OBJECTS_URL = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
 const CONTRACTORS_URL = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
+const PLACES_URL = "https://functions.poehali.dev/6720e1ec-5646-4a64-8183-95ba73c130bd";
 const MAX_PHOTOS = 3;
 const MAX_PHOTO_SIZE = 1.5 * 1024 * 1024;
 const MAX_PHOTO_WIDTH = 600;
@@ -121,9 +122,9 @@ function resizeImage(file: File): Promise<string> {
 
 // --- Строка замечания ---
 function RemarkRow({
-  remark, index, onChange, onRemove, canRemove, categories,
+  remark, index, onChange, onRemove, canRemove, categories, places,
 }: {
-  remark: Remark; index: number; onChange: (r: Remark) => void; onRemove: () => void; canRemove: boolean; categories: string[];
+  remark: Remark; index: number; onChange: (r: Remark) => void; onRemove: () => void; canRemove: boolean; categories: string[]; places: string[];
 }) {
   const set = (key: keyof Remark, val: string) => onChange({ ...remark, [key]: val });
   const [uploading, setUploading] = useState(false);
@@ -174,7 +175,10 @@ function RemarkRow({
         )}
       </div>
       <Field label="Место нарушения *">
-        <InputBase value={remark.place} onChange={e => set("place", e.target.value)} placeholder="Например: Эвакуационный выход №2" />
+        <SelectBase value={remark.place} onChange={e => set("place", e.target.value)}>
+          <option value="">— Выберите место нарушения —</option>
+          {places.map(p => <option key={p} value={p}>{p}</option>)}
+        </SelectBase>
       </Field>
       <Field label="Вид нарушения *">
         <SelectBase value={remark.category} onChange={e => set("category", e.target.value)}>
@@ -263,6 +267,7 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
 
   const [categories, setCategories] = useState<string[]>([]);
   const [objects, setObjects] = useState<string[]>([]);
+  const [places, setPlaces] = useState<string[]>([]);
   const [contractorsList, setContractorsList] = useState<{ name: string; contracts: { id: number; contract_number: string }[] }[]>([]);
   useEffect(() => {
     fetch(CATEGORIES_URL)
@@ -271,6 +276,9 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
     fetch(OBJECTS_URL)
       .then(r => r.json())
       .then(data => setObjects(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
+    fetch(PLACES_URL)
+      .then(r => r.json())
+      .then(data => setPlaces(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
     fetch(CONTRACTORS_URL)
       .then(r => r.json())
       .then(data => setContractorsList(Array.isArray(data) ? data : []));
@@ -411,6 +419,7 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
                 onRemove={() => removeRemark(i)}
                 canRemove={form.remarks.length > 1}
                 categories={categories}
+                places={places}
               />
             ))}
             <button
