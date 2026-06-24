@@ -60,7 +60,7 @@ export default function InspectionsTable({
               <th className="text-left px-3 py-3 text-xs font-semibold text-muted-foreground">ПО</th>
               <th className="text-left px-3 py-3 text-xs font-semibold text-muted-foreground">Вид нарушения</th>
               <th className="text-left px-3 py-3 text-xs font-semibold text-muted-foreground">Объект</th>
-              <th className="text-center px-2 py-3 text-xs font-semibold text-muted-foreground">Замеч.</th>
+              <th className="text-center px-2 py-3 text-xs font-semibold text-muted-foreground">Замечаний</th>
               <th className="text-center px-2 py-3 text-xs font-semibold text-muted-foreground leading-tight">Работы приостановлены</th>
               <th className="text-left px-3 py-3 text-xs font-semibold text-muted-foreground">Проверяющий</th>
               <th className="text-left px-3 py-3 text-xs font-semibold text-muted-foreground">Примечание</th>
