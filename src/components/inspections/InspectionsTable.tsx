@@ -43,41 +43,52 @@ export default function InspectionsTable({
     <div className="bg-card border border-border rounded-xl overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
+          <colgroup>
+            <col style={{ width: 90 }} />
+            <col style={{ width: 120 }} />
+            <col style={{ width: 120 }} />
+            <col style={{ width: 120 }} />
+            <col style={{ width: 50 }} />
+            <col style={{ width: 50 }} />
+            <col style={{ width: 100 }} />
+            <col style={{ width: 100 }} />
+            <col style={{ width: 40 }} />
+          </colgroup>
           <thead>
             <tr className="border-b border-border bg-secondary/30">
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">Дата</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">ПО</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">Вид нарушения</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">Объект</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">Замечаний</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">Работы<br/>приостановлены</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">Проверяющий</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">Примечание</th>
-              <th className="px-4 py-3" />
+              <th className="text-left px-3 py-3 text-xs font-semibold text-muted-foreground">ПО</th>
+              <th className="text-left px-3 py-3 text-xs font-semibold text-muted-foreground">Вид нарушения</th>
+              <th className="text-left px-3 py-3 text-xs font-semibold text-muted-foreground">Объект</th>
+              <th className="text-center px-2 py-3 text-xs font-semibold text-muted-foreground">Замеч.</th>
+              <th className="text-center px-2 py-3 text-xs font-semibold text-muted-foreground leading-tight">Работы<br/>прост.</th>
+              <th className="text-left px-3 py-3 text-xs font-semibold text-muted-foreground">Проверяющий</th>
+              <th className="text-left px-3 py-3 text-xs font-semibold text-muted-foreground">Примечание</th>
+              <th className="px-2 py-3" />
             </tr>
           </thead>
           <tbody>
             {rows.map((row, idx) => (
               <tr key={row.id} className={`border-b border-border last:border-0 hover:bg-secondary/20 transition-colors ${idx % 2 === 0 ? "" : "bg-secondary/10"}`}>
                 <td className="px-4 py-3 text-sm whitespace-nowrap">{formatDate(row.inspection_date)}</td>
-                <td className="px-4 py-3 text-sm whitespace-nowrap">{row.contractor}</td>
-                <td className="px-4 py-3 text-sm">{row.violation_type}</td>
-                <td className="px-4 py-3 text-sm whitespace-nowrap">{row.object_name}</td>
-                <td className="px-4 py-3 text-center">
+                <td className="px-3 py-3 text-sm truncate max-w-0" title={row.contractor}>{row.contractor}</td>
+                <td className="px-3 py-3 text-sm truncate max-w-0" title={row.violation_type}>{row.violation_type}</td>
+                <td className="px-3 py-3 text-sm truncate max-w-0" title={row.object_name}>{row.object_name}</td>
+                <td className="px-2 py-3 text-center">
                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold">
                     {row.remarks_count}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-center">
+                <td className="px-2 py-3 text-center">
                   {row.works_suspended
                     ? <span className="text-xs font-semibold text-red-400">да</span>
                     : <span className="text-xs text-muted-foreground">нет</span>
                   }
                 </td>
-                <td className="px-4 py-3 text-sm whitespace-nowrap">{row.inspector_name}</td>
-                <td className="px-4 py-3 text-sm max-w-[200px]">
+                <td className="px-3 py-3 text-sm truncate max-w-0" title={row.inspector_name}>{row.inspector_name}</td>
+                <td className="px-3 py-3 text-sm truncate max-w-0">
                   {row.note ? (
-                    <span className="text-muted-foreground line-clamp-2" title={row.note}>{row.note}</span>
+                    <span className="text-muted-foreground truncate" title={row.note}>{row.note}</span>
                   ) : (
                     <span className="text-muted-foreground/30">—</span>
                   )}
