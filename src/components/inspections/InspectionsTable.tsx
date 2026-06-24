@@ -70,30 +70,30 @@ export default function InspectionsTable({
           <tbody>
             {rows.map((row, idx) => (
               <tr key={row.id} className={`border-b border-border last:border-0 hover:bg-secondary/20 transition-colors ${idx % 2 === 0 ? "" : "bg-secondary/10"}`}>
-                <td className="px-4 py-3 text-sm whitespace-nowrap">{formatDate(row.inspection_date)}</td>
-                <td className="px-3 py-3 text-sm truncate max-w-0" title={row.contractor}>{row.contractor}</td>
-                <td className="px-3 py-3 text-sm truncate max-w-0" title={row.violation_type}>{row.violation_type}</td>
-                <td className="px-3 py-3 text-sm truncate max-w-0" title={row.object_name}>{row.object_name}</td>
-                <td className="px-2 py-3 text-center">
+                <td className="px-4 py-3 text-sm whitespace-nowrap align-top">{formatDate(row.inspection_date)}</td>
+                <td className="px-3 py-3 text-sm align-top"><span className="line-clamp-3" title={row.contractor}>{row.contractor}</span></td>
+                <td className="px-3 py-3 text-sm align-top"><span className="line-clamp-3" title={row.violation_type}>{row.violation_type}</span></td>
+                <td className="px-3 py-3 text-sm align-top"><span className="line-clamp-3" title={row.object_name}>{row.object_name}</span></td>
+                <td className="px-2 py-3 text-center align-top">
                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold">
                     {row.remarks_count}
                   </span>
                 </td>
-                <td className="px-2 py-3 text-center">
+                <td className="px-2 py-3 text-center align-top">
                   {row.works_suspended
                     ? <span className="text-xs font-semibold text-red-400">да</span>
                     : <span className="text-xs text-muted-foreground">нет</span>
                   }
                 </td>
-                <td className="px-3 py-3 text-sm truncate max-w-0" title={row.inspector_name}>{row.inspector_name}</td>
-                <td className="px-3 py-3 text-sm truncate max-w-0">
+                <td className="px-3 py-3 text-sm align-top"><span className="line-clamp-3" title={row.inspector_name}>{row.inspector_name}</span></td>
+                <td className="px-3 py-3 text-sm align-top">
                   {row.note ? (
-                    <span className="text-muted-foreground truncate" title={row.note}>{row.note}</span>
+                    <span className="line-clamp-3 text-muted-foreground" title={row.note}>{row.note}</span>
                   ) : (
                     <span className="text-muted-foreground/30">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 align-top">
                   {deleteConfirm === row.id ? (
                     <div className="flex items-center gap-1 whitespace-nowrap">
                       <button onClick={() => onDeleteConfirm(row.id)} className="text-[10px] px-2 py-1 rounded bg-red-500 text-white hover:bg-red-600 transition-colors">Удалить</button>
