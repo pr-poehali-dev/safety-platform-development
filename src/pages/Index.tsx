@@ -100,7 +100,7 @@ export default function Index({ user, onLogout }: IndexProps) {
           user={user}
           canEdit={
             user.role === "admin" ||
-            (user.role === "specialist" && (!selected.createdBy || selected.createdBy === user.login))
+            (user.role === "specialist" && selected.createdBy === user.login)
           }
           template={activeTemplate}
         />
