@@ -34,7 +34,8 @@ export default function InspectionForm({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const isValid = form.inspection_date && form.contractor.trim() && form.violation_type && form.object_name.trim();
+  const noteRequired = form.violation_type === "Прочее";
+  const isValid = form.inspection_date && form.contractor.trim() && form.violation_type && form.object_name.trim() && (!noteRequired || form.note.trim());
   const selectedContractor = contractors.find(c => c.name === form.contractor);
 
   return (
@@ -142,13 +143,18 @@ export default function InspectionForm({
           </div>
 
           <div>
-            <label className={lbl}>Примечание <span className="text-muted-foreground/60">(не обязательно, до 300 символов)</span></label>
+            <label className={lbl}>
+              Примечание{" "}
+              {noteRequired
+                ? <span className="text-red-400">*</span>
+                : <span className="text-muted-foreground/60">(не обязательно, до 300 символов)</span>}
+            </label>
             <textarea
               value={form.note}
               onChange={e => set("note", e.target.value.slice(0, 300))}
-              placeholder="Дополнительная информация..."
+              placeholder={noteRequired ? "Укажите подробности нарушения..." : "Дополнительная информация..."}
               rows={3}
-              className={inp + " resize-none"}
+              className={inp + " resize-none" + (noteRequired && !form.note.trim() ? " border-red-400/60 focus:ring-red-400/50" : "")}
             />
             <p className="text-[10px] text-muted-foreground text-right mt-0.5">{form.note.length}/300</p>
           </div>
