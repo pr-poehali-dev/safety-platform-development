@@ -94,7 +94,6 @@ const UPLOAD_URL = "https://functions.poehali.dev/b1d2899a-a609-43c1-81e8-34e4c4
 const CATEGORIES_URL = "https://functions.poehali.dev/ea358d23-fa1e-4907-88c0-87cd78732293";
 const OBJECTS_URL = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
 const CONTRACTORS_URL = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
-const PLACES_URL = "https://functions.poehali.dev/6720e1ec-5646-4a64-8183-95ba73c130bd";
 const MAX_PHOTOS = 3;
 const MAX_PHOTO_SIZE = 1.5 * 1024 * 1024;
 const MAX_PHOTO_WIDTH = 600;
@@ -175,8 +174,8 @@ function RemarkRow({
         )}
       </div>
       <Field label="Место нарушения *">
-        <SelectBase value={remark.place} onChange={e => set("place", e.target.value)}>
-          <option value="">— Выберите место нарушения —</option>
+        <SelectBase value={remark.place} onChange={e => set("place", e.target.value)} disabled={places.length === 0}>
+          <option value="">{places.length === 0 ? "— Сначала выберите объект —" : "— Выберите место нарушения —"}</option>
           {places.map(p => <option key={p} value={p}>{p}</option>)}
         </SelectBase>
       </Field>
@@ -266,8 +265,7 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
   const inspectorLabel = [inspectorPosition, inspectorName].filter(Boolean).join(" ");
 
   const [categories, setCategories] = useState<string[]>([]);
-  const [objects, setObjects] = useState<string[]>([]);
-  const [places, setPlaces] = useState<string[]>([]);
+  const [objectsList, setObjectsList] = useState<{ id: number; name: string; places: { id: number; name: string }[] }[]>([]);
   const [contractorsList, setContractorsList] = useState<{ name: string; contracts: { id: number; contract_number: string }[] }[]>([]);
   useEffect(() => {
     fetch(CATEGORIES_URL)
@@ -275,10 +273,7 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
       .then(data => setCategories(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
     fetch(OBJECTS_URL)
       .then(r => r.json())
-      .then(data => setObjects(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
-    fetch(PLACES_URL)
-      .then(r => r.json())
-      .then(data => setPlaces(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
+      .then(data => setObjectsList(Array.isArray(data) ? data : []));
     fetch(CONTRACTORS_URL)
       .then(r => r.json())
       .then(data => setContractorsList(Array.isArray(data) ? data : []));
@@ -289,12 +284,15 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
   });
 
   const selectedContractor = contractorsList.find(c => c.name === form.contractor);
+  const selectedObject = objectsList.find(o => o.name === form.object);
+  const availablePlaces = selectedObject ? selectedObject.places.map(p => p.name) : [];
 
   const setField = (key: keyof Omit<FormState, "remarks">, val: string) =>
     setForm(prev => ({
       ...prev,
       [key]: val,
       ...(key === "contractor" ? { contractNumber: "" } : {}),
+      ...(key === "object" ? { remarks: prev.remarks.map(r => ({ ...r, place: "" })) } : {}),
     }));
 
   const updateRemark = (index: number, r: Remark) =>
@@ -357,7 +355,7 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
               <Field label="Проверяемый объект *">
                 <SelectBase value={form.object} onChange={e => setField("object", e.target.value)}>
                   <option value="">— Выберите объект —</option>
-                  {objects.map(o => <option key={o} value={o}>{o}</option>)}
+                  {objectsList.map(o => <option key={o.name} value={o.name}>{o.name}</option>)}
                 </SelectBase>
               </Field>
               <Field label="Подрядчик *">
@@ -419,7 +417,7 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
                 onRemove={() => removeRemark(i)}
                 canRemove={form.remarks.length > 1}
                 categories={categories}
-                places={places}
+                places={availablePlaces}
               />
             ))}
             <button
