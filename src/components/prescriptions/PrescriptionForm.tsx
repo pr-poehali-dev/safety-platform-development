@@ -327,6 +327,7 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
       reportDeadline: form.reportDeadline,
       remarks: form.remarks,
       comments: [],
+      createdBy: user.login,
     });
     onClose();
   };

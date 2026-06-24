@@ -1,0 +1,1 @@
+ALTER TABLE t_p5901577_safety_platform_deve.prescriptions ADD COLUMN IF NOT EXISTS created_by TEXT NOT NULL DEFAULT '';

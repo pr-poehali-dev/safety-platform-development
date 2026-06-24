@@ -34,6 +34,7 @@ def row_to_prescription(row, remarks):
         "responsible": row[7], "replyEmail": row[8], "reportDeadline": row[9],
         "comments": row[10] if row[10] else [], "remarks": remarks,
         "contractNumber": row[11] if len(row) > 11 else None,
+        "createdBy": row[12] if len(row) > 12 else "",
     }
 
 
@@ -165,7 +166,7 @@ def handler(event: dict, context) -> dict:
         # --- ПРЕДПИСАНИЯ ---
         if method == "GET":
             cur.execute(
-                f"SELECT id, number, date, object, contractor, inspector, representative, responsible, reply_email, report_deadline, comments, contract_number "
+                f"SELECT id, number, date, object, contractor, inspector, representative, responsible, reply_email, report_deadline, comments, contract_number, created_by "
                 f"FROM {SCHEMA}.prescriptions ORDER BY created_at DESC"
             )
             rows = cur.fetchall()
@@ -194,13 +195,14 @@ def handler(event: dict, context) -> dict:
             count = cur.fetchone()[0]
             number = f"МАН-{year}-{str(count + 1).zfill(2)}"
             cur.execute(
-                f"INSERT INTO {SCHEMA}.prescriptions (id, number, date, object, contractor, inspector, representative, responsible, reply_email, report_deadline, comments, contract_number) "
-                f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                f"INSERT INTO {SCHEMA}.prescriptions (id, number, date, object, contractor, inspector, representative, responsible, reply_email, report_deadline, comments, contract_number, created_by) "
+                f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                 (pid, number, p["date"], p["object"], p["contractor"],
                  p.get("inspector", ""), p.get("representative", ""), p.get("responsible", ""),
                  p.get("replyEmail", ""), p.get("reportDeadline", ""),
                  json.dumps(p.get("comments", []), ensure_ascii=False),
-                 p.get("contractNumber") or None)
+                 p.get("contractNumber") or None,
+                 p.get("createdBy", ""))
             )
             for i, r in enumerate(p.get("remarks", [])):
                 cur.execute(

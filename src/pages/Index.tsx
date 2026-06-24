@@ -98,7 +98,10 @@ export default function Index({ user, onLogout }: IndexProps) {
           onClose={() => setSelected(null)}
           onUpdate={updatePrescription}
           user={user}
-          canEdit={canEdit}
+          canEdit={
+            user.role === "admin" ||
+            (user.role === "specialist" && (!selected.createdBy || selected.createdBy === user.login))
+          }
           template={activeTemplate}
         />
       )}

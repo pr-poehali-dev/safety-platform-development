@@ -118,6 +118,7 @@ export interface Prescription {
   reportDeadline: string;
   remarks: Remark[];
   comments: Comment[];
+  createdBy?: string;
 }
 
 export interface Attachment {
