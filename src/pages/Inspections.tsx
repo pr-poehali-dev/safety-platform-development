@@ -3,6 +3,8 @@ import { AppUser } from "@/lib/auth";
 import Icon from "@/components/ui/icon";
 import { format, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
 
 const API = "https://functions.poehali.dev/b2222d00-a1b0-43fd-966d-3f39732867c3";
 const CATEGORIES_API = "https://functions.poehali.dev/ea358d23-fa1e-4907-88c0-87cd78732293";
@@ -61,8 +63,18 @@ function InspectionForm({
   saving: boolean;
 }) {
   const [form, setForm] = useState<InspectionFormData>(initial);
+  const [calOpen, setCalOpen] = useState(false);
+  const calRef = useRef<HTMLDivElement>(null);
   const set = (key: keyof InspectionFormData, val: string | number | boolean) =>
     setForm(prev => ({ ...prev, [key]: val }));
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (calRef.current && !calRef.current.contains(e.target as Node)) setCalOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const isValid = form.inspection_date && form.contractor.trim() && form.violation_type && form.object_name.trim();
   const selectedContractor = contractors.find(c => c.name === form.contractor);
@@ -80,9 +92,34 @@ function InspectionForm({
 
         <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            <div ref={calRef} className="relative">
               <label className={lbl}>Дата проверки *</label>
-              <input type="date" value={form.inspection_date} onChange={e => set("inspection_date", e.target.value)} className={inp} />
+              <button
+                type="button"
+                onClick={() => setCalOpen(o => !o)}
+                className={inp + " flex items-center gap-2 cursor-pointer text-left"}
+              >
+                <Icon name="CalendarDays" size={14} className="text-muted-foreground flex-shrink-0" />
+                {form.inspection_date
+                  ? format(parseISO(form.inspection_date), "d MMMM yyyy", { locale: ru })
+                  : <span className="text-muted-foreground">Выберите дату</span>}
+              </button>
+              {calOpen && (
+                <div className="absolute z-50 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
+                  <DayPicker
+                    mode="single"
+                    locale={ru}
+                    selected={form.inspection_date ? parseISO(form.inspection_date) : undefined}
+                    onSelect={day => {
+                      if (day) { set("inspection_date", format(day, "yyyy-MM-dd")); setCalOpen(false); }
+                    }}
+                    defaultMonth={form.inspection_date ? parseISO(form.inspection_date) : new Date()}
+                    styles={{
+                      root: { margin: 0, padding: "8px 12px", fontSize: "13px" },
+                    }}
+                  />
+                </div>
+              )}
             </div>
             <div>
               <label className={lbl}>Проверяющий</label>
