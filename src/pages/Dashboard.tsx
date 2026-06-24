@@ -1,0 +1,264 @@
+import { useState, useEffect, useMemo } from "react";
+import { AppUser } from "@/lib/auth";
+import { Prescription, overallStatus } from "@/lib/prescriptionTypes";
+import { Inspection } from "@/components/inspections/types";
+import Icon from "@/components/ui/icon";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend
+} from "recharts";
+
+const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
+const INSPECTIONS_API = "https://functions.poehali.dev/b2222d00-a1b0-43fd-966d-3f39732867c3";
+
+interface DashboardProps {
+  user: AppUser;
+}
+
+const COLORS = [
+  "#6366f1", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6",
+  "#ec4899", "#14b8a6", "#f97316", "#84cc16", "#06b6d4",
+  "#a855f7", "#e11d48", "#0ea5e9",
+];
+
+function StatCard({ label, value, sub, icon, color }: {
+  label: string; value: number | string; sub?: string; icon: string; color: string;
+}) {
+  return (
+    <div className="bg-card border border-border rounded-xl px-5 py-4 flex items-start gap-4">
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
+        <Icon name={icon as never} size={18} className="text-white" />
+      </div>
+      <div>
+        <p className="text-2xl font-bold leading-tight">{value}</p>
+        <p className="text-sm text-muted-foreground mt-0.5">{label}</p>
+        {sub && <p className="text-xs text-muted-foreground/60 mt-0.5">{sub}</p>}
+      </div>
+    </div>
+  );
+}
+
+type PivotRow = {
+  category: string;
+  byContractor: Record<string, number>;
+  total: number;
+};
+
+export default function Dashboard({ user }: DashboardProps) {
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [inspections, setInspections] = useState<Inspection[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fetch(PRESCRIPTIONS_API).then(r => r.json()).catch(() => []),
+      fetch(INSPECTIONS_API).then(r => r.json()).catch(() => []),
+    ]).then(([pres, insp]) => {
+      setPrescriptions(Array.isArray(pres) ? pres : []);
+      setInspections(Array.isArray(insp) ? insp : []);
+      setLoading(false);
+    });
+  }, []);
+
+  const isContractor = user.role === "contractor";
+
+  const filteredPrescriptions = useMemo(() =>
+    isContractor
+      ? prescriptions.filter(p => p.contractor === user.contractor)
+      : prescriptions,
+    [prescriptions, user]
+  );
+
+  const filteredInspections = useMemo(() =>
+    isContractor
+      ? inspections.filter(i => i.contractor === user.contractor)
+      : inspections,
+    [inspections, user]
+  );
+
+  // --- Статистика предписаний ---
+  const presTotal = filteredPrescriptions.length;
+  const presIssued = filteredPrescriptions.filter(p => overallStatus(p.remarks) === "Выдано").length;
+  const presFixed = filteredPrescriptions.filter(p => overallStatus(p.remarks) === "Устранено").length;
+  const presOverdue = filteredPrescriptions.filter(p => overallStatus(p.remarks) === "Просрочено").length;
+
+  // --- Статистика проверок ---
+  const inspTotal = filteredInspections.length;
+  const inspSuspended = filteredInspections.filter(i => i.works_suspended).length;
+  const inspRemarks = filteredInspections.reduce((s, i) => s + (i.remarks_count || 0), 0);
+
+  // --- Сводная таблица: категория × подрядчик ---
+  const { contractors, pivotRows } = useMemo(() => {
+    const contractorSet = new Set<string>();
+    const map = new Map<string, Record<string, number>>();
+
+    filteredInspections.forEach(i => {
+      const cat = i.violation_type || "Без категории";
+      const co = i.contractor || "Не указан";
+      contractorSet.add(co);
+      if (!map.has(cat)) map.set(cat, {});
+      const row = map.get(cat)!;
+      row[co] = (row[co] || 0) + (i.remarks_count || 0);
+    });
+
+    const contractors = [...contractorSet].sort();
+    const pivotRows: PivotRow[] = [...map.entries()]
+      .map(([category, byContractor]) => ({
+        category,
+        byContractor,
+        total: Object.values(byContractor).reduce((s, v) => s + v, 0),
+      }))
+      .sort((a, b) => b.total - a.total);
+
+    const grandTotal: Record<string, number> = {};
+    contractors.forEach(c => {
+      grandTotal[c] = pivotRows.reduce((s, r) => s + (r.byContractor[c] || 0), 0);
+    });
+
+    return { contractors, pivotRows, grandTotal };
+  }, [filteredInspections]);
+
+  // --- Данные для графика ---
+  const chartData = useMemo(() => {
+    return pivotRows.map(row => {
+      const obj: Record<string, unknown> = { category: row.category };
+      contractors.forEach(c => { obj[c] = row.byContractor[c] || 0; });
+      return obj;
+    });
+  }, [pivotRows, contractors]);
+
+  const grandTotal = useMemo(() => {
+    const gt: Record<string, number> = {};
+    contractors.forEach(c => {
+      gt[c] = pivotRows.reduce((s, r) => s + (r.byContractor[c] || 0), 0);
+    });
+    return gt;
+  }, [pivotRows, contractors]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+      {/* Сводные карточки */}
+      <div>
+        <h2 className="text-base font-semibold mb-3">Предписания</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatCard label="Всего предписаний" value={presTotal} icon="ClipboardList" color="bg-indigo-500" />
+          <StatCard label="Выдано" value={presIssued} icon="Send" color="bg-primary" />
+          <StatCard label="Устранено" value={presFixed} icon="CheckCircle" color="bg-green-500" />
+          <StatCard label="Просрочено" value={presOverdue} icon="AlertCircle" color="bg-red-500" />
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-base font-semibold mb-3">Проверки</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <StatCard label="Всего проверок" value={inspTotal} icon="TableProperties" color="bg-violet-500" />
+          <StatCard label="Всего замечаний" value={inspRemarks} icon="AlertTriangle" color="bg-amber-500" />
+          <StatCard label="Приостановлено работ" value={inspSuspended} icon="OctagonX" color="bg-red-600" />
+        </div>
+      </div>
+
+      {/* Сводная таблица — Замечания по категориям и подрядчикам */}
+      {pivotRows.length > 0 && (
+        <div>
+          <h2 className="text-base font-semibold mb-3">Замечания по категориям и подрядчикам</h2>
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-secondary/30">
+                    <th className="text-left px-4 py-2.5 font-semibold text-muted-foreground min-w-[180px]">Вид нарушения</th>
+                    {contractors.map(c => (
+                      <th key={c} className="text-center px-3 py-2.5 font-semibold text-muted-foreground whitespace-nowrap">{c}</th>
+                    ))}
+                    <th className="text-center px-3 py-2.5 font-semibold text-foreground">Итого</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pivotRows.map((row, idx) => (
+                    <tr key={row.category} className={`border-b border-border last:border-0 ${idx % 2 === 0 ? "" : "bg-secondary/10"}`}>
+                      <td className="px-4 py-2 text-foreground">{row.category}</td>
+                      {contractors.map(c => (
+                        <td key={c} className="px-3 py-2 text-center text-muted-foreground">
+                          {row.byContractor[c] ? (
+                            <span className="text-foreground font-medium">{row.byContractor[c]}</span>
+                          ) : ""}
+                        </td>
+                      ))}
+                      <td className="px-3 py-2 text-center font-bold text-foreground">{row.total}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-secondary/30 border-t-2 border-border">
+                    <td className="px-4 py-2.5 font-bold text-foreground">Общий итог</td>
+                    {contractors.map(c => (
+                      <td key={c} className="px-3 py-2.5 text-center font-bold text-foreground">
+                        {grandTotal[c] || ""}
+                      </td>
+                    ))}
+                    <td className="px-3 py-2.5 text-center font-bold text-foreground">
+                      {pivotRows.reduce((s, r) => s + r.total, 0)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* График — замечания по категориям */}
+      {chartData.length > 0 && contractors.length > 0 && (
+        <div>
+          <h2 className="text-base font-semibold mb-3">Количество замечаний (диаграмма)</h2>
+          <div className="bg-card border border-border rounded-xl p-4">
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={chartData} margin={{ top: 8, right: 20, left: 0, bottom: 80 }}>
+                <XAxis
+                  dataKey="category"
+                  tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                  angle={-45}
+                  textAnchor="end"
+                  interval={0}
+                />
+                <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--card)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: 11, paddingTop: 12 }}
+                  formatter={(value) => <span style={{ color: "var(--muted-foreground)" }}>{value}</span>}
+                />
+                {contractors.map((c, i) => (
+                  <Bar key={c} dataKey={c} stackId="a" fill={COLORS[i % COLORS.length]} radius={i === contractors.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}>
+                    {chartData.map((_, ci) => (
+                      <Cell key={ci} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Bar>
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {pivotRows.length === 0 && (
+        <div className="bg-card border border-border rounded-xl py-16 flex flex-col items-center gap-3 text-muted-foreground">
+          <Icon name="BarChart3" size={36} className="opacity-30" />
+          <p className="text-sm">Нет данных для отображения</p>
+        </div>
+      )}
+    </div>
+  );
+}

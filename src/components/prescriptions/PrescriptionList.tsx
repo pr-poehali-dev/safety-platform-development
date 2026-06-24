@@ -109,12 +109,15 @@ interface PrescriptionListProps {
   onSelect: (p: Prescription) => void;
   onAddClick: () => void;
   onInspectionsClick?: () => void;
+  onDashboardClick?: () => void;
+  activeTab?: string;
 }
 
 export function PrescriptionList({
   user, onLogout, prescriptions, loading, search, filterStatus,
   canEdit, isContractor, activeTemplate,
   onSearchChange, onFilterChange, onSelect, onAddClick, onInspectionsClick,
+  onDashboardClick, activeTab = "prescriptions",
 }: PrescriptionListProps) {
 
   const [colFilters, setColFilters] = useState({
@@ -181,20 +184,33 @@ export function PrescriptionList({
       </header>
 
       {/* Навигационные вкладки */}
-      {onInspectionsClick && (
+      {(onInspectionsClick || onDashboardClick) && (
         <div className="border-b border-border bg-background">
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 flex gap-1 pt-2">
-            <button className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 border-primary text-foreground transition-colors">
+            {onDashboardClick && (
+              <button
+                onClick={onDashboardClick}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "dashboard" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                <Icon name="LayoutDashboard" size={14} />
+                Главная
+              </button>
+            )}
+            <button
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "prescriptions" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            >
               <Icon name="ClipboardList" size={14} />
               Предписания
             </button>
-            <button
-              onClick={onInspectionsClick}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Icon name="TableProperties" size={14} />
-              Проверки
-            </button>
+            {onInspectionsClick && (
+              <button
+                onClick={onInspectionsClick}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "inspections" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                <Icon name="TableProperties" size={14} />
+                Проверки
+              </button>
+            )}
           </div>
         </div>
       )}

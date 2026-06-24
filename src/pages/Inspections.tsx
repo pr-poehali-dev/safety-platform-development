@@ -6,13 +6,17 @@ import InspectionForm from "@/components/inspections/InspectionForm";
 import FilterDropdown from "@/components/inspections/FilterDropdown";
 import InspectionsTable from "@/components/inspections/InspectionsTable";
 
+type Tab = "dashboard" | "prescriptions" | "inspections";
+
 interface InspectionsProps {
   user: AppUser;
   onLogout: () => void;
   onBack: () => void;
+  onTabChange?: (tab: Tab) => void;
+  activeTab?: Tab;
 }
 
-export default function Inspections({ user, onLogout, onBack }: InspectionsProps) {
+export default function Inspections({ user, onLogout, onBack, onTabChange, activeTab = "inspections" }: InspectionsProps) {
   const [rows, setRows] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<string[]>([]);
@@ -103,19 +107,24 @@ export default function Inspections({ user, onLogout, onBack }: InspectionsProps
       {/* Вкладки навигации */}
       <div className="border-b border-border bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-1 pt-2">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Icon name="ClipboardList" size={14} />
-            Предписания
-          </button>
-          <button
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 border-primary text-foreground transition-colors"
-          >
-            <Icon name="TableProperties" size={14} />
-            Проверки
-          </button>
+          {[
+            { id: "dashboard" as Tab, label: "Главная", icon: "LayoutDashboard", action: () => onTabChange ? onTabChange("dashboard") : onBack() },
+            { id: "prescriptions" as Tab, label: "Предписания", icon: "ClipboardList", action: onBack },
+            { id: "inspections" as Tab, label: "Проверки", icon: "TableProperties", action: () => {} },
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={t.action}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === t.id
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Icon name={t.icon as never} size={14} />
+              {t.label}
+            </button>
+          ))}
         </div>
       </div>
 

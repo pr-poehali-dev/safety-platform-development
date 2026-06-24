@@ -6,6 +6,8 @@ import { AddForm } from "@/components/prescriptions/PrescriptionForm";
 import { PrescriptionDetail } from "@/components/prescriptions/PrescriptionDetail";
 import { PrescriptionList } from "@/components/prescriptions/PrescriptionList";
 import Inspections from "@/pages/Inspections";
+import Dashboard from "@/pages/Dashboard";
+import Icon from "@/components/ui/icon";
 
 interface IndexProps {
   user: AppUser;
@@ -14,8 +16,10 @@ interface IndexProps {
 
 const API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
 
+type Tab = "dashboard" | "prescriptions" | "inspections";
+
 export default function Index({ user, onLogout }: IndexProps) {
-  const [tab, setTab] = useState<"prescriptions" | "inspections">("prescriptions");
+  const [tab, setTab] = useState<Tab>("dashboard");
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -59,13 +63,107 @@ export default function Index({ user, onLogout }: IndexProps) {
     setSelected(updated);
   };
 
+  const NAV_TABS = [
+    { id: "dashboard" as Tab, label: "Главная", icon: "LayoutDashboard" },
+    { id: "prescriptions" as Tab, label: "Предписания", icon: "ClipboardList" },
+    ...(canEdit ? [{ id: "inspections" as Tab, label: "Проверки", icon: "TableProperties" }] : []),
+  ];
+
+  const header = (
+    <div className="min-h-screen bg-background" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
+      <header className="border-b border-border px-6 py-4 flex items-center justify-between bg-background sticky top-0 z-30">
+        <div className="flex items-center gap-3">
+          <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
+            <Icon name="Shield" size={14} className="text-primary-foreground" />
+          </div>
+          <span className="text-sm font-semibold tracking-tight">Охрана Труда Онлайн</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+            {user.name}
+          </div>
+          <button onClick={onLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors">
+            <Icon name="LogOut" size={13} />
+            Выйти
+          </button>
+        </div>
+      </header>
+
+      <div className="border-b border-border bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-1 pt-2">
+          {NAV_TABS.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                tab === t.id
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Icon name={t.icon as never} size={14} />
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
   if (tab === "inspections") {
     return (
       <Inspections
         user={user}
         onLogout={onLogout}
         onBack={() => setTab("prescriptions")}
+        onTabChange={setTab}
+        activeTab={tab}
       />
+    );
+  }
+
+  if (tab === "dashboard") {
+    return (
+      <div className="min-h-screen bg-background" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
+        <header className="border-b border-border px-6 py-4 flex items-center justify-between bg-background sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
+              <Icon name="Shield" size={14} className="text-primary-foreground" />
+            </div>
+            <span className="text-sm font-semibold tracking-tight">Охрана Труда Онлайн</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+              {user.name}
+            </div>
+            <button onClick={onLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors">
+              <Icon name="LogOut" size={13} />
+              Выйти
+            </button>
+          </div>
+        </header>
+        <div className="border-b border-border bg-background">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-1 pt-2">
+            {NAV_TABS.map(t => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                  tab === t.id
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon name={t.icon as never} size={14} />
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <Dashboard user={user} />
+      </div>
     );
   }
 
@@ -86,6 +184,8 @@ export default function Index({ user, onLogout }: IndexProps) {
         onSelect={setSelected}
         onAddClick={() => setShowAdd(true)}
         onInspectionsClick={canEdit ? () => setTab("inspections") : undefined}
+        onDashboardClick={() => setTab("dashboard")}
+        activeTab={tab}
       />
 
       {showAdd && canEdit && (
