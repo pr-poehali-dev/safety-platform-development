@@ -17,6 +17,8 @@ function ContractorsEditor({ onClose }: { onClose: () => void }) {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [newContractMap, setNewContractMap] = useState<Record<number, string>>({});
   const [addingContract, setAddingContract] = useState<number | null>(null);
+  const [editContractId, setEditContractId] = useState<number | null>(null);
+  const [editContractNumber, setEditContractNumber] = useState("");
 
   const inp = "bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50";
 
@@ -83,6 +85,18 @@ function ContractorsEditor({ onClose }: { onClose: () => void }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "remove_contract", contract_id: contractId }),
     });
+    load();
+  };
+
+  const handleEditContract = async () => {
+    if (!editContractId || !editContractNumber.trim()) return;
+    await fetch(CONTRACTORS_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "edit_contract", contract_id: editContractId, contract_number: editContractNumber.trim() }),
+    });
+    setEditContractId(null);
+    setEditContractNumber("");
     load();
   };
 
@@ -180,14 +194,39 @@ function ContractorsEditor({ onClose }: { onClose: () => void }) {
                       item.contracts.map(c => (
                         <div key={c.id} className="flex items-center gap-2 group/contract py-0.5">
                           <Icon name="FileText" size={11} className="text-muted-foreground flex-shrink-0" />
-                          <span className="text-xs text-foreground flex-1">№ {c.contract_number}</span>
-                          <button
-                            onClick={() => handleRemoveContract(c.id)}
-                            className="p-0.5 rounded text-muted-foreground hover:text-red-400 opacity-0 group-hover/contract:opacity-100 transition-all"
-                            title="Удалить договор"
-                          >
-                            <Icon name="X" size={11} />
-                          </button>
+                          {editContractId === c.id ? (
+                            <>
+                              <input
+                                autoFocus
+                                value={editContractNumber}
+                                onChange={e => setEditContractNumber(e.target.value)}
+                                onKeyDown={e => { if (e.key === "Enter") handleEditContract(); if (e.key === "Escape") setEditContractId(null); }}
+                                className="flex-1 bg-background border border-border rounded px-2 py-0.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                              />
+                              <button onClick={handleEditContract} className="text-xs px-2 py-0.5 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap">Сохранить</button>
+                              <button onClick={() => setEditContractId(null)} className="text-xs px-1.5 py-0.5 rounded border border-border text-muted-foreground hover:text-foreground transition-colors">✕</button>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-xs text-foreground flex-1">№ {c.contract_number}</span>
+                              <div className="flex items-center gap-0.5 opacity-0 group-hover/contract:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => { setEditContractId(c.id); setEditContractNumber(c.contract_number); }}
+                                  className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
+                                  title="Редактировать договор"
+                                >
+                                  <Icon name="Pencil" size={11} />
+                                </button>
+                                <button
+                                  onClick={() => handleRemoveContract(c.id)}
+                                  className="p-0.5 rounded text-muted-foreground hover:text-red-400 transition-colors"
+                                  title="Удалить договор"
+                                >
+                                  <Icon name="X" size={11} />
+                                </button>
+                              </div>
+                            </>
+                          )}
                         </div>
                       ))
                     )}

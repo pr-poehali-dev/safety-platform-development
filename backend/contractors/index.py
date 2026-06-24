@@ -63,6 +63,19 @@ def handler(event: dict, context) -> dict:
         conn.close()
         return {"statusCode": 200, "headers": cors, "body": json.dumps({"id": new_id})}
 
+    # Редактировать номер договора
+    if action == "edit_contract":
+        contract_id = body.get("contract_id")
+        contract_number = (body.get("contract_number") or "").strip()
+        if not contract_id or not contract_number:
+            return {"statusCode": 400, "headers": cors, "body": json.dumps({"error": "contract_id and contract_number required"})}
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute(f"UPDATE {SCHEMA}.contractor_contracts SET contract_number = %s WHERE id = %s", (contract_number, contract_id))
+        conn.commit()
+        conn.close()
+        return {"statusCode": 200, "headers": cors, "body": json.dumps({"ok": True})}
+
     # Удалить договор (обнуляем значение — DELETE запрещён платформой)
     if action == "remove_contract":
         contract_id = body.get("contract_id")
