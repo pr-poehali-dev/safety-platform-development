@@ -52,6 +52,7 @@ export default function InspectionsTable({
               <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">Замечаний</th>
               <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">Работы<br/>приостановлены</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">Проверяющий</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">Выявивший нарушение</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">Примечание</th>
               <th className="px-4 py-3" />
             </tr>
@@ -74,6 +75,7 @@ export default function InspectionsTable({
                     : <span className="text-xs text-muted-foreground">нет</span>
                   }
                 </td>
+                <td className="px-4 py-3 text-sm whitespace-nowrap">{row.inspector_name}</td>
                 <td className="px-4 py-3 text-sm whitespace-nowrap">{row.inspector_name}</td>
                 <td className="px-4 py-3 text-sm max-w-[200px]">
                   {row.note ? (
