@@ -206,7 +206,7 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
           <H v={t.blockInspectorLabel} />{" "}
           <span style={fieldLine}>{toInstrumentalFull(p.inspector) || "\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0"}</span>
           {p.representative ? (
-            <>{" "}<span>в присутствии представителя подрядной организации</span>{" "}<span style={fieldLine}>{p.contractor}</span></>
+            <>{" "}<span>в присутствии представителя подрядной организации</span>{" "}<span style={fieldLine}>{p.contractor}</span>{" "}<span style={fieldLine}>{p.representative}</span></>
           ) : (
             <>{" "}<H v={t.blockRepresentativeLabel} />{" "}<span style={fieldLine}>{"\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0"}</span></>
           )}
