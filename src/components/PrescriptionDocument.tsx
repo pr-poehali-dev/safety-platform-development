@@ -205,12 +205,15 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
         <p style={{ marginTop: 2 }}>
           <H v={t.blockInspectorLabel} />{" "}
           <span style={fieldLine}>{toInstrumentalFull(p.inspector) || "\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0"}</span>
-          {" "}<H v={t.blockRepresentativeLabel} />{" "}
-          <span style={fieldLine}>{p.representative || "\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0"}</span>
+          {p.representative ? (
+            <>{" "}<span>в присутствии представителя подрядной организации</span>{" "}<span style={fieldLine}>{p.contractor}</span></>
+          ) : (
+            <>{" "}<H v={t.blockRepresentativeLabel} />{" "}<span style={fieldLine}>{"\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0"}</span></>
+          )}
         </p>
         <div style={{ display: "flex", gap: 40, fontSize: "8pt", color: "#555", paddingLeft: 120, marginTop: 1 }}>
           <span>(Должность, ФИО представителя СОТ)</span>
-          <span>(Наименование организации)</span>
+          {!p.representative && <span>(Наименование организации)</span>}
         </div>
       </div>
 
