@@ -58,6 +58,10 @@ export default function Dashboard({ user }: DashboardProps) {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [showAllContractors, setShowAllContractors] = useState(false);
+  const [selectedContractors, setSelectedContractors] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [contractorOpen, setContractorOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -75,6 +79,20 @@ export default function Dashboard({ user }: DashboardProps) {
   const from = dateFrom ? new Date(dateFrom) : null;
   const to = dateTo ? new Date(dateTo + "T23:59:59") : null;
 
+  const allContractorOptions = useMemo(() => {
+    const set = new Set<string>();
+    prescriptions.forEach(p => p.contractor && set.add(p.contractor));
+    inspections.forEach(i => i.contractor && set.add(i.contractor));
+    return [...set].sort();
+  }, [prescriptions, inspections]);
+
+  const allCategoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    inspections.forEach(i => i.violation_type && set.add(i.violation_type));
+    prescriptions.forEach(p => (p.remarks || []).forEach(r => r.category && set.add(r.category)));
+    return [...set].sort();
+  }, [prescriptions, inspections]);
+
   const filteredPrescriptions = useMemo(() => {
     return prescriptions.filter(p => {
       if (isContractor && p.contractor !== user.contractor) return false;
@@ -84,9 +102,14 @@ export default function Dashboard({ user }: DashboardProps) {
         if (from && d < from) return false;
         if (to && d > to) return false;
       }
+      if (selectedContractors.length > 0 && !selectedContractors.includes(p.contractor || "Не указан")) return false;
+      if (selectedCategories.length > 0) {
+        const hasCategory = (p.remarks || []).some(r => selectedCategories.includes(r.category));
+        if (!hasCategory) return false;
+      }
       return true;
     });
-  }, [prescriptions, user, dateFrom, dateTo]);
+  }, [prescriptions, user, dateFrom, dateTo, selectedContractors, selectedCategories]);
 
   const filteredInspections = useMemo(() => {
     return inspections.filter(i => {
@@ -97,9 +120,11 @@ export default function Dashboard({ user }: DashboardProps) {
         if (from && d < from) return false;
         if (to && d > to) return false;
       }
+      if (selectedContractors.length > 0 && !selectedContractors.includes(i.contractor || "Не указан")) return false;
+      if (selectedCategories.length > 0 && !selectedCategories.includes(i.violation_type || "")) return false;
       return true;
     });
-  }, [inspections, user, dateFrom, dateTo]);
+  }, [inspections, user, dateFrom, dateTo, selectedContractors, selectedCategories]);
 
   const presTotal = filteredPrescriptions.length;
   const presIssued = filteredPrescriptions.filter(p => overallStatus(p.remarks) === "Выдано").length;
@@ -185,7 +210,11 @@ export default function Dashboard({ user }: DashboardProps) {
       .sort((a, b) => b.remarks - a.remarks);
   }, [filteredInspections, filteredPrescriptions]);
 
-  const hasFilter = dateFrom || dateTo;
+  const hasFilter = dateFrom || dateTo || selectedContractors.length > 0 || selectedCategories.length > 0;
+
+  function toggleItem(list: string[], setList: (v: string[]) => void, item: string) {
+    setList(list.includes(item) ? list.filter(x => x !== item) : [...list, item]);
+  }
 
   if (loading) {
     return (
@@ -198,22 +227,110 @@ export default function Dashboard({ user }: DashboardProps) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-      {/* Фильтр по периоду */}
-      <div className="flex flex-wrap items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
-        <span className="text-xs text-muted-foreground">Период:</span>
-        <DateRangePicker
-          dateFrom={dateFrom}
-          dateTo={dateTo}
-          onFromChange={setDateFrom}
-          onToChange={setDateTo}
-          onReset={() => { setDateFrom(""); setDateTo(""); }}
-        />
-        {hasFilter && (
-          <span className="ml-auto text-xs text-muted-foreground">
-            {filteredPrescriptions.length} пред. · {filteredInspections.length} пров.
-          </span>
+      {/* Фильтры */}
+      <div className="flex flex-wrap items-start gap-3 bg-card border border-border rounded-xl px-4 py-3">
+        {/* Период */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">Период:</span>
+          <DateRangePicker
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            onFromChange={setDateFrom}
+            onToChange={setDateTo}
+            onReset={() => { setDateFrom(""); setDateTo(""); }}
+          />
+        </div>
+
+        {/* Фильтр по организации */}
+        {!isContractor && allContractorOptions.length > 0 && (
+          <div className="relative">
+            <button
+              onClick={() => { setContractorOpen(v => !v); setCategoryOpen(false); }}
+              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${selectedContractors.length > 0 ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/30 text-muted-foreground hover:text-foreground"}`}
+            >
+              <Icon name="Building2" size={12} />
+              {selectedContractors.length > 0 ? `Орг.: ${selectedContractors.length}` : "Организация"}
+              <Icon name="ChevronDown" size={11} />
+            </button>
+            {contractorOpen && (
+              <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-xl shadow-xl min-w-[260px] max-h-64 overflow-y-auto">
+                <div className="px-3 py-2 border-b border-border flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground">Организации</span>
+                  {selectedContractors.length > 0 && (
+                    <button onClick={() => setSelectedContractors([])} className="text-xs text-primary hover:underline">Сбросить</button>
+                  )}
+                </div>
+                {allContractorOptions.map(opt => (
+                  <label key={opt} className="flex items-center gap-2.5 px-3 py-2 hover:bg-secondary/30 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedContractors.includes(opt)}
+                      onChange={() => toggleItem(selectedContractors, setSelectedContractors, opt)}
+                      className="accent-primary w-3.5 h-3.5"
+                    />
+                    <span className="text-xs text-foreground leading-tight">{opt}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
         )}
+
+        {/* Фильтр по виду нарушений */}
+        {allCategoryOptions.length > 0 && (
+          <div className="relative">
+            <button
+              onClick={() => { setCategoryOpen(v => !v); setContractorOpen(false); }}
+              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${selectedCategories.length > 0 ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/30 text-muted-foreground hover:text-foreground"}`}
+            >
+              <Icon name="Tag" size={12} />
+              {selectedCategories.length > 0 ? `Вид: ${selectedCategories.length}` : "Вид нарушения"}
+              <Icon name="ChevronDown" size={11} />
+            </button>
+            {categoryOpen && (
+              <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-xl shadow-xl min-w-[240px] max-h-64 overflow-y-auto">
+                <div className="px-3 py-2 border-b border-border flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground">Виды нарушений</span>
+                  {selectedCategories.length > 0 && (
+                    <button onClick={() => setSelectedCategories([])} className="text-xs text-primary hover:underline">Сбросить</button>
+                  )}
+                </div>
+                {allCategoryOptions.map(opt => (
+                  <label key={opt} className="flex items-center gap-2.5 px-3 py-2 hover:bg-secondary/30 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedCategories.includes(opt)}
+                      onChange={() => toggleItem(selectedCategories, setSelectedCategories, opt)}
+                      className="accent-primary w-3.5 h-3.5"
+                    />
+                    <span className="text-xs text-foreground leading-tight">{opt}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Сброс всех / счётчик */}
+        <div className="ml-auto flex items-center gap-3">
+          {hasFilter && (
+            <>
+              <span className="text-xs text-muted-foreground">{filteredPrescriptions.length} пред. · {filteredInspections.length} пров.</span>
+              <button
+                onClick={() => { setDateFrom(""); setDateTo(""); setSelectedContractors([]); setSelectedCategories([]); }}
+                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+              >
+                <Icon name="X" size={11} /> Сбросить всё
+              </button>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* Закрытие дропдаунов по клику вне */}
+      {(contractorOpen || categoryOpen) && (
+        <div className="fixed inset-0 z-40" onClick={() => { setContractorOpen(false); setCategoryOpen(false); }} />
+      )}
 
       {/* Карточки предписаний */}
       <div>
