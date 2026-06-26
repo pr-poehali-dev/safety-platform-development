@@ -350,11 +350,15 @@ export default function Dashboard({ user }: DashboardProps) {
                 <YAxis tick={{ fontSize: 10, fill: "#8b9ab0" }} allowDecimals={false} />
                 <Tooltip
                   contentStyle={{
-                    background: "var(--card)",
-                    border: "1px solid var(--border)",
+                    background: "rgba(22, 26, 35, 0.97)",
+                    border: "1px solid #2e3547",
                     borderRadius: 8,
                     fontSize: 12,
+                    color: "#d0d8e8",
+                    boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
                   }}
+                  labelStyle={{ color: "#d0d8e8", fontWeight: 600, marginBottom: 4 }}
+                  itemStyle={{ color: "#8b9ab0" }}
                 />
                 <Legend
                   verticalAlign="bottom"
