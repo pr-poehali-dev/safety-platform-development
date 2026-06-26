@@ -3,10 +3,11 @@ import { AppUser } from "@/lib/auth";
 import { Prescription, overallStatus } from "@/lib/prescriptionTypes";
 import { Inspection } from "@/components/inspections/types";
 import Icon from "@/components/ui/icon";
-import DateRangePicker from "@/components/ui/date-range-picker";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend
-} from "recharts";
+import DashboardFilters from "@/components/dashboard/DashboardFilters";
+import TopContractors from "@/components/dashboard/TopContractors";
+import PivotTable from "@/components/dashboard/PivotTable";
+import RemarksChart from "@/components/dashboard/RemarksChart";
+import { type PivotRow } from "@/components/dashboard/PivotTable";
 
 const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
 const INSPECTIONS_API = "https://functions.poehali.dev/b2222d00-a1b0-43fd-966d-3f39732867c3";
@@ -14,12 +15,6 @@ const INSPECTIONS_API = "https://functions.poehali.dev/b2222d00-a1b0-43fd-966d-3
 interface DashboardProps {
   user: AppUser;
 }
-
-const COLORS = [
-  "#6366f1", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6",
-  "#ec4899", "#14b8a6", "#f97316", "#84cc16", "#06b6d4",
-  "#a855f7", "#e11d48", "#0ea5e9",
-];
 
 function StatCard({ label, value, icon, color }: {
   label: string; value: number | string; icon: string; color: string;
@@ -37,12 +32,6 @@ function StatCard({ label, value, icon, color }: {
   );
 }
 
-type PivotRow = {
-  category: string;
-  byContractor: Record<string, number>;
-  total: number;
-};
-
 function parseDate(str: string): Date | null {
   if (!str) return null;
   if (str.includes("-")) return new Date(str);
@@ -57,7 +46,6 @@ export default function Dashboard({ user }: DashboardProps) {
   const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [showAllContractors, setShowAllContractors] = useState(false);
   const [selectedContractors, setSelectedContractors] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [contractorOpen, setContractorOpen] = useState(false);
@@ -139,7 +127,6 @@ export default function Dashboard({ user }: DashboardProps) {
     const contractorSet = new Set<string>();
     const map = new Map<string, Record<string, number>>();
 
-    // Замечания из проверок
     filteredInspections.forEach(i => {
       const cat = i.violation_type || "Без категории";
       const co = i.contractor || "Не указан";
@@ -149,12 +136,11 @@ export default function Dashboard({ user }: DashboardProps) {
       row[co] = (row[co] || 0) + (i.remarks_count || 0);
     });
 
-    // Замечания из предписаний (каждое remark — 1 единица, по category)
     filteredPrescriptions.forEach(p => {
       const co = p.contractor || "Не указан";
       (p.remarks || []).forEach(r => {
         const cat = r.category;
-        if (!cat) return; // игнорируем без вида нарушения
+        if (!cat) return;
         contractorSet.add(co);
         if (!map.has(cat)) map.set(cat, {});
         const row = map.get(cat)!;
@@ -210,7 +196,7 @@ export default function Dashboard({ user }: DashboardProps) {
       .sort((a, b) => b.remarks - a.remarks);
   }, [filteredInspections, filteredPrescriptions]);
 
-  const hasFilter = dateFrom || dateTo || selectedContractors.length > 0 || selectedCategories.length > 0;
+  const hasFilter = !!(dateFrom || dateTo || selectedContractors.length > 0 || selectedCategories.length > 0);
 
   function toggleItem(list: string[], setList: (v: string[]) => void, item: string) {
     setList(list.includes(item) ? list.filter(x => x !== item) : [...list, item]);
@@ -227,110 +213,27 @@ export default function Dashboard({ user }: DashboardProps) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-      {/* Фильтры */}
-      <div className="flex flex-wrap items-start gap-3 bg-card border border-border rounded-xl px-4 py-3">
-        {/* Период */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground whitespace-nowrap">Период:</span>
-          <DateRangePicker
-            dateFrom={dateFrom}
-            dateTo={dateTo}
-            onFromChange={setDateFrom}
-            onToChange={setDateTo}
-            onReset={() => { setDateFrom(""); setDateTo(""); }}
-          />
-        </div>
-
-        {/* Фильтр по организации */}
-        {!isContractor && allContractorOptions.length > 0 && (
-          <div className="relative">
-            <button
-              onClick={() => { setContractorOpen(v => !v); setCategoryOpen(false); }}
-              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${selectedContractors.length > 0 ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/30 text-muted-foreground hover:text-foreground"}`}
-            >
-              <Icon name="Building2" size={12} />
-              {selectedContractors.length > 0 ? `Орг.: ${selectedContractors.length}` : "Организация"}
-              <Icon name="ChevronDown" size={11} />
-            </button>
-            {contractorOpen && (
-              <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-xl shadow-xl min-w-[260px] max-h-64 overflow-y-auto">
-                <div className="px-3 py-2 border-b border-border flex items-center justify-between">
-                  <span className="text-xs font-semibold text-muted-foreground">Организации</span>
-                  {selectedContractors.length > 0 && (
-                    <button onClick={() => setSelectedContractors([])} className="text-xs text-primary hover:underline">Сбросить</button>
-                  )}
-                </div>
-                {allContractorOptions.map(opt => (
-                  <label key={opt} className="flex items-center gap-2.5 px-3 py-2 hover:bg-secondary/30 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedContractors.includes(opt)}
-                      onChange={() => toggleItem(selectedContractors, setSelectedContractors, opt)}
-                      className="accent-primary w-3.5 h-3.5"
-                    />
-                    <span className="text-xs text-foreground leading-tight">{opt}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Фильтр по виду нарушений */}
-        {allCategoryOptions.length > 0 && (
-          <div className="relative">
-            <button
-              onClick={() => { setCategoryOpen(v => !v); setContractorOpen(false); }}
-              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${selectedCategories.length > 0 ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/30 text-muted-foreground hover:text-foreground"}`}
-            >
-              <Icon name="Tag" size={12} />
-              {selectedCategories.length > 0 ? `Вид: ${selectedCategories.length}` : "Вид нарушения"}
-              <Icon name="ChevronDown" size={11} />
-            </button>
-            {categoryOpen && (
-              <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-xl shadow-xl min-w-[240px] max-h-64 overflow-y-auto">
-                <div className="px-3 py-2 border-b border-border flex items-center justify-between">
-                  <span className="text-xs font-semibold text-muted-foreground">Виды нарушений</span>
-                  {selectedCategories.length > 0 && (
-                    <button onClick={() => setSelectedCategories([])} className="text-xs text-primary hover:underline">Сбросить</button>
-                  )}
-                </div>
-                {allCategoryOptions.map(opt => (
-                  <label key={opt} className="flex items-center gap-2.5 px-3 py-2 hover:bg-secondary/30 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedCategories.includes(opt)}
-                      onChange={() => toggleItem(selectedCategories, setSelectedCategories, opt)}
-                      className="accent-primary w-3.5 h-3.5"
-                    />
-                    <span className="text-xs text-foreground leading-tight">{opt}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Сброс всех / счётчик */}
-        <div className="ml-auto flex items-center gap-3">
-          {hasFilter && (
-            <>
-              <span className="text-xs text-muted-foreground">{filteredPrescriptions.length} пред. · {filteredInspections.length} пров.</span>
-              <button
-                onClick={() => { setDateFrom(""); setDateTo(""); setSelectedContractors([]); setSelectedCategories([]); }}
-                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-              >
-                <Icon name="X" size={11} /> Сбросить всё
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Закрытие дропдаунов по клику вне */}
-      {(contractorOpen || categoryOpen) && (
-        <div className="fixed inset-0 z-40" onClick={() => { setContractorOpen(false); setCategoryOpen(false); }} />
-      )}
+      <DashboardFilters
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        onFromChange={setDateFrom}
+        onToChange={setDateTo}
+        selectedContractors={selectedContractors}
+        setSelectedContractors={setSelectedContractors}
+        selectedCategories={selectedCategories}
+        setSelectedCategories={setSelectedCategories}
+        allContractorOptions={allContractorOptions}
+        allCategoryOptions={allCategoryOptions}
+        contractorOpen={contractorOpen}
+        setContractorOpen={setContractorOpen}
+        categoryOpen={categoryOpen}
+        setCategoryOpen={setCategoryOpen}
+        isContractor={isContractor}
+        filteredPresCount={filteredPrescriptions.length}
+        filteredInspCount={filteredInspections.length}
+        hasFilter={hasFilter}
+        toggleItem={toggleItem}
+      />
 
       {/* Карточки предписаний */}
       <div>
@@ -353,182 +256,11 @@ export default function Dashboard({ user }: DashboardProps) {
         </div>
       </div>
 
-      {/* Топ подрядчиков */}
-      {topContractors.length > 0 && (
-        <div>
-          <h2 className="text-base font-semibold mb-3">Топ подрядчиков по нарушениям</h2>
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
-            {(() => {
-              const max = topContractors[0]?.remarks || 1;
-              const visible = showAllContractors ? topContractors : topContractors.slice(0, 3);
-              return (
-                <>
-                  {visible.map((co, idx) => (
-                    <div key={co.name} className="flex items-center gap-4 px-5 py-3 border-b border-border">
-                      <span className="text-sm font-bold text-muted-foreground w-5 flex-shrink-0">{idx + 1}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-sm font-medium truncate">{co.name}</span>
-                          <div className="flex items-center gap-3 flex-shrink-0 ml-3 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Icon name="TableProperties" size={11} />
-                              {co.inspections} пров.
-                            </span>
-                            {co.suspended > 0 && (
-                              <span className="flex items-center gap-1 text-red-400">
-                                <Icon name="OctagonX" size={11} />
-                                {co.suspended} пр.
-                              </span>
-                            )}
-                            <span className="font-semibold text-foreground">{co.remarks} зам.</span>
-                          </div>
-                        </div>
-                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all"
-                            style={{
-                              width: `${Math.round((co.remarks / max) * 100)}%`,
-                              background: idx === 0 ? "hsl(var(--destructive))" : idx === 1 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {topContractors.length > 3 && (
-                    <button
-                      onClick={() => setShowAllContractors(v => !v)}
-                      className="w-full py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/30 transition-colors flex items-center justify-center gap-1.5"
-                    >
-                      <Icon name={showAllContractors ? "ChevronUp" : "ChevronDown"} size={13} />
-                      {showAllContractors ? "Скрыть" : `Показать все (${topContractors.length})`}
-                    </button>
-                  )}
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      )}
+      <TopContractors topContractors={topContractors} />
 
-      {/* Сводная таблица */}
-      {pivotRows.length > 0 && (
-        <div>
-          <h2 className="text-base font-semibold mb-3">Замечания по категориям и подрядчикам</h2>
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs" style={{ tableLayout: "fixed" }}>
-                <colgroup>
-                  <col style={{ minWidth: 180 }} />
-                  {contractors.map(c => <col key={c} style={{ width: 50, maxWidth: 50 }} />)}
-                  <col style={{ width: 50, maxWidth: 50 }} />
-                </colgroup>
-                <thead>
-                  <tr className="border-b border-border bg-secondary/30">
-                    <th className="text-left px-4 py-2.5 font-semibold text-muted-foreground">Вид нарушения</th>
-                    {contractors.map(c => (
-                      <th key={c} className="text-center py-2.5 font-semibold text-muted-foreground" style={{ width: 50, maxWidth: 50 }}>
-                        <div
-                          className="overflow-hidden mx-auto"
-                          style={{ width: 50, maxHeight: "2.8em", lineHeight: "1.4em", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", cursor: "default" }}
-                          title={c}
-                        >
-                          {c}
-                        </div>
-                      </th>
-                    ))}
-                    <th className="text-center py-2.5 font-semibold text-foreground" style={{ width: 50 }}>Итого</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pivotRows.map((row, idx) => {
-                    const isTop = idx < 3;
-                    const medals = ["🥇", "🥈", "🥉"];
-                    const rowBg = idx === 0 ? "bg-red-500/10" : idx === 1 ? "bg-amber-500/8" : idx === 2 ? "bg-yellow-500/6" : idx % 2 !== 0 ? "bg-secondary/10" : "";
-                    return (
-                      <tr key={row.category} className={`border-b border-border last:border-0 ${rowBg}`}>
-                        <td className="px-4 py-2 text-foreground">
-                          <span className="flex items-center gap-1.5">
-                            {isTop && <span className="text-xs">{medals[idx]}</span>}
-                            <span className={isTop ? "font-semibold" : ""}>{row.category}</span>
-                          </span>
-                        </td>
-                        {contractors.map(c => (
-                          <td key={c} className="py-2 text-center text-muted-foreground" style={{ width: 50, maxWidth: 50 }}>
-                            {row.byContractor[c] ? (
-                              <span className="text-foreground font-medium">{row.byContractor[c]}</span>
-                            ) : ""}
-                          </td>
-                        ))}
-                        <td className={`py-2 text-center font-bold ${isTop ? "text-foreground" : "text-foreground"}`} style={{ width: 50 }}>
-                          {isTop ? <span className={idx === 0 ? "text-red-400" : idx === 1 ? "text-amber-400" : "text-yellow-500"}>{row.total}</span> : row.total}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  <tr className="bg-secondary/30 border-t-2 border-border">
-                    <td className="px-4 py-2.5 font-bold text-foreground">Общий итог</td>
-                    {contractors.map(c => (
-                      <td key={c} className="py-2.5 text-center font-bold text-foreground" style={{ width: 50, maxWidth: 50 }}>
-                        {grandTotal[c] || ""}
-                      </td>
-                    ))}
-                    <td className="py-2.5 text-center font-bold text-foreground" style={{ width: 50 }}>
-                      {pivotRows.reduce((s, r) => s + r.total, 0)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
+      <PivotTable pivotRows={pivotRows} contractors={contractors} grandTotal={grandTotal} />
 
-      {/* График */}
-      {chartData.length > 0 && contractors.length > 0 && (
-        <div>
-          <h2 className="text-base font-semibold mb-3">Количество замечаний (диаграмма)</h2>
-          <div className="bg-card border border-border rounded-xl p-4">
-            <ResponsiveContainer width="100%" height={420}>
-              <BarChart data={chartData} margin={{ top: 8, right: 20, left: 0, bottom: 100 }}>
-                <XAxis
-                  dataKey="category"
-                  tick={{ fontSize: 10, fill: "#8b9ab0" }}
-                  angle={-45}
-                  textAnchor="end"
-                  interval={0}
-                  height={100}
-                />
-                <YAxis tick={{ fontSize: 10, fill: "#8b9ab0" }} allowDecimals={false} />
-                <Tooltip
-                  contentStyle={{
-                    background: "rgba(22, 26, 35, 0.97)",
-                    border: "1px solid #2e3547",
-                    borderRadius: 8,
-                    fontSize: 12,
-                    color: "#d0d8e8",
-                    boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
-                  }}
-                  labelStyle={{ color: "#d0d8e8", fontWeight: 600, marginBottom: 4 }}
-                  itemStyle={{ color: "#8b9ab0" }}
-                />
-                <Legend
-                  verticalAlign="bottom"
-                  wrapperStyle={{ fontSize: 11, paddingTop: 16, position: "relative" }}
-                  formatter={(value) => <span style={{ color: "#8b9ab0" }}>{value}</span>}
-                />
-                {contractors.map((c, i) => (
-                  <Bar key={c} dataKey={c} stackId="a" fill={COLORS[i % COLORS.length]} radius={i === contractors.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}>
-                    {chartData.map((_, ci) => (
-                      <Cell key={ci} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Bar>
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
+      <RemarksChart chartData={chartData} contractors={contractors} />
 
       {pivotRows.length === 0 && (
         <div className="bg-card border border-border rounded-xl py-16 flex flex-col items-center gap-3 text-muted-foreground">
