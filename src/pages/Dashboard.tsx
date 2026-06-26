@@ -341,12 +341,12 @@ export default function Dashboard({ user }: DashboardProps) {
               <BarChart data={chartData} margin={{ top: 8, right: 20, left: 0, bottom: 80 }}>
                 <XAxis
                   dataKey="category"
-                  tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                  tick={{ fontSize: 10, fill: "#8b9ab0" }}
                   angle={-45}
                   textAnchor="end"
                   interval={0}
                 />
-                <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} allowDecimals={false} />
+                <YAxis tick={{ fontSize: 10, fill: "#8b9ab0" }} allowDecimals={false} />
                 <Tooltip
                   contentStyle={{
                     background: "var(--card)",
