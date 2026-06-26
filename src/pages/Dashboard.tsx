@@ -57,6 +57,7 @@ export default function Dashboard({ user }: DashboardProps) {
   const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [showAllContractors, setShowAllContractors] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -242,38 +243,52 @@ export default function Dashboard({ user }: DashboardProps) {
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             {(() => {
               const max = topContractors[0]?.remarks || 1;
-              return topContractors.map((co, idx) => (
-                <div key={co.name} className={`flex items-center gap-4 px-5 py-3 ${idx !== topContractors.length - 1 ? "border-b border-border" : ""}`}>
-                  <span className="text-sm font-bold text-muted-foreground w-5 flex-shrink-0">{idx + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-sm font-medium truncate">{co.name}</span>
-                      <div className="flex items-center gap-3 flex-shrink-0 ml-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Icon name="TableProperties" size={11} />
-                          {co.inspections} пров.
-                        </span>
-                        {co.suspended > 0 && (
-                          <span className="flex items-center gap-1 text-red-400">
-                            <Icon name="OctagonX" size={11} />
-                            {co.suspended} пр.
-                          </span>
-                        )}
-                        <span className="font-semibold text-foreground">{co.remarks} зам.</span>
+              const visible = showAllContractors ? topContractors : topContractors.slice(0, 3);
+              return (
+                <>
+                  {visible.map((co, idx) => (
+                    <div key={co.name} className="flex items-center gap-4 px-5 py-3 border-b border-border">
+                      <span className="text-sm font-bold text-muted-foreground w-5 flex-shrink-0">{idx + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-sm font-medium truncate">{co.name}</span>
+                          <div className="flex items-center gap-3 flex-shrink-0 ml-3 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Icon name="TableProperties" size={11} />
+                              {co.inspections} пров.
+                            </span>
+                            {co.suspended > 0 && (
+                              <span className="flex items-center gap-1 text-red-400">
+                                <Icon name="OctagonX" size={11} />
+                                {co.suspended} пр.
+                              </span>
+                            )}
+                            <span className="font-semibold text-foreground">{co.remarks} зам.</span>
+                          </div>
+                        </div>
+                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${Math.round((co.remarks / max) * 100)}%`,
+                              background: idx === 0 ? "hsl(var(--destructive))" : idx === 1 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
-                    <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{
-                          width: `${Math.round((co.remarks / max) * 100)}%`,
-                          background: idx === 0 ? "hsl(var(--destructive))" : idx === 1 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ));
+                  ))}
+                  {topContractors.length > 3 && (
+                    <button
+                      onClick={() => setShowAllContractors(v => !v)}
+                      className="w-full py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/30 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Icon name={showAllContractors ? "ChevronUp" : "ChevronDown"} size={13} />
+                      {showAllContractors ? "Скрыть" : `Показать все (${topContractors.length})`}
+                    </button>
+                  )}
+                </>
+              );
             })()}
           </div>
         </div>
