@@ -20,8 +20,8 @@ const COLORS = [
   "#a855f7", "#e11d48", "#0ea5e9",
 ];
 
-function StatCard({ label, value, sub, icon, color }: {
-  label: string; value: number | string; sub?: string; icon: string; color: string;
+function StatCard({ label, value, icon, color }: {
+  label: string; value: number | string; icon: string; color: string;
 }) {
   return (
     <div className="bg-card border border-border rounded-xl px-5 py-4 flex items-start gap-4">
@@ -31,7 +31,6 @@ function StatCard({ label, value, sub, icon, color }: {
       <div>
         <p className="text-2xl font-bold leading-tight">{value}</p>
         <p className="text-sm text-muted-foreground mt-0.5">{label}</p>
-        {sub && <p className="text-xs text-muted-foreground/60 mt-0.5">{sub}</p>}
       </div>
     </div>
   );
@@ -43,10 +42,20 @@ type PivotRow = {
   total: number;
 };
 
+function parseDate(str: string): Date | null {
+  if (!str) return null;
+  if (str.includes("-")) return new Date(str);
+  const [d, m, y] = str.split(".").map(Number);
+  if (!d || !m || !y) return null;
+  return new Date(y, m - 1, d);
+}
+
 export default function Dashboard({ user }: DashboardProps) {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -61,33 +70,45 @@ export default function Dashboard({ user }: DashboardProps) {
 
   const isContractor = user.role === "contractor";
 
-  const filteredPrescriptions = useMemo(() =>
-    isContractor
-      ? prescriptions.filter(p => p.contractor === user.contractor)
-      : prescriptions,
-    [prescriptions, user]
-  );
+  const from = dateFrom ? new Date(dateFrom) : null;
+  const to = dateTo ? new Date(dateTo + "T23:59:59") : null;
 
-  const filteredInspections = useMemo(() =>
-    isContractor
-      ? inspections.filter(i => i.contractor === user.contractor)
-      : inspections,
-    [inspections, user]
-  );
+  const filteredPrescriptions = useMemo(() => {
+    return prescriptions.filter(p => {
+      if (isContractor && p.contractor !== user.contractor) return false;
+      if (from || to) {
+        const d = parseDate(p.date);
+        if (!d) return false;
+        if (from && d < from) return false;
+        if (to && d > to) return false;
+      }
+      return true;
+    });
+  }, [prescriptions, user, dateFrom, dateTo]);
 
-  // --- Статистика предписаний ---
+  const filteredInspections = useMemo(() => {
+    return inspections.filter(i => {
+      if (isContractor && i.contractor !== user.contractor) return false;
+      if (from || to) {
+        const d = parseDate(i.inspection_date);
+        if (!d) return false;
+        if (from && d < from) return false;
+        if (to && d > to) return false;
+      }
+      return true;
+    });
+  }, [inspections, user, dateFrom, dateTo]);
+
   const presTotal = filteredPrescriptions.length;
   const presIssued = filteredPrescriptions.filter(p => overallStatus(p.remarks) === "Выдано").length;
   const presFixed = filteredPrescriptions.filter(p => overallStatus(p.remarks) === "Устранено").length;
   const presOverdue = filteredPrescriptions.filter(p => overallStatus(p.remarks) === "Просрочено").length;
 
-  // --- Статистика проверок ---
   const inspTotal = filteredInspections.length;
   const inspSuspended = filteredInspections.filter(i => i.works_suspended).length;
   const inspRemarks = filteredInspections.reduce((s, i) => s + (i.remarks_count || 0), 0);
 
-  // --- Сводная таблица: категория × подрядчик ---
-  const { contractors, pivotRows } = useMemo(() => {
+  const { contractors, pivotRows, grandTotal } = useMemo(() => {
     const contractorSet = new Set<string>();
     const map = new Map<string, Record<string, number>>();
 
@@ -117,7 +138,6 @@ export default function Dashboard({ user }: DashboardProps) {
     return { contractors, pivotRows, grandTotal };
   }, [filteredInspections]);
 
-  // --- Данные для графика ---
   const chartData = useMemo(() => {
     return pivotRows.map(row => {
       const obj: Record<string, unknown> = { category: row.category };
@@ -126,13 +146,7 @@ export default function Dashboard({ user }: DashboardProps) {
     });
   }, [pivotRows, contractors]);
 
-  const grandTotal = useMemo(() => {
-    const gt: Record<string, number> = {};
-    contractors.forEach(c => {
-      gt[c] = pivotRows.reduce((s, r) => s + (r.byContractor[c] || 0), 0);
-    });
-    return gt;
-  }, [pivotRows, contractors]);
+  const hasFilter = dateFrom || dateTo;
 
   if (loading) {
     return (
@@ -145,7 +159,45 @@ export default function Dashboard({ user }: DashboardProps) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-      {/* Сводные карточки */}
+      {/* Фильтр по периоду */}
+      <div className="flex flex-wrap items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
+        <Icon name="CalendarDays" size={14} className="text-muted-foreground flex-shrink-0" />
+        <span className="text-xs text-muted-foreground">Период:</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">с</span>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={e => setDateFrom(e.target.value)}
+            className="bg-background border border-border rounded-lg px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">по</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={e => setDateTo(e.target.value)}
+            className="bg-background border border-border rounded-lg px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+          />
+        </div>
+        {hasFilter && (
+          <button
+            onClick={() => { setDateFrom(""); setDateTo(""); }}
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+          >
+            <Icon name="X" size={11} />
+            Сбросить
+          </button>
+        )}
+        {hasFilter && (
+          <span className="ml-auto text-xs text-muted-foreground">
+            {filteredPrescriptions.length} пред. · {filteredInspections.length} пров.
+          </span>
+        )}
+      </div>
+
+      {/* Карточки предписаний */}
       <div>
         <h2 className="text-base font-semibold mb-3">Предписания</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -156,6 +208,7 @@ export default function Dashboard({ user }: DashboardProps) {
         </div>
       </div>
 
+      {/* Карточки проверок */}
       <div>
         <h2 className="text-base font-semibold mb-3">Проверки</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -165,7 +218,7 @@ export default function Dashboard({ user }: DashboardProps) {
         </div>
       </div>
 
-      {/* Сводная таблица — Замечания по категориям и подрядчикам */}
+      {/* Сводная таблица */}
       {pivotRows.length > 0 && (
         <div>
           <h2 className="text-base font-semibold mb-3">Замечания по категориям и подрядчикам</h2>
@@ -213,7 +266,7 @@ export default function Dashboard({ user }: DashboardProps) {
         </div>
       )}
 
-      {/* График — замечания по категориям */}
+      {/* График */}
       {chartData.length > 0 && contractors.length > 0 && (
         <div>
           <h2 className="text-base font-semibold mb-3">Количество замечаний (диаграмма)</h2>
