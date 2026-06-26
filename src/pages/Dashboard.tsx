@@ -147,6 +147,21 @@ export default function Dashboard({ user }: DashboardProps) {
     });
   }, [pivotRows, contractors]);
 
+  const topContractors = useMemo(() => {
+    const map = new Map<string, { remarks: number; inspections: number; suspended: number }>();
+    filteredInspections.forEach(i => {
+      const co = i.contractor || "Не указан";
+      const cur = map.get(co) ?? { remarks: 0, inspections: 0, suspended: 0 };
+      cur.remarks += i.remarks_count || 0;
+      cur.inspections += 1;
+      cur.suspended += i.works_suspended ? 1 : 0;
+      map.set(co, cur);
+    });
+    return [...map.entries()]
+      .map(([name, stats]) => ({ name, ...stats }))
+      .sort((a, b) => b.remarks - a.remarks);
+  }, [filteredInspections]);
+
   const hasFilter = dateFrom || dateTo;
 
   if (loading) {
@@ -197,6 +212,50 @@ export default function Dashboard({ user }: DashboardProps) {
           <StatCard label="Приостановлено работ" value={inspSuspended} icon="OctagonX" color="bg-red-600" />
         </div>
       </div>
+
+      {/* Топ подрядчиков */}
+      {topContractors.length > 0 && (
+        <div>
+          <h2 className="text-base font-semibold mb-3">Топ подрядчиков по нарушениям</h2>
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            {(() => {
+              const max = topContractors[0]?.remarks || 1;
+              return topContractors.map((co, idx) => (
+                <div key={co.name} className={`flex items-center gap-4 px-5 py-3 ${idx !== topContractors.length - 1 ? "border-b border-border" : ""}`}>
+                  <span className="text-sm font-bold text-muted-foreground w-5 flex-shrink-0">{idx + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-sm font-medium truncate">{co.name}</span>
+                      <div className="flex items-center gap-3 flex-shrink-0 ml-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Icon name="TableProperties" size={11} />
+                          {co.inspections} пров.
+                        </span>
+                        {co.suspended > 0 && (
+                          <span className="flex items-center gap-1 text-red-400">
+                            <Icon name="OctagonX" size={11} />
+                            {co.suspended} пр.
+                          </span>
+                        )}
+                        <span className="font-semibold text-foreground">{co.remarks} зам.</span>
+                      </div>
+                    </div>
+                    <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${Math.round((co.remarks / max) * 100)}%`,
+                          background: idx === 0 ? "hsl(var(--destructive))" : idx === 1 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* Сводная таблица */}
       {pivotRows.length > 0 && (
