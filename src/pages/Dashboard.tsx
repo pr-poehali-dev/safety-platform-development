@@ -277,14 +277,27 @@ export default function Dashboard({ user }: DashboardProps) {
           <h2 className="text-base font-semibold mb-3">Замечания по категориям и подрядчикам</h2>
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-xs">
+              <table className="w-full text-xs" style={{ tableLayout: "fixed" }}>
+                <colgroup>
+                  <col style={{ minWidth: 180 }} />
+                  {contractors.map(c => <col key={c} style={{ width: 50, maxWidth: 50 }} />)}
+                  <col style={{ width: 50, maxWidth: 50 }} />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-border bg-secondary/30">
-                    <th className="text-left px-4 py-2.5 font-semibold text-muted-foreground min-w-[180px]">Вид нарушения</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-muted-foreground">Вид нарушения</th>
                     {contractors.map(c => (
-                      <th key={c} className="text-center px-3 py-2.5 font-semibold text-muted-foreground whitespace-nowrap">{c}</th>
+                      <th key={c} className="text-center py-2.5 font-semibold text-muted-foreground" style={{ width: 50, maxWidth: 50 }}>
+                        <div
+                          className="overflow-hidden mx-auto"
+                          style={{ width: 50, maxHeight: "2.8em", lineHeight: "1.4em", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", cursor: "default" }}
+                          title={c}
+                        >
+                          {c}
+                        </div>
+                      </th>
                     ))}
-                    <th className="text-center px-3 py-2.5 font-semibold text-foreground">Итого</th>
+                    <th className="text-center py-2.5 font-semibold text-foreground" style={{ width: 50 }}>Итого</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -292,23 +305,23 @@ export default function Dashboard({ user }: DashboardProps) {
                     <tr key={row.category} className={`border-b border-border last:border-0 ${idx % 2 === 0 ? "" : "bg-secondary/10"}`}>
                       <td className="px-4 py-2 text-foreground">{row.category}</td>
                       {contractors.map(c => (
-                        <td key={c} className="px-3 py-2 text-center text-muted-foreground">
+                        <td key={c} className="py-2 text-center text-muted-foreground" style={{ width: 50, maxWidth: 50 }}>
                           {row.byContractor[c] ? (
                             <span className="text-foreground font-medium">{row.byContractor[c]}</span>
                           ) : ""}
                         </td>
                       ))}
-                      <td className="px-3 py-2 text-center font-bold text-foreground">{row.total}</td>
+                      <td className="py-2 text-center font-bold text-foreground" style={{ width: 50 }}>{row.total}</td>
                     </tr>
                   ))}
                   <tr className="bg-secondary/30 border-t-2 border-border">
                     <td className="px-4 py-2.5 font-bold text-foreground">Общий итог</td>
                     {contractors.map(c => (
-                      <td key={c} className="px-3 py-2.5 text-center font-bold text-foreground">
+                      <td key={c} className="py-2.5 text-center font-bold text-foreground" style={{ width: 50, maxWidth: 50 }}>
                         {grandTotal[c] || ""}
                       </td>
                     ))}
-                    <td className="px-3 py-2.5 text-center font-bold text-foreground">
+                    <td className="py-2.5 text-center font-bold text-foreground" style={{ width: 50 }}>
                       {pivotRows.reduce((s, r) => s + r.total, 0)}
                     </td>
                   </tr>
