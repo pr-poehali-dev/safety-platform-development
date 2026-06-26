@@ -3,6 +3,7 @@ import { AppUser } from "@/lib/auth";
 import { Prescription, overallStatus } from "@/lib/prescriptionTypes";
 import { Inspection } from "@/components/inspections/types";
 import Icon from "@/components/ui/icon";
+import DateRangePicker from "@/components/ui/date-range-picker";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend
 } from "recharts";
@@ -161,35 +162,14 @@ export default function Dashboard({ user }: DashboardProps) {
 
       {/* Фильтр по периоду */}
       <div className="flex flex-wrap items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
-        <Icon name="CalendarDays" size={14} className="text-muted-foreground flex-shrink-0" />
         <span className="text-xs text-muted-foreground">Период:</span>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">с</span>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={e => setDateFrom(e.target.value)}
-            className="bg-background border border-border rounded-lg px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">по</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={e => setDateTo(e.target.value)}
-            className="bg-background border border-border rounded-lg px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-          />
-        </div>
-        {hasFilter && (
-          <button
-            onClick={() => { setDateFrom(""); setDateTo(""); }}
-            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-          >
-            <Icon name="X" size={11} />
-            Сбросить
-          </button>
-        )}
+        <DateRangePicker
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          onFromChange={setDateFrom}
+          onToChange={setDateTo}
+          onReset={() => { setDateFrom(""); setDateTo(""); }}
+        />
         {hasFilter && (
           <span className="ml-auto text-xs text-muted-foreground">
             {filteredPrescriptions.length} пред. · {filteredInspections.length} пров.
