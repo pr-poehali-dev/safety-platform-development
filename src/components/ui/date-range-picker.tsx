@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { format, isValid } from "date-fns";
+import { format, isValid, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, subYears } from "date-fns";
 import { ru } from "date-fns/locale";
 import { DayPicker, DateRange } from "react-day-picker";
 import Icon from "@/components/ui/icon";
@@ -82,6 +82,29 @@ export default function DateRangePicker({
 
       {open && (
         <div className="absolute top-full left-0 mt-2 z-50 bg-card border border-border rounded-xl shadow-xl p-3">
+
+          {/* Быстрые периоды */}
+          <div className="flex flex-wrap gap-1.5 mb-3 pb-3 border-b border-border">
+            {[
+              { label: "Этот месяц", from: startOfMonth(new Date()), to: endOfMonth(new Date()) },
+              { label: "Прошлый месяц", from: startOfMonth(subMonths(new Date(), 1)), to: endOfMonth(subMonths(new Date(), 1)) },
+              { label: "Этот год", from: startOfYear(new Date()), to: endOfYear(new Date()) },
+              { label: "Прошлый год", from: startOfYear(subYears(new Date(), 1)), to: endOfYear(subYears(new Date(), 1)) },
+            ].map(preset => (
+              <button
+                key={preset.label}
+                onClick={() => {
+                  onFromChange(toIso(preset.from));
+                  onToChange(toIso(preset.to));
+                  setOpen(false);
+                }}
+                className="px-2.5 py-1 text-xs rounded-lg border border-border hover:border-primary/40 hover:bg-primary/10 hover:text-foreground text-muted-foreground transition-colors"
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+
           <DayPicker
             mode="range"
             selected={range}
