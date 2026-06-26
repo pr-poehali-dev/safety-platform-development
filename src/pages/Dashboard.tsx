@@ -113,6 +113,7 @@ export default function Dashboard({ user }: DashboardProps) {
     const contractorSet = new Set<string>();
     const map = new Map<string, Record<string, number>>();
 
+    // Замечания из проверок
     filteredInspections.forEach(i => {
       const cat = i.violation_type || "Без категории";
       const co = i.contractor || "Не указан";
@@ -120,6 +121,19 @@ export default function Dashboard({ user }: DashboardProps) {
       if (!map.has(cat)) map.set(cat, {});
       const row = map.get(cat)!;
       row[co] = (row[co] || 0) + (i.remarks_count || 0);
+    });
+
+    // Замечания из предписаний (каждое remark — 1 единица, по category)
+    filteredPrescriptions.forEach(p => {
+      const co = p.contractor || "Не указан";
+      (p.remarks || []).forEach(r => {
+        const cat = r.category;
+        if (!cat) return; // игнорируем без вида нарушения
+        contractorSet.add(co);
+        if (!map.has(cat)) map.set(cat, {});
+        const row = map.get(cat)!;
+        row[co] = (row[co] || 0) + 1;
+      });
     });
 
     const contractors = [...contractorSet].sort();
@@ -137,7 +151,7 @@ export default function Dashboard({ user }: DashboardProps) {
     });
 
     return { contractors, pivotRows, grandTotal };
-  }, [filteredInspections]);
+  }, [filteredInspections, filteredPrescriptions]);
 
   const chartData = useMemo(() => {
     return pivotRows.map(row => {
