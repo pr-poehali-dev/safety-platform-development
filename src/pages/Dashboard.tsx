@@ -324,19 +324,31 @@ export default function Dashboard({ user }: DashboardProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {pivotRows.map((row, idx) => (
-                    <tr key={row.category} className={`border-b border-border last:border-0 ${idx % 2 === 0 ? "" : "bg-secondary/10"}`}>
-                      <td className="px-4 py-2 text-foreground">{row.category}</td>
-                      {contractors.map(c => (
-                        <td key={c} className="py-2 text-center text-muted-foreground" style={{ width: 50, maxWidth: 50 }}>
-                          {row.byContractor[c] ? (
-                            <span className="text-foreground font-medium">{row.byContractor[c]}</span>
-                          ) : ""}
+                  {pivotRows.map((row, idx) => {
+                    const isTop = idx < 3;
+                    const medals = ["🥇", "🥈", "🥉"];
+                    const rowBg = idx === 0 ? "bg-red-500/10" : idx === 1 ? "bg-amber-500/8" : idx === 2 ? "bg-yellow-500/6" : idx % 2 !== 0 ? "bg-secondary/10" : "";
+                    return (
+                      <tr key={row.category} className={`border-b border-border last:border-0 ${rowBg}`}>
+                        <td className="px-4 py-2 text-foreground">
+                          <span className="flex items-center gap-1.5">
+                            {isTop && <span className="text-xs">{medals[idx]}</span>}
+                            <span className={isTop ? "font-semibold" : ""}>{row.category}</span>
+                          </span>
                         </td>
-                      ))}
-                      <td className="py-2 text-center font-bold text-foreground" style={{ width: 50 }}>{row.total}</td>
-                    </tr>
-                  ))}
+                        {contractors.map(c => (
+                          <td key={c} className="py-2 text-center text-muted-foreground" style={{ width: 50, maxWidth: 50 }}>
+                            {row.byContractor[c] ? (
+                              <span className="text-foreground font-medium">{row.byContractor[c]}</span>
+                            ) : ""}
+                          </td>
+                        ))}
+                        <td className={`py-2 text-center font-bold ${isTop ? "text-foreground" : "text-foreground"}`} style={{ width: 50 }}>
+                          {isTop ? <span className={idx === 0 ? "text-red-400" : idx === 1 ? "text-amber-400" : "text-yellow-500"}>{row.total}</span> : row.total}
+                        </td>
+                      </tr>
+                    );
+                  })}
                   <tr className="bg-secondary/30 border-t-2 border-border">
                     <td className="px-4 py-2.5 font-bold text-foreground">Общий итог</td>
                     {contractors.map(c => (
