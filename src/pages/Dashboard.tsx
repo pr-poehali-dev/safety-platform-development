@@ -171,10 +171,18 @@ export default function Dashboard({ user }: DashboardProps) {
       cur.suspended += i.works_suspended ? 1 : 0;
       map.set(co, cur);
     });
+    filteredPrescriptions.forEach(p => {
+      const co = p.contractor || "Не указан";
+      const count = (p.remarks || []).length;
+      if (count === 0) return;
+      const cur = map.get(co) ?? { remarks: 0, inspections: 0, suspended: 0 };
+      cur.remarks += count;
+      map.set(co, cur);
+    });
     return [...map.entries()]
       .map(([name, stats]) => ({ name, ...stats }))
       .sort((a, b) => b.remarks - a.remarks);
-  }, [filteredInspections]);
+  }, [filteredInspections, filteredPrescriptions]);
 
   const hasFilter = dateFrom || dateTo;
 
