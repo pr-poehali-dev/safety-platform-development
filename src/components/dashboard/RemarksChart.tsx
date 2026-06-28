@@ -42,6 +42,8 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
               }}
               labelStyle={{ color: "#d0d8e8", fontWeight: 600, marginBottom: 4 }}
               itemStyle={{ color: "#8b9ab0" }}
+              formatter={(value, name) => (Number(value) > 0 ? [value, name] : [null, null])}
+              filterNull
             />
             <Legend
               verticalAlign="bottom"
