@@ -14,9 +14,10 @@ interface InspectionsProps {
   onBack: () => void;
   onTabChange?: (tab: Tab) => void;
   activeTab?: Tab;
+  initialSuspended?: boolean;
 }
 
-export default function Inspections({ user, onLogout, onBack, onTabChange, activeTab = "inspections" }: InspectionsProps) {
+export default function Inspections({ user, onLogout, onBack, onTabChange, activeTab = "inspections", initialSuspended }: InspectionsProps) {
   const [rows, setRows] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<string[]>([]);
@@ -30,6 +31,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
   const [dateTo, setDateTo] = useState("");
   const [filterContractor, setFilterContractor] = useState("");
   const [filterObject, setFilterObject] = useState("");
+  const [filterSuspended, setFilterSuspended] = useState(initialSuspended ?? false);
 
   const inspectorName = user.name || "";
 
@@ -80,6 +82,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
 
   const uniqueContractors = [...new Set(rows.map(r => r.contractor))].filter(Boolean);
   const uniqueObjects = [...new Set(rows.map(r => r.object_name))].filter(Boolean);
+  const displayedRows = filterSuspended ? rows.filter(r => r.works_suspended) : rows;
 
   return (
     <div className="min-h-screen bg-background" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
@@ -159,21 +162,28 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
           <div className="w-px h-4 bg-border" />
           <FilterDropdown label="Подрядчик" options={uniqueContractors} value={filterContractor} onChange={setFilterContractor} />
           <FilterDropdown label="Объект" options={uniqueObjects} value={filterObject} onChange={setFilterObject} />
-          {(dateFrom || dateTo || filterContractor || filterObject) && (
+          <button
+            onClick={() => setFilterSuspended(v => !v)}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${filterSuspended ? "border-red-500 bg-red-500/10 text-red-400" : "border-border bg-secondary/30 text-muted-foreground hover:text-foreground"}`}
+          >
+            <Icon name="OctagonX" size={12} />
+            Приостановлено
+          </button>
+          {(dateFrom || dateTo || filterContractor || filterObject || filterSuspended) && (
             <button
-              onClick={() => { setDateFrom(""); setDateTo(""); setFilterContractor(""); setFilterObject(""); }}
+              onClick={() => { setDateFrom(""); setDateTo(""); setFilterContractor(""); setFilterObject(""); setFilterSuspended(false); }}
               className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
             >
               <Icon name="X" size={11} />
               Сбросить
             </button>
           )}
-          <span className="ml-auto text-xs text-muted-foreground">{rows.length} записей</span>
+          <span className="ml-auto text-xs text-muted-foreground">{displayedRows.length} записей</span>
         </div>
 
         {/* Таблица */}
         <InspectionsTable
-          rows={rows}
+          rows={displayedRows}
           loading={loading}
           deleteConfirm={deleteConfirm}
           onDeleteRequest={setDeleteConfirm}

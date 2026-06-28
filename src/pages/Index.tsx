@@ -26,6 +26,7 @@ export default function Index({ user, onLogout }: IndexProps) {
   const [selected, setSelected] = useState<Prescription | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("Все");
   const [search, setSearch] = useState("");
+  const [inspectionsSuspended, setInspectionsSuspended] = useState(false);
   const [activeTemplate, setActiveTemplate] = useState<Template>({ ...DEFAULT_TEMPLATE, id: "default", name: "По умолчанию", isDefault: true });
 
   useEffect(() => {
@@ -119,6 +120,7 @@ export default function Index({ user, onLogout }: IndexProps) {
         onBack={() => setTab("prescriptions")}
         onTabChange={setTab}
         activeTab={tab}
+        initialSuspended={inspectionsSuspended}
       />
     );
   }
@@ -167,6 +169,10 @@ export default function Index({ user, onLogout }: IndexProps) {
           onNavigateToPrescriptions={(status) => {
             if (status) setFilterStatus(status);
             setTab("prescriptions");
+          }}
+          onNavigateToInspections={(suspended) => {
+            setInspectionsSuspended(suspended ?? false);
+            setTab("inspections");
           }}
         />
       </div>

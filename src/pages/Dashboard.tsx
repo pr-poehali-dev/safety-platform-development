@@ -15,6 +15,7 @@ const INSPECTIONS_API = "https://functions.poehali.dev/b2222d00-a1b0-43fd-966d-3
 interface DashboardProps {
   user: AppUser;
   onNavigateToPrescriptions?: (status?: string) => void;
+  onNavigateToInspections?: (suspended?: boolean) => void;
 }
 
 function StatCard({ label, value, icon, color, onClick }: {
@@ -44,7 +45,7 @@ function parseDate(str: string): Date | null {
   return new Date(y, m - 1, d);
 }
 
-export default function Dashboard({ user, onNavigateToPrescriptions }: DashboardProps) {
+export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateToInspections }: DashboardProps) {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -254,9 +255,9 @@ export default function Dashboard({ user, onNavigateToPrescriptions }: Dashboard
       <div>
         <h2 className="text-base font-semibold mb-3">Проверки</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <StatCard label="Всего проверок" value={inspTotal} icon="TableProperties" color="bg-violet-500" />
-          <StatCard label="Всего замечаний" value={inspRemarks} icon="AlertTriangle" color="bg-amber-500" />
-          <StatCard label="Приостановлено работ" value={inspSuspended} icon="OctagonX" color="bg-red-600" />
+          <StatCard label="Всего проверок" value={inspTotal} icon="TableProperties" color="bg-violet-500" onClick={onNavigateToInspections ? () => onNavigateToInspections(false) : undefined} />
+          <StatCard label="Всего замечаний" value={inspRemarks} icon="AlertTriangle" color="bg-amber-500" onClick={onNavigateToInspections ? () => onNavigateToInspections(false) : undefined} />
+          <StatCard label="Приостановлено работ" value={inspSuspended} icon="OctagonX" color="bg-red-600" onClick={onNavigateToInspections ? () => onNavigateToInspections(true) : undefined} />
         </div>
       </div>
 
