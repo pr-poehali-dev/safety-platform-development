@@ -14,13 +14,17 @@ const INSPECTIONS_API = "https://functions.poehali.dev/b2222d00-a1b0-43fd-966d-3
 
 interface DashboardProps {
   user: AppUser;
+  onNavigateToPrescriptions?: (status?: string) => void;
 }
 
-function StatCard({ label, value, icon, color }: {
-  label: string; value: number | string; icon: string; color: string;
+function StatCard({ label, value, icon, color, onClick }: {
+  label: string; value: number | string; icon: string; color: string; onClick?: () => void;
 }) {
   return (
-    <div className="bg-card border border-border rounded-xl px-5 py-4 flex items-start gap-4">
+    <div
+      className={`bg-card border border-border rounded-xl px-5 py-4 flex items-start gap-4 ${onClick ? "cursor-pointer hover:border-primary/50 hover:bg-card/80 transition-colors" : ""}`}
+      onClick={onClick}
+    >
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
         <Icon name={icon as never} size={18} className="text-white" />
       </div>
@@ -40,7 +44,7 @@ function parseDate(str: string): Date | null {
   return new Date(y, m - 1, d);
 }
 
-export default function Dashboard({ user }: DashboardProps) {
+export default function Dashboard({ user, onNavigateToPrescriptions }: DashboardProps) {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -239,10 +243,10 @@ export default function Dashboard({ user }: DashboardProps) {
       <div>
         <h2 className="text-base font-semibold mb-3">Предписания</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="Всего предписаний" value={presTotal} icon="ClipboardList" color="bg-indigo-500" />
-          <StatCard label="Выдано" value={presIssued} icon="Send" color="bg-primary" />
-          <StatCard label="Устранено" value={presFixed} icon="CheckCircle" color="bg-green-500" />
-          <StatCard label="Просрочено" value={presOverdue} icon="AlertCircle" color="bg-red-500" />
+          <StatCard label="Всего предписаний" value={presTotal} icon="ClipboardList" color="bg-indigo-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Все") : undefined} />
+          <StatCard label="Выдано" value={presIssued} icon="Send" color="bg-primary" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Выдано") : undefined} />
+          <StatCard label="Устранено" value={presFixed} icon="CheckCircle" color="bg-green-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Устранено") : undefined} />
+          <StatCard label="Просрочено" value={presOverdue} icon="AlertCircle" color="bg-red-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Просрочено") : undefined} />
         </div>
       </div>
 

@@ -162,7 +162,13 @@ export default function Index({ user, onLogout }: IndexProps) {
             ))}
           </div>
         </div>
-        <Dashboard user={user} />
+        <Dashboard
+          user={user}
+          onNavigateToPrescriptions={(status) => {
+            if (status) setFilterStatus(status);
+            setTab("prescriptions");
+          }}
+        />
       </div>
     );
   }
