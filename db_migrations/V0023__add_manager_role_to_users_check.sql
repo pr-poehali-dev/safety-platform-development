@@ -1,0 +1,2 @@
+ALTER TABLE t_p5901577_safety_platform_deve.users DROP CONSTRAINT users_role_check;
+ALTER TABLE t_p5901577_safety_platform_deve.users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'specialist', 'manager', 'contractor'));
