@@ -330,7 +330,7 @@ export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateT
 
           {/* Проверки 1 колонка */}
           <div>
-            <h2 className="text-base font-semibold mb-3">Проверки</h2>
+            <h2 className="text-base font-semibold mb-3 py-[15px]">Проверки</h2>
             <div className="flex flex-col gap-3">
               <StatCard label="Всего проверок" value={inspTotal} icon="TableProperties" color="bg-violet-500" onClick={onNavigateToInspections ? () => onNavigateToInspections(false) : undefined} />
               <StatCard label="Всего замечаний" value={inspRemarks} icon="AlertTriangle" color="bg-amber-500" onClick={onNavigateToInspections ? () => onNavigateToInspections(false) : undefined} />
