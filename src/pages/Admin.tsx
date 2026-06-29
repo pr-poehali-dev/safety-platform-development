@@ -6,6 +6,7 @@ import { UsersTab } from "@/components/admin/UsersTab";
 import { PrescriptionsTab } from "@/components/admin/PrescriptionsTab";
 import { TemplatesTab } from "@/components/admin/TemplatesTab";
 import { DataTab } from "@/components/admin/DataTab";
+import { InspectionsTab } from "@/components/admin/InspectionsTab";
 
 const TEMPLATES_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69?type=templates";
 
@@ -17,7 +18,7 @@ interface AdminProps {
 }
 
 export default function Admin({ currentUser, users, onUsersChange, onLogout }: AdminProps) {
-  const [tab, setTab] = useState<"users" | "prescriptions" | "templates" | "data">("users");
+  const [tab, setTab] = useState<"users" | "prescriptions" | "inspections" | "templates" | "data">("users");
 
   const [templates, setTemplates] = useState<Template[]>([]);
   const [tLoading, setTLoading] = useState(false);
@@ -87,6 +88,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
           {([
             { key: "users", label: "Управление пользователями", icon: "Users" },
             { key: "prescriptions", label: "Управление предписаниями", icon: "ClipboardList" },
+            { key: "inspections", label: "Управление проверками", icon: "TableProperties" },
             { key: "templates", label: "Управление шаблонами", icon: "FileText" },
             { key: "data", label: "Управление данными", icon: "Database" },
           ] as const).map(t => (
@@ -122,6 +124,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
             setTDeleteConfirm={setTDeleteConfirm}
           />
         )}
+        {tab === "inspections" && <InspectionsTab />}
         {tab === "data" && <DataTab />}
       </main>
     </div>
