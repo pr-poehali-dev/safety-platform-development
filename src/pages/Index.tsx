@@ -50,7 +50,7 @@ export default function Index({ user, onLogout }: IndexProps) {
   }, []);
 
   const isContractor = user.role === "contractor";
-  const canEdit = user.role === "admin" || user.role === "specialist";
+  const canEdit = user.role === "admin" || user.role === "specialist" || user.role === "manager";
 
   const addPrescription = async (p: Prescription) => {
     const res = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) });

@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "specialist" | "contractor";
+export type UserRole = "admin" | "specialist" | "manager" | "contractor";
 
 export interface AppUser {
   id: string;
@@ -13,12 +13,14 @@ export interface AppUser {
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: "Администратор",
   specialist: "Специалист ОТ",
+  manager: "Руководитель",
   contractor: "Подрядчик",
 };
 
 export const ROLE_COLORS: Record<UserRole, string> = {
   admin: "text-yellow-400 bg-yellow-400/10 border-yellow-400/20",
   specialist: "text-primary bg-primary/10 border-primary/20",
+  manager: "text-orange-400 bg-orange-400/10 border-orange-400/20",
   contractor: "text-green-400 bg-green-400/10 border-green-400/20",
 };
 

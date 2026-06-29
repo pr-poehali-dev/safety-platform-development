@@ -120,7 +120,7 @@ export function PrescriptionDetail({
   };
 
   const isContractor = user.role === "contractor";
-  const myRole = isContractor ? "Подрядчик" : "Специалист ОТ";
+  const myRole = isContractor ? "Подрядчик" : user.role === "manager" ? "Руководитель" : "Специалист ОТ";
 
   const handleFiles = (files: FileList | null) => {
     if (!files) return;

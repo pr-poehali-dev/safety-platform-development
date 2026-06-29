@@ -2,8 +2,8 @@ import { useState } from "react";
 import Icon from "@/components/ui/icon";
 import { AppUser, UserRole, ROLE_LABELS, ROLE_COLORS, apiCreateUser, apiUpdateUser, apiDeleteUser } from "@/lib/auth";
 
-const ROLE_ICONS: Record<UserRole, string> = { admin: "Crown", specialist: "ShieldCheck", contractor: "HardHat" };
-const ALL_ROLES: UserRole[] = ["admin", "specialist", "contractor"];
+const ROLE_ICONS: Record<UserRole, string> = { admin: "Crown", specialist: "ShieldCheck", manager: "Briefcase", contractor: "HardHat" };
+const ALL_ROLES: UserRole[] = ["admin", "specialist", "manager", "contractor"];
 
 interface UserFormData { login: string; password: string; name: string; position: string; role: UserRole; contractor: string; }
 function emptyForm(): UserFormData { return { login: "", password: "", name: "", position: "", role: "specialist", contractor: "" }; }
