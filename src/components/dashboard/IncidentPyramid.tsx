@@ -202,8 +202,8 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
                   </div>
                 </foreignObject>
 
-                {/* Right label panel — only for base layer */}
-                {i === layers.length - 1 && layer.labelRight && (
+                {/* Right label panel — for base and microtrauma layers */}
+                {(i === layers.length - 1 || i === layers.length - 2) && layer.labelRight && (
                   <foreignObject x={ox + W + 4} y={y0} width={labelPanelW - 4} height={y1 - y0}>
                     <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: 6 }}>
                       <span style={{ fontSize: 9, color: "#94a3b8", textAlign: "left", lineHeight: 1.3, whiteSpace: "pre-line" }}>
