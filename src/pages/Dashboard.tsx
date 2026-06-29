@@ -7,6 +7,7 @@ import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import TopContractors from "@/components/dashboard/TopContractors";
 import PivotTable from "@/components/dashboard/PivotTable";
 import RemarksChart from "@/components/dashboard/RemarksChart";
+import IncidentPyramid from "@/components/dashboard/IncidentPyramid";
 import { type PivotRow } from "@/components/dashboard/PivotTable";
 
 const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
@@ -144,6 +145,34 @@ export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateT
   const inspSuspended = filteredInspections.filter(i => i.works_suspended).length;
   const inspRemarks = filteredInspections.reduce((s, i) => s + (i.remarks_count || 0), 0);
 
+  const filteredIncidents = useMemo(() => {
+    return incidents.filter(i => {
+      if (isContractor && i.contractor !== user.contractor) return false;
+      if (from || to) {
+        const d = parseDate(i.incident_date);
+        if (!d) return false;
+        if (from && d < from) return false;
+        if (to && d > to) return false;
+      }
+      if (selectedContractors.length > 0 && !selectedContractors.includes(i.contractor || "Не указан")) return false;
+      return true;
+    });
+  }, [incidents, user, dateFrom, dateTo, selectedContractors]);
+
+  const pyramidData = useMemo(() => {
+    const presViolations = filteredPrescriptions.reduce((s, p) => s + (p.remarks || []).length, 0);
+    const totalViolations = inspRemarks + presViolations;
+    return {
+      fatal: filteredIncidents.reduce((s, i) => s + (i.fatal || 0), 0),
+      severe_injury: filteredIncidents.reduce((s, i) => s + (i.severe_injury || 0), 0),
+      light_injury: filteredIncidents.reduce((s, i) => s + (i.light_injury || 0), 0),
+      microtrauma: filteredIncidents.reduce((s, i) => s + (i.microtrauma || 0), 0),
+      no_consequences: filteredIncidents.reduce((s, i) => s + (i.no_consequences || 0), 0),
+      totalViolations,
+      suspendedWorks: inspSuspended,
+    };
+  }, [filteredIncidents, filteredPrescriptions, inspRemarks, inspSuspended]);
+
   const { contractors, pivotRows, grandTotal } = useMemo(() => {
     const contractorSet = new Set<string>();
     const map = new Map<string, Record<string, number>>();
@@ -256,25 +285,36 @@ export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateT
         toggleItem={toggleItem}
       />
 
-      {/* Карточки предписаний */}
-      <div>
-        <h2 className="text-base font-semibold mb-3">Предписания</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="Всего предписаний" value={presTotal} icon="ClipboardList" color="bg-indigo-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Все") : undefined} />
-          <StatCard label="Выдано" value={presIssued} icon="Send" color="bg-primary" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Выдано") : undefined} />
-          <StatCard label="Устранено" value={presFixed} icon="CheckCircle" color="bg-green-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Устранено") : undefined} />
-          <StatCard label="Просрочено" value={presOverdue} icon="AlertCircle" color="bg-red-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Просрочено") : undefined} />
-        </div>
-      </div>
+      {/* Статистика + Пирамида */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-      {/* Карточки проверок */}
-      <div>
-        <h2 className="text-base font-semibold mb-3">Проверки</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <StatCard label="Всего проверок" value={inspTotal} icon="TableProperties" color="bg-violet-500" onClick={onNavigateToInspections ? () => onNavigateToInspections(false) : undefined} />
-          <StatCard label="Всего замечаний" value={inspRemarks} icon="AlertTriangle" color="bg-amber-500" onClick={onNavigateToInspections ? () => onNavigateToInspections(false) : undefined} />
-          <StatCard label="Приостановлено работ" value={inspSuspended} icon="OctagonX" color="bg-red-600" onClick={onNavigateToInspections ? () => onNavigateToInspections(true) : undefined} />
+        {/* Левая колонка: Предписания + Проверки */}
+        <div className="flex flex-col gap-4">
+
+          {/* Предписания 2x2 */}
+          <div>
+            <h2 className="text-base font-semibold mb-3">Предписания</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <StatCard label="Всего предписаний" value={presTotal} icon="ClipboardList" color="bg-indigo-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Все") : undefined} />
+              <StatCard label="Выдано" value={presIssued} icon="Send" color="bg-primary" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Выдано") : undefined} />
+              <StatCard label="Устранено" value={presFixed} icon="CheckCircle" color="bg-green-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Устранено") : undefined} />
+              <StatCard label="Просрочено" value={presOverdue} icon="AlertCircle" color="bg-red-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Просрочено") : undefined} />
+            </div>
+          </div>
+
+          {/* Проверки 1 колонка */}
+          <div>
+            <h2 className="text-base font-semibold mb-3">Проверки</h2>
+            <div className="flex flex-col gap-3">
+              <StatCard label="Всего проверок" value={inspTotal} icon="TableProperties" color="bg-violet-500" onClick={onNavigateToInspections ? () => onNavigateToInspections(false) : undefined} />
+              <StatCard label="Всего замечаний" value={inspRemarks} icon="AlertTriangle" color="bg-amber-500" onClick={onNavigateToInspections ? () => onNavigateToInspections(false) : undefined} />
+              <StatCard label="Приостановлено работ" value={inspSuspended} icon="OctagonX" color="bg-red-600" onClick={onNavigateToInspections ? () => onNavigateToInspections(true) : undefined} />
+            </div>
+          </div>
         </div>
+
+        {/* Правая колонка: Пирамида */}
+        <IncidentPyramid data={pyramidData} year={new Date().getFullYear()} />
       </div>
 
       <TopContractors topContractors={topContractors} />
