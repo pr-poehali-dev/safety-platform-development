@@ -11,11 +11,24 @@ import { type PivotRow } from "@/components/dashboard/PivotTable";
 
 const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
 const INSPECTIONS_API = "https://functions.poehali.dev/b2222d00-a1b0-43fd-966d-3f39732867c3";
+const INCIDENTS_API = "https://functions.poehali.dev/4aedfdd0-d096-43ad-b4e7-b7b2aec3f753";
+
+interface Incident {
+  id: number;
+  incident_date: string;
+  contractor: string | null;
+  microtrauma: number;
+  light_injury: number;
+  severe_injury: number;
+  fatal: number;
+  no_consequences: number;
+}
 
 interface DashboardProps {
   user: AppUser;
   onNavigateToPrescriptions?: (status?: string) => void;
   onNavigateToInspections?: (suspended?: boolean) => void;
+  onNavigateToIncidents?: () => void;
 }
 
 function StatCard({ label, value, icon, color, onClick }: {
@@ -45,9 +58,10 @@ function parseDate(str: string): Date | null {
   return new Date(y, m - 1, d);
 }
 
-export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateToInspections }: DashboardProps) {
+export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateToInspections, onNavigateToIncidents }: DashboardProps) {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [inspections, setInspections] = useState<Inspection[]>([]);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -60,9 +74,11 @@ export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateT
     Promise.all([
       fetch(PRESCRIPTIONS_API).then(r => r.json()).catch(() => []),
       fetch(INSPECTIONS_API).then(r => r.json()).catch(() => []),
-    ]).then(([pres, insp]) => {
+      fetch(INCIDENTS_API).then(r => r.json()).catch(() => []),
+    ]).then(([pres, insp, inc]) => {
       setPrescriptions(Array.isArray(pres) ? pres : []);
       setInspections(Array.isArray(insp) ? insp : []);
+      setIncidents(Array.isArray(inc) ? inc : []);
       setLoading(false);
     });
   }, []);
