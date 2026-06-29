@@ -228,7 +228,7 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
             fontSize="12"
             fontWeight="700"
             fill="#38bdf8"
-          >ПБ</text>
+          ></text>
         </svg>
       </div>
     </div>
