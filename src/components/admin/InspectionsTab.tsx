@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as XLSX from "xlsx";
 import Icon from "@/components/ui/icon";
 import { Inspection } from "@/components/inspections/types";
 
@@ -127,6 +128,26 @@ export function InspectionsTab() {
     setDeleting(false);
   };
 
+  const handleExport = () => {
+    const rows = filtered.map(i => ({
+      "ID": i.id,
+      "Дата проверки": i.inspection_date ? new Date(i.inspection_date).toLocaleDateString("ru-RU") : "",
+      "Подрядчик": i.contractor || "",
+      "Объект": i.object_name || "",
+      "Вид нарушения": i.violation_type || "",
+      "Инспектор": i.inspector_name || "",
+      "Кол-во замечаний": i.remarks_count,
+      "Работы приостановлены": i.works_suspended ? "Да" : "Нет",
+      "Примечание": i.note || "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Проверки");
+    const colWidths = [6, 14, 25, 25, 30, 25, 18, 22, 30];
+    ws["!cols"] = colWidths.map(w => ({ wch: w }));
+    XLSX.writeFile(wb, `Проверки_${new Date().toLocaleDateString("ru-RU").replace(/\./g, "-")}.xlsx`);
+  };
+
   const handleSave = async (updated: Inspection) => {
     await fetch(INSPECTIONS_API, {
       method: "PUT",
@@ -151,6 +172,14 @@ export function InspectionsTab() {
           />
         </div>
         <span className="text-sm text-muted-foreground">{filtered.length} проверок</span>
+        <button
+          onClick={handleExport}
+          disabled={filtered.length === 0}
+          className="ml-auto flex items-center gap-2 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <Icon name="Download" size={14} />
+          Экспорт в Excel
+        </button>
       </div>
 
       {/* Таблица */}
