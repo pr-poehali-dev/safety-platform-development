@@ -97,7 +97,7 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
   const ox = labelPanelW;
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4 flex flex-col h-full">
+    <div className="bg-card border border-border rounded-xl p-4 flex flex-col h-full py-0 my-0">
       {year && (
         <div className="text-center mb-0.5">
           <span className="text-sm text-foreground font-black">{year} год</span>
