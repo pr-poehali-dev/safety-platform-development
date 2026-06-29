@@ -173,24 +173,32 @@ function RemarkRow({
           </button>
         )}
       </div>
-      <Field label="Место нарушения *">
-        <SelectBase value={remark.place} onChange={e => set("place", e.target.value)} disabled={places.length === 0}>
-          <option value="">{places.length === 0 ? "— Сначала выберите объект —" : "— Выберите место нарушения —"}</option>
-          {places.map(p => <option key={p} value={p}>{p}</option>)}
-        </SelectBase>
-      </Field>
-      <Field label="Вид нарушения *">
-        <SelectBase value={remark.category} onChange={e => set("category", e.target.value)}>
-          <option value="">— Выберите вид нарушения —</option>
-          {categories.map(c => <option key={c} value={c}>{c}</option>)}
-        </SelectBase>
-      </Field>
-      <Field label="Работы приостановлены">
-        <SelectBase value={remark.work_suspended ? "yes" : "no"} onChange={e => set("work_suspended", e.target.value === "yes")}>
-          <option value="no">Нет</option>
-          <option value="yes">Да</option>
-        </SelectBase>
-      </Field>
+      <div className="flex gap-4">
+        <div style={{ flex: "0 0 50%" }}>
+          <Field label="Место нарушения *">
+            <SelectBase value={remark.place} onChange={e => set("place", e.target.value)} disabled={places.length === 0}>
+              <option value="">{places.length === 0 ? "— Сначала выберите объект —" : "— Выберите место нарушения —"}</option>
+              {places.map(p => <option key={p} value={p}>{p}</option>)}
+            </SelectBase>
+          </Field>
+        </div>
+        <div style={{ flex: "0 0 30%" }}>
+          <Field label="Вид нарушения *">
+            <SelectBase value={remark.category} onChange={e => set("category", e.target.value)}>
+              <option value="">— Выберите вид нарушения —</option>
+              {categories.map(c => <option key={c} value={c}>{c}</option>)}
+            </SelectBase>
+          </Field>
+        </div>
+        <div style={{ flex: "0 0 20%" }}>
+          <Field label="Работы приостановлены">
+            <SelectBase value={remark.work_suspended ? "yes" : "no"} onChange={e => set("work_suspended", e.target.value === "yes")}>
+              <option value="no">Нет</option>
+              <option value="yes">Да</option>
+            </SelectBase>
+          </Field>
+        </div>
+      </div>
       <Field label="Описание нарушения *">
         <TextareaBase value={remark.description} onChange={e => set("description", e.target.value)} placeholder="Опишите выявленное нарушение" rows={4} />
       </Field>
