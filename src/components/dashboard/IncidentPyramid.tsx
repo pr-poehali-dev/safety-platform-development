@@ -121,22 +121,27 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
             const isTop = i === 0;
             const hasSplit = layer.valRight !== null;
             const midY = (y0 + y1) / 2;
-            const cx = ox + apexX;
+            // cx: split point at 80% from left edge of the layer's top edge
+            const splitRatio = 0.8;
+            const cx0 = ox + t0.left + (t0.right - t0.left) * splitRatio; // split at y0
+            const cx1 = ox + t1.left + (t1.right - t1.left) * splitRatio; // split at y1
+            // for vertical divider line we use midpoint
+            const cxMid = (cx0 + cx1) / 2;
 
             const fullPoints = isTop
               ? `${ox + apexX},${y0} ${ox + t1.left},${y1} ${ox + t1.right},${y1}`
               : `${ox + t0.left},${y0} ${ox + t0.right},${y0} ${ox + t1.right},${y1} ${ox + t1.left},${y1}`;
 
             const leftPoints = isTop
-              ? `${cx},${y0} ${ox + t1.left},${y1} ${cx},${y1}`
-              : `${ox + t0.left},${y0} ${cx},${y0} ${cx},${y1} ${ox + t1.left},${y1}`;
+              ? `${ox + apexX},${y0} ${ox + t1.left},${y1} ${cx1},${y1}`
+              : `${ox + t0.left},${y0} ${cx0},${y0} ${cx1},${y1} ${ox + t1.left},${y1}`;
 
             const rightPoints = isTop
-              ? `${cx},${y0} ${cx},${y1} ${ox + t1.right},${y1}`
-              : `${cx},${y0} ${ox + t0.right},${y0} ${ox + t1.right},${y1} ${cx},${y1}`;
+              ? `${ox + apexX},${y0} ${cx1},${y1} ${ox + t1.right},${y1}`
+              : `${cx0},${y0} ${ox + t0.right},${y0} ${ox + t1.right},${y1} ${cx1},${y1}`;
 
-            const leftMidX = (ox + (isTop ? t1.left : t0.left) + cx) / 2;
-            const rightMidX = (cx + ox + (isTop ? t1.right : t0.right)) / 2;
+            const leftMidX = (ox + (isTop ? t1.left : t0.left) + cxMid) / 2;
+            const rightMidX = (cxMid + ox + (isTop ? t1.right : t0.right)) / 2;
 
             return (
               <g key={i}>
@@ -154,7 +159,7 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
                 )}
 
                 {hasSplit && (
-                  <line x1={cx} y1={y0} x2={cx} y2={y1} stroke="white" strokeWidth="1.5" strokeOpacity="0.5" />
+                  <line x1={cx0} y1={y0} x2={cx1} y2={y1} stroke="white" strokeWidth="1.5" strokeOpacity="0.5" />
                 )}
 
                 {!isTop && layer.dotColor && (
@@ -172,22 +177,22 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
                     {layer.valLeft}
                   </text>
                 ) : i === layers.length - 1 ? (
-                  // Base layer: values centered in each half
+                  // Base layer: values centered in each half (80/20 split)
                   <>
-                    <text x={(ox + t1.left + cx) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
+                    <text x={(ox + t1.left + cx1) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
                       {layer.valLeft}
                     </text>
-                    <text x={(cx + ox + t1.right) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
+                    <text x={(cx1 + ox + t1.right) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
                       {layer.valRight}
                     </text>
                   </>
                 ) : (
-                  // Split layer (microtrauma): values centered in each half, same as base
+                  // Split layer (microtrauma): values centered in each half (80/20 split)
                   <>
-                    <text x={(ox + t0.left + cx) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="13" fontWeight="700" fill="white">
+                    <text x={leftMidX} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="13" fontWeight="700" fill="white">
                       {layer.valLeft}
                     </text>
-                    <text x={(cx + ox + t0.right) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="13" fontWeight="700" fill="white">
+                    <text x={rightMidX} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="13" fontWeight="700" fill="white">
                       {layer.valRight}
                     </text>
                   </>
