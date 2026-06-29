@@ -182,18 +182,14 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
                     </text>
                   </>
                 ) : (
+                  // Split layer (microtrauma): values centered in each half, same as base
                   <>
-                    <text x={leftMidX} y={midY - 4} textAnchor="middle" dominantBaseline="middle" fontSize="13" fontWeight="700" fill="white">
+                    <text x={(ox + t0.left + cx) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="13" fontWeight="700" fill="white">
                       {layer.valLeft}
                     </text>
-                    <text x={rightMidX} y={midY - 4} textAnchor="middle" dominantBaseline="middle" fontSize="13" fontWeight="700" fill="white">
+                    <text x={(cx + ox + t0.right) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="13" fontWeight="700" fill="white">
                       {layer.valRight}
                     </text>
-                    {layer.labelRight && (
-                      <text x={rightMidX} y={midY + 10} textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="rgba(255,255,255,0.85)">
-                        {layer.labelRight}
-                      </text>
-                    )}
                   </>
                 )}
 
