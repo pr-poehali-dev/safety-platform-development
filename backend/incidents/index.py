@@ -54,8 +54,8 @@ def handler(event: dict, context) -> dict:
 
     if method == "POST":
         body = json.loads(event.get("body") or "{}")
-        if not body.get("description") or not body.get("incident_date"):
-            return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": "description and incident_date required"})}
+        if not body.get("incident_date"):
+            return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": "incident_date required"})}
 
         conn = get_conn()
         cur = conn.cursor()
@@ -67,7 +67,7 @@ def handler(event: dict, context) -> dict:
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id, created_at""",
             (
-                body["description"],
+                body.get("description") or "",
                 body["incident_date"],
                 body.get("location") or None,
                 body.get("contractor") or None,

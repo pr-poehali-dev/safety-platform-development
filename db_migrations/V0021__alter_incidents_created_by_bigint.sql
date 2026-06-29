@@ -1,0 +1,1 @@
+ALTER TABLE t_p5901577_safety_platform_deve.incidents ALTER COLUMN created_by TYPE bigint;
