@@ -218,7 +218,7 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
             fontSize="12"
             fontWeight="700"
             fill="#f59e0b"
-          >ОТ</text>
+          ></text>
 
           {/* PB label — below right column */}
           <text
