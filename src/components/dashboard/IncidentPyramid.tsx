@@ -150,8 +150,8 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
         <div className="flex items-center w-full mt-1">
           <div className="w-[28%]" />
           <div className="flex-1 flex justify-around">
-            <span className="text-xs font-semibold text-amber-400">ОТ</span>
-            <span className="text-xs font-semibold text-primary">ПБ</span>
+            <span className="text-xs font-semibold text-amber-400"></span>
+            <span className="text-xs font-semibold text-primary"></span>
           </div>
           <div className="w-[28%]" />
         </div>
