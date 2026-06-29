@@ -95,6 +95,7 @@ export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateT
   }, []);
 
   const isContractor = user.role === "contractor";
+  const isSpecialist = user.role === "specialist";
 
   const from = dateFrom ? new Date(dateFrom) : null;
   const to = dateTo ? new Date(dateTo + "T23:59:59") : null;
@@ -116,6 +117,7 @@ export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateT
   const filteredPrescriptions = useMemo(() => {
     return prescriptions.filter(p => {
       if (isContractor && p.contractor !== user.contractor) return false;
+      if (isSpecialist && p.createdBy !== user.login) return false;
       if (from || to) {
         const d = parseDate(p.date);
         if (!d) return false;
@@ -134,6 +136,7 @@ export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateT
   const filteredInspections = useMemo(() => {
     return inspections.filter(i => {
       if (isContractor && i.contractor !== user.contractor) return false;
+      if (isSpecialist && i.created_by !== user.login) return false;
       if (from || to) {
         const d = parseDate(i.inspection_date);
         if (!d) return false;
