@@ -181,7 +181,7 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
                     <text x={(ox + t1.left + cx1) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
                       {layer.valLeft}
                     </text>
-                    <text x={(cx1 + ox + t1.right) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
+                    <text x={((cx0 + cx1) / 2 + (ox + t0.right + ox + t1.right) / 2) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
                       {layer.valRight}
                     </text>
                   </>
