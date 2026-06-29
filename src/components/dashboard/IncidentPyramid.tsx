@@ -16,47 +16,85 @@ interface IncidentPyramidProps {
 export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
   const { fatal, severe_injury, light_injury, microtrauma, no_consequences, totalViolations, suspendedWorks } = data;
 
-  // SVG dimensions
-  const W = 340;
-  const H = 300;
+  const W = 420;
+  const H = 340;
 
-  // Pyramid apex and base
   const apexX = W / 2;
-  const apexY = 18;
-  const baseY = H - 10;
-  const baseLeft = 18;
-  const baseRight = W - 18;
-
-  // 5 layers from top to bottom (y positions of dividing lines)
-  // Layer proportions (height): fatal 16%, severe 16%, light 16%, micro 20%, base 32%
+  const apexY = 20;
+  const baseY = H - 44;
+  const baseLeft = 30;
+  const baseRight = W - 30;
   const totalH = baseY - apexY;
-  const cuts = [0, 0.16, 0.32, 0.48, 0.68, 1].map(p => apexY + p * totalH);
 
-  // At each y, the triangle width
+  const ratios = [0, 0.155, 0.31, 0.465, 0.665, 1];
+  const cuts = ratios.map(r => apexY + r * totalH);
+
   function xAtY(y: number) {
     const t = (y - apexY) / totalH;
-    const halfW = t * (baseRight - apexX);
-    return { left: apexX - halfW, right: apexX + halfW };
+    const halfBase = (baseRight - baseLeft) / 2;
+    return {
+      left: apexX - t * halfBase,
+      right: apexX + t * halfBase,
+    };
   }
 
-  // Build layer trapezoids
   const layers = [
-    { fill: "#c0362a", stroke: "#e05248", label: "Смертельные случаи",        valOT: fatal,         valPB: null,             labelPB: null,                   dotColor: "#ef4444" },
-    { fill: "#d9534f", stroke: "#e06b68", label: "Тяжелые несчастные случаи", valOT: severe_injury, valPB: null,             labelPB: null,                   dotColor: "#ef4444" },
-    { fill: "#93b8d4", stroke: "#7aa8cb", label: "Легкие несчастные случаи",  valOT: light_injury,  valPB: null,             labelPB: null,                   dotColor: "#7db9e8" },
-    { fill: "#5b8db8", stroke: "#4a7da8", label: "Микротравмы",               valOT: microtrauma,   valPB: no_consequences,  labelPB: "Происшествия",         dotColor: "#7db9e8" },
-    { fill: "#8a9bb0", stroke: "#6e82a0", label: "Опасные действия/\nопасные условия\n(нарушения)", valOT: totalViolations, valPB: suspendedWorks, labelPB: "Приостановки работ", dotColor: null },
+    {
+      label: "Смертельные\nслучаи",
+      valLeft: fatal,
+      valRight: null as number | null,
+      labelRight: null as string | null,
+      fillLeft: "#c0362a",
+      fillRight: "#c0362a",
+      stroke: "#e05248",
+      dotColor: "#ef4444",
+    },
+    {
+      label: "Тяжелые несчастные\nслучаи",
+      valLeft: severe_injury,
+      valRight: null,
+      labelRight: null,
+      fillLeft: "#d9534f",
+      fillRight: "#d9534f",
+      stroke: "#e06b68",
+      dotColor: "#ef4444",
+    },
+    {
+      label: "Легкие несчастные\nслучаи",
+      valLeft: light_injury,
+      valRight: null,
+      labelRight: null,
+      fillLeft: "#93b8d4",
+      fillRight: "#93b8d4",
+      stroke: "#7aa8cb",
+      dotColor: "#7db9e8",
+    },
+    {
+      label: "Микротравмы",
+      valLeft: microtrauma,
+      valRight: no_consequences,
+      labelRight: "Происшествия",
+      fillLeft: "#5b8db8",
+      fillRight: "#4a7da8",
+      stroke: "#3a6d98",
+      dotColor: "#7db9e8",
+    },
+    {
+      label: "Опасные действия/\nопасные условия\n(нарушения)",
+      valLeft: totalViolations,
+      valRight: suspendedWorks,
+      labelRight: "Приостановки\nработ",
+      fillLeft: "#8a9bb0",
+      fillRight: "#7a8ba0",
+      stroke: "#6e82a0",
+      dotColor: null,
+    },
   ];
 
-  // Left/right label panel widths
-  const leftW = 88;
-  const rightW = 88;
-  const centerW = W;
-  const totalW = leftW + centerW + rightW;
-  const svgH = H + 28; // extra for OT/PB labels
-
-  // Offset SVG pyramid inside full-width SVG
-  const ox = leftW;
+  const labelPanelW = 90;
+  const totalSvgW = labelPanelW + W;
+  const totalSvgH = H;
+  const ox = labelPanelW;
 
   return (
     <div className="bg-card border border-border rounded-xl p-4 flex flex-col h-full">
@@ -65,16 +103,15 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
           <span className="text-sm font-bold text-foreground">{year} год</span>
         </div>
       )}
-      <h3 className="text-sm font-semibold text-primary text-center mb-3">Пирамида происшествий (НИТ)</h3>
+      <h3 className="text-sm font-semibold text-primary text-center mb-2">Пирамида происшествий (НИТ)</h3>
 
       <div className="flex-1 flex items-center justify-center overflow-hidden">
         <svg
-          viewBox={`0 0 ${totalW} ${svgH}`}
+          viewBox={`0 0 ${totalSvgW} ${totalSvgH}`}
           width="100%"
-          style={{ maxHeight: 340 }}
+          style={{ maxHeight: 360 }}
           fontFamily="'IBM Plex Sans', sans-serif"
         >
-          {/* Render layers bottom-to-top so top renders on top */}
           {[...layers].reverse().map((layer, ri) => {
             const i = layers.length - 1 - ri;
             const y0 = cuts[i];
@@ -82,153 +119,87 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
             const t0 = xAtY(y0);
             const t1 = xAtY(y1);
             const isTop = i === 0;
-            const isBase = i === layers.length - 1;
+            const hasSplit = layer.valRight !== null;
+            const midY = (y0 + y1) / 2;
+            const cx = ox + apexX;
 
-            // Trapezoid points (or triangle for top)
-            const points = isTop
+            const fullPoints = isTop
               ? `${ox + apexX},${y0} ${ox + t1.left},${y1} ${ox + t1.right},${y1}`
               : `${ox + t0.left},${y0} ${ox + t0.right},${y0} ${ox + t1.right},${y1} ${ox + t1.left},${y1}`;
 
-            // Center of layer for value label
-            const midY = (y0 + y1) / 2;
-            const midX = ox + apexX;
+            const leftPoints = isTop
+              ? `${cx},${y0} ${ox + t1.left},${y1} ${cx},${y1}`
+              : `${ox + t0.left},${y0} ${cx},${y0} ${cx},${y1} ${ox + t1.left},${y1}`;
 
-            // Dotted line at top of layer (except very top apex)
-            const hasDotLine = !isTop && layer.dotColor;
-            const dotLineY = y0;
+            const rightPoints = isTop
+              ? `${cx},${y0} ${cx},${y1} ${ox + t1.right},${y1}`
+              : `${cx},${y0} ${ox + t0.right},${y0} ${ox + t1.right},${y1} ${cx},${y1}`;
+
+            const leftMidX = (ox + (isTop ? t1.left : t0.left) + cx) / 2;
+            const rightMidX = (cx + ox + (isTop ? t1.right : t0.right)) / 2;
 
             return (
               <g key={i}>
-                <polygon
-                  points={points}
-                  fill={layer.fill}
-                  stroke={layer.stroke}
-                  strokeWidth="1.5"
-                  strokeLinejoin="round"
-                />
-
-                {/* White divider line between layers */}
-                {!isTop && !isBase && (
-                  <line
-                    x1={ox + t0.left} y1={y0}
-                    x2={ox + t0.right} y2={y0}
-                    stroke="white" strokeWidth="1.5" strokeOpacity="0.5"
-                  />
-                )}
-
-                {/* Dotted horizontal line extending left and right */}
-                {hasDotLine && (
+                {!hasSplit ? (
+                  <polygon points={fullPoints} fill={layer.fillLeft} stroke={layer.stroke} strokeWidth="1.2" strokeLinejoin="round" />
+                ) : (
                   <>
-                    <line
-                      x1={0} y1={dotLineY}
-                      x2={ox + t0.left} y2={dotLineY}
-                      stroke={layer.dotColor!}
-                      strokeWidth="1"
-                      strokeDasharray="3 3"
-                      strokeOpacity="0.8"
-                    />
-                    <line
-                      x1={ox + t0.right} y1={dotLineY}
-                      x2={totalW} y2={dotLineY}
-                      stroke={layer.dotColor!}
-                      strokeWidth="1"
-                      strokeDasharray="3 3"
-                      strokeOpacity="0.8"
-                    />
-                    {/* Dot on left edge */}
-                    <circle cx={ox + t0.left} cy={dotLineY} r="3.5" fill={layer.dotColor!} />
+                    <polygon points={leftPoints} fill={layer.fillLeft} stroke={layer.stroke} strokeWidth="1.2" strokeLinejoin="round" />
+                    <polygon points={rightPoints} fill={layer.fillRight} stroke={layer.stroke} strokeWidth="1.2" strokeLinejoin="round" />
                   </>
                 )}
 
-                {/* Value OT in center */}
-                <text
-                  x={midX} y={midY + 1}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fontSize={i === layers.length - 1 ? 13 : 12}
-                  fontWeight="700"
-                  fill="white"
-                  style={{ textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}
-                >
-                  {layer.valOT}
-                </text>
+                {!isTop && (
+                  <line x1={ox + t0.left} y1={y0} x2={ox + t0.right} y2={y0} stroke="white" strokeWidth="1.5" strokeOpacity="0.4" />
+                )}
 
-                {/* Left label */}
-                <foreignObject
-                  x={0}
-                  y={y0}
-                  width={leftW - 4}
-                  height={y1 - y0}
-                >
-                  <div
-                    style={{
-                      height: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "flex-end",
-                      paddingRight: 6,
-                    }}
-                  >
-                    <span style={{
-                      fontSize: 9,
-                      color: "#94a3b8",
-                      textAlign: "right",
-                      lineHeight: 1.25,
-                      whiteSpace: "pre-line",
-                    }}>
+                {hasSplit && (
+                  <line x1={cx} y1={y0} x2={cx} y2={y1} stroke="white" strokeWidth="1.5" strokeOpacity="0.5" />
+                )}
+
+                {!isTop && layer.dotColor && (
+                  <>
+                    <line
+                      x1={ox} y1={y0} x2={ox + t0.left} y2={y0}
+                      stroke={layer.dotColor} strokeWidth="1" strokeDasharray="3 3" strokeOpacity="0.9"
+                    />
+                    <circle cx={ox + t0.left - 1} cy={y0} r="3.5" fill={layer.dotColor} />
+                  </>
+                )}
+
+                {!hasSplit ? (
+                  <text x={ox + apexX} y={midY + 1} textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight="700" fill="white">
+                    {layer.valLeft}
+                  </text>
+                ) : (
+                  <>
+                    <text x={leftMidX} y={midY - 4} textAnchor="middle" dominantBaseline="middle" fontSize="13" fontWeight="700" fill="white">
+                      {layer.valLeft}
+                    </text>
+                    <text x={rightMidX} y={midY - 4} textAnchor="middle" dominantBaseline="middle" fontSize="13" fontWeight="700" fill="white">
+                      {layer.valRight}
+                    </text>
+                    {layer.labelRight && (
+                      <text x={rightMidX} y={midY + 10} textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="rgba(255,255,255,0.85)">
+                        {layer.labelRight}
+                      </text>
+                    )}
+                  </>
+                )}
+
+                <foreignObject x={0} y={y0} width={labelPanelW - 6} height={y1 - y0}>
+                  <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 6 }}>
+                    <span style={{ fontSize: 9, color: "#94a3b8", textAlign: "right", lineHeight: 1.3, whiteSpace: "pre-line" }}>
                       {layer.label}
                     </span>
                   </div>
                 </foreignObject>
-
-                {/* Right value + label (PB column) */}
-                {layer.valPB !== null && (
-                  <foreignObject
-                    x={ox + centerW + 4}
-                    y={y0}
-                    width={rightW - 4}
-                    height={y1 - y0}
-                  >
-                    <div style={{
-                      height: "100%",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "center",
-                      paddingLeft: 4,
-                    }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0" }}>
-                        {layer.valPB}
-                      </span>
-                      <span style={{ fontSize: 9, color: "#94a3b8", lineHeight: 1.2 }}>
-                        {layer.labelPB}
-                      </span>
-                    </div>
-                  </foreignObject>
-                )}
               </g>
             );
           })}
 
-          {/* OT / PB column headers at bottom */}
-          {/* OT label — below center-left */}
-          <text
-            x={ox + apexX - 30}
-            y={svgH - 6}
-            textAnchor="middle"
-            fontSize="12"
-            fontWeight="700"
-            fill="#f59e0b"
-          ></text>
-
-          {/* PB label — below right column */}
-          <text
-            x={ox + centerW + rightW / 2}
-            y={svgH - 6}
-            textAnchor="middle"
-            fontSize="12"
-            fontWeight="700"
-            fill="#38bdf8"
-          ></text>
+          <text x={ox + apexX - (xAtY(baseY).right - apexX) / 2} y={baseY + 16} textAnchor="middle" fontSize="12" fontWeight="700" fill="#f59e0b">ОТ</text>
+          <text x={ox + apexX + (xAtY(baseY).right - apexX) / 2} y={baseY + 16} textAnchor="middle" fontSize="12" fontWeight="700" fill="#38bdf8">ПБ</text>
         </svg>
       </div>
     </div>
