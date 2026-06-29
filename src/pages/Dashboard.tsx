@@ -359,7 +359,7 @@ export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateT
                       </div>
                       <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-primary rounded-full transition-all"
+                          className="h-full rounded-full transition-all bg-yellow-500"
                           style={{ width: spbTotal > 0 ? `${(stat.count / spbTotal) * 100}%` : "0%" }}
                         />
                       </div>
