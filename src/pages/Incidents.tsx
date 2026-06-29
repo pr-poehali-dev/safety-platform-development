@@ -36,31 +36,37 @@ interface ContractorItem {
 const inp = "w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50";
 const lbl = "text-xs font-medium text-muted-foreground block mb-1";
 
-const emptyForm = () => ({
-  description: "",
-  incident_date: new Date().toISOString().slice(0, 10),
-  location: "",
-  contractor: "",
-  microtrauma: 0,
-  light_injury: 0,
-  severe_injury: 0,
-  fatal: 0,
-  no_consequences: 0,
-});
+const INCIDENT_TYPES = [
+  "Микротравма",
+  "Происшествие без последствий",
+  "Лёгкий НС",
+  "Тяжёлый НС",
+  "Смертельный НС",
+] as const;
 
-function NumField({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
-  return (
-    <div>
-      <label className={lbl}>{label}</label>
-      <input
-        type="number"
-        min={0}
-        value={value}
-        onChange={e => onChange(Math.max(0, Number(e.target.value)))}
-        className={inp}
-      />
-    </div>
-  );
+type IncidentType = typeof INCIDENT_TYPES[number];
+
+const typeToField: Record<IncidentType, keyof ReturnType<typeof emptyForm>> = {
+  "Микротравма": "microtrauma",
+  "Происшествие без последствий": "no_consequences",
+  "Лёгкий НС": "light_injury",
+  "Тяжёлый НС": "severe_injury",
+  "Смертельный НС": "fatal",
+};
+
+function emptyForm() {
+  return {
+    description: "",
+    incident_date: new Date().toISOString().slice(0, 10),
+    location: "",
+    contractor: "",
+    incident_type: "" as IncidentType | "",
+    microtrauma: 0,
+    light_injury: 0,
+    severe_injury: 0,
+    fatal: 0,
+    no_consequences: 0,
+  };
 }
 
 export default function Incidents({ user, onLogout, onTabChange, activeTab = "incidents" }: IncidentsProps) {
@@ -92,13 +98,22 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
   }, []);
 
   const handleSave = async () => {
-    if (!form.description.trim() || !form.incident_date) return;
+    if (!form.incident_date || !form.incident_type) return;
     setSaving(true);
+    const counts = { microtrauma: 0, light_injury: 0, severe_injury: 0, fatal: 0, no_consequences: 0 };
+    if (form.incident_type) {
+      const field = typeToField[form.incident_type as IncidentType];
+      (counts as Record<string, number>)[field] = 1;
+    }
     await fetch(INCIDENTS_API, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...form,
+        description: form.description,
+        incident_date: form.incident_date,
+        location: form.location,
+        contractor: form.contractor,
+        ...counts,
         created_by: user.id,
         created_by_name: user.name,
       }),
@@ -242,17 +257,6 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
             </div>
 
             <div className="px-6 py-5 space-y-4">
-              <div>
-                <label className={lbl}>Происшествие (кратко) *</label>
-                <textarea
-                  rows={3}
-                  value={form.description}
-                  onChange={e => set("description", e.target.value)}
-                  placeholder="Краткое описание происшествия"
-                  className={inp + " resize-none"}
-                />
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={lbl}>Дата происшествия *</label>
@@ -272,15 +276,27 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
                 </select>
               </div>
 
-              <div className="border-t border-border pt-4">
-                <p className="text-xs font-medium text-muted-foreground mb-3">Пострадавшие</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <NumField label="Микротравма (чел.)" value={form.microtrauma} onChange={v => set("microtrauma", v)} />
-                  <NumField label="Лёгкий НС (чел.)" value={form.light_injury} onChange={v => set("light_injury", v)} />
-                  <NumField label="Тяжёлый НС (чел.)" value={form.severe_injury} onChange={v => set("severe_injury", v)} />
-                  <NumField label="Смертельный НС (чел.)" value={form.fatal} onChange={v => set("fatal", v)} />
-                  <NumField label="Без последствий" value={form.no_consequences} onChange={v => set("no_consequences", v)} />
-                </div>
+              <div>
+                <label className={lbl}>Тип происшествия *</label>
+                <select
+                  value={form.incident_type}
+                  onChange={e => set("incident_type", e.target.value)}
+                  className={inp + (!form.incident_type ? " text-muted-foreground" : "")}
+                >
+                  <option value="">— выберите тип —</option>
+                  {INCIDENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className={lbl}>Описание происшествия</label>
+                <textarea
+                  rows={4}
+                  value={form.description}
+                  onChange={e => set("description", e.target.value)}
+                  placeholder="Подробное описание происшествия"
+                  className={inp + " resize-none"}
+                />
               </div>
             </div>
 
@@ -290,7 +306,7 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
               </button>
               <button
                 onClick={handleSave}
-                disabled={saving || !form.description.trim() || !form.incident_date}
+                disabled={saving || !form.incident_date || !form.incident_type}
                 className="flex items-center gap-2 bg-primary text-primary-foreground text-sm px-5 py-2 rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {saving ? <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" /> : <Icon name="Save" size={14} />}
