@@ -220,8 +220,8 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
             );
           })}
 
-          <text x={ox + apexX - (xAtY(baseY).right - apexX) / 2} y={baseY + 16} textAnchor="middle" fontSize="12" fontWeight="700" fill="#f59e0b">ОТ</text>
-          <text x={ox + apexX + (xAtY(baseY).right - apexX) / 2} y={baseY + 16} textAnchor="middle" fontSize="12" fontWeight="700" fill="#38bdf8">ПБ</text>
+          <text x={ox + apexX - (xAtY(baseY).right - apexX) / 2} y={baseY + 16} textAnchor="middle" fontSize="12" fontWeight="700" fill="#f59e0b"></text>
+          <text x={ox + apexX + (xAtY(baseY).right - apexX) / 2} y={baseY + 16} textAnchor="middle" fontSize="12" fontWeight="700" fill="#38bdf8"></text>
         </svg>
       </div>
     </div>
