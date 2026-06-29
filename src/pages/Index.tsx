@@ -6,6 +6,7 @@ import { AddForm } from "@/components/prescriptions/PrescriptionForm";
 import { PrescriptionDetail } from "@/components/prescriptions/PrescriptionDetail";
 import { PrescriptionList } from "@/components/prescriptions/PrescriptionList";
 import Inspections from "@/pages/Inspections";
+import Incidents from "@/pages/Incidents";
 import Dashboard from "@/pages/Dashboard";
 import Icon from "@/components/ui/icon";
 
@@ -16,7 +17,7 @@ interface IndexProps {
 
 const API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
 
-type Tab = "dashboard" | "prescriptions" | "inspections";
+type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents";
 
 export default function Index({ user, onLogout }: IndexProps) {
   const [tab, setTab] = useState<Tab>("dashboard");
@@ -68,6 +69,7 @@ export default function Index({ user, onLogout }: IndexProps) {
     { id: "dashboard" as Tab, label: "Главная", icon: "LayoutDashboard" },
     { id: "prescriptions" as Tab, label: "Предписания", icon: "ClipboardList" },
     ...(canEdit ? [{ id: "inspections" as Tab, label: "Проверки", icon: "TableProperties" }] : []),
+    { id: "incidents" as Tab, label: "Происшествия", icon: "TriangleAlert" },
   ];
 
   const header = (
@@ -111,6 +113,17 @@ export default function Index({ user, onLogout }: IndexProps) {
       </div>
     </div>
   );
+
+  if (tab === "incidents") {
+    return (
+      <Incidents
+        user={user}
+        onLogout={onLogout}
+        onTabChange={setTab}
+        activeTab={tab}
+      />
+    );
+  }
 
   if (tab === "inspections") {
     return (
@@ -197,6 +210,7 @@ export default function Index({ user, onLogout }: IndexProps) {
         onAddClick={() => setShowAdd(true)}
         onInspectionsClick={canEdit ? () => setTab("inspections") : undefined}
         onDashboardClick={() => setTab("dashboard")}
+        onIncidentsClick={() => setTab("incidents")}
         activeTab={tab}
       />
 

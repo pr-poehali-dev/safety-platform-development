@@ -110,6 +110,7 @@ interface PrescriptionListProps {
   onAddClick: () => void;
   onInspectionsClick?: () => void;
   onDashboardClick?: () => void;
+  onIncidentsClick?: () => void;
   activeTab?: string;
 }
 
@@ -117,7 +118,7 @@ export function PrescriptionList({
   user, onLogout, prescriptions, loading, search, filterStatus,
   canEdit, isContractor, activeTemplate,
   onSearchChange, onFilterChange, onSelect, onAddClick, onInspectionsClick,
-  onDashboardClick, activeTab = "prescriptions",
+  onDashboardClick, onIncidentsClick, activeTab = "prescriptions",
 }: PrescriptionListProps) {
 
   const [colFilters, setColFilters] = useState({
@@ -211,6 +212,13 @@ export function PrescriptionList({
                 Проверки
               </button>
             )}
+            <button
+              onClick={onIncidentsClick}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "incidents" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            >
+              <Icon name="TriangleAlert" size={14} />
+              Происшествия
+            </button>
           </div>
         </div>
       )}

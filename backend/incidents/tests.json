@@ -1,0 +1,11 @@
+{
+  "tests": [
+    {
+      "name": "GET incidents list",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "bodyMatcher": "any"
+    }
+  ]
+}

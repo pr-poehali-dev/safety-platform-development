@@ -6,7 +6,7 @@ import InspectionForm from "@/components/inspections/InspectionForm";
 import FilterDropdown from "@/components/inspections/FilterDropdown";
 import InspectionsTable from "@/components/inspections/InspectionsTable";
 
-type Tab = "dashboard" | "prescriptions" | "inspections";
+type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents";
 
 interface InspectionsProps {
   user: AppUser;
@@ -114,6 +114,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
             { id: "dashboard" as Tab, label: "Главная", icon: "LayoutDashboard", action: () => onTabChange ? onTabChange("dashboard") : onBack() },
             { id: "prescriptions" as Tab, label: "Предписания", icon: "ClipboardList", action: onBack },
             { id: "inspections" as Tab, label: "Проверки", icon: "TableProperties", action: () => {} },
+            { id: "incidents" as Tab, label: "Происшествия", icon: "TriangleAlert", action: () => onTabChange?.("incidents") },
           ].map(t => (
             <button
               key={t.id}
