@@ -172,12 +172,12 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
                     {layer.valLeft}
                   </text>
                 ) : i === layers.length - 1 ? (
-                  // Base layer: value left-aligned in left half, value right-aligned in right half
+                  // Base layer: values centered in each half
                   <>
-                    <text x={ox + t1.left + 10} y={midY} textAnchor="start" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
+                    <text x={(ox + t1.left + cx) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
                       {layer.valLeft}
                     </text>
-                    <text x={ox + t1.right - 10} y={midY} textAnchor="end" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
+                    <text x={(cx + ox + t1.right) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
                       {layer.valRight}
                     </text>
                   </>
