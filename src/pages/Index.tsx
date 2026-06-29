@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { AppUser } from "@/lib/auth";
 import { Template, DEFAULT_TEMPLATE } from "@/lib/template";
-import ChangePasswordModal from "@/components/ChangePasswordModal";
+import UserMenu from "@/components/UserMenu";
 import { Prescription, overallStatus } from "@/lib/prescriptionTypes";
 import { AddForm } from "@/components/prescriptions/PrescriptionForm";
 import { PrescriptionDetail } from "@/components/prescriptions/PrescriptionDetail";
@@ -22,7 +22,6 @@ type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents";
 
 export default function Index({ user: initialUser, onLogout }: IndexProps) {
   const [user, setUser] = useState<AppUser>(initialUser);
-  const [showChangePassword, setShowChangePassword] = useState(false);
   const [tab, setTab] = useState<Tab>("dashboard");
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,22 +84,7 @@ export default function Index({ user: initialUser, onLogout }: IndexProps) {
           <span className="text-sm font-semibold tracking-tight">Охрана Труда Онлайн</span>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-            {user.name}
-          </div>
-          <button
-            onClick={() => setShowChangePassword(true)}
-            title="Сменить пароль"
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors"
-          >
-            <Icon name="KeyRound" size={13} />
-            Пароль
-          </button>
-          <button onClick={onLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors">
-            <Icon name="LogOut" size={13} />
-            Выйти
-          </button>
+          <UserMenu user={user} onLogout={onLogout} onUserUpdate={setUser} />
         </div>
       </header>
 
@@ -122,13 +106,6 @@ export default function Index({ user: initialUser, onLogout }: IndexProps) {
           ))}
         </div>
       </div>
-      {showChangePassword && (
-        <ChangePasswordModal
-          user={user}
-          onClose={() => setShowChangePassword(false)}
-          onSuccess={setUser}
-        />
-      )}
     </div>
   );
 
@@ -166,32 +143,8 @@ export default function Index({ user: initialUser, onLogout }: IndexProps) {
             </div>
             <span className="text-sm font-semibold tracking-tight">Охрана Труда Онлайн</span>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-              {user.name}
-            </div>
-            <button
-              onClick={() => setShowChangePassword(true)}
-              title="Сменить пароль"
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors"
-            >
-              <Icon name="KeyRound" size={13} />
-              Пароль
-            </button>
-            <button onClick={onLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors">
-              <Icon name="LogOut" size={13} />
-              Выйти
-            </button>
-          </div>
+          <UserMenu user={user} onLogout={onLogout} onUserUpdate={setUser} />
         </header>
-        {showChangePassword && (
-          <ChangePasswordModal
-            user={user}
-            onClose={() => setShowChangePassword(false)}
-            onSuccess={setUser}
-          />
-        )}
         <div className="border-b border-border bg-background">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-1 pt-2">
             {NAV_TABS.map(t => (

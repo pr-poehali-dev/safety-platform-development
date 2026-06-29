@@ -1,5 +1,6 @@
 import Icon from "@/components/ui/icon";
 import { AppUser, ROLE_LABELS, ROLE_COLORS } from "@/lib/auth";
+import UserMenu from "@/components/UserMenu";
 import { Template } from "@/lib/template";
 import { printPrescription } from "@/lib/printPrescription";
 import {
@@ -166,22 +167,7 @@ export function PrescriptionList({
           </div>
           <span className="text-sm font-semibold tracking-tight">Охрана Труда Онлайн</span>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-            {user.name}
-            <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${ROLE_COLORS[user.role]}`}>
-              {ROLE_LABELS[user.role]}
-            </span>
-          </div>
-          <button
-            onClick={onLogout}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors"
-          >
-            <Icon name="LogOut" size={13} />
-            Выйти
-          </button>
-        </div>
+        <UserMenu user={user} onLogout={onLogout} />
       </header>
 
       {/* Навигационные вкладки */}

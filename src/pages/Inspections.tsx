@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { AppUser } from "@/lib/auth";
 import Icon from "@/components/ui/icon";
+import UserMenu from "@/components/UserMenu";
 import { API, CATEGORIES_API, OBJECTS_API, CONTRACTORS_API, Inspection, InspectionFormData, ContractorItem, emptyForm } from "@/components/inspections/types";
 import InspectionForm from "@/components/inspections/InspectionForm";
 import FilterDropdown from "@/components/inspections/FilterDropdown";
@@ -95,16 +96,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
           </div>
           <span className="text-sm font-semibold tracking-tight">Охрана Труда Онлайн</span>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-            {user.name}
-          </div>
-          <button onClick={onLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors">
-            <Icon name="LogOut" size={13} />
-            Выйти
-          </button>
-        </div>
+        <UserMenu user={user} onLogout={onLogout} />
       </header>
 
       {/* Вкладки навигации */}
