@@ -350,7 +350,7 @@ export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateT
                   <span className="inline-flex items-center bg-primary/10 text-primary border border-primary/20 rounded px-2 py-0.5 font-bold text-xs tracking-wide">СПБ</span>
                   <span className="text-sm font-semibold text-foreground">Стратегические приоритеты безопасности</span>
                 </div>
-                <span className="text-xl font-bold text-primary">{spbTotal}</span>
+                <span className="font-bold text-primary text-3xl">{spbTotal}</span>
               </div>
               <div className="space-y-1.5">
                 {spbStats.map(stat => (
