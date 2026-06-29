@@ -92,7 +92,7 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
   ];
 
   const labelPanelW = 90;
-  const totalSvgW = labelPanelW + W;
+  const totalSvgW = labelPanelW + W + labelPanelW;
   const totalSvgH = H;
   const ox = labelPanelW;
 
@@ -171,6 +171,16 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
                   <text x={ox + apexX} y={midY + 1} textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight="700" fill="white">
                     {layer.valLeft}
                   </text>
+                ) : i === layers.length - 1 ? (
+                  // Base layer: value left-aligned in left half, value right-aligned in right half
+                  <>
+                    <text x={ox + t1.left + 10} y={midY} textAnchor="start" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
+                      {layer.valLeft}
+                    </text>
+                    <text x={ox + t1.right - 10} y={midY} textAnchor="end" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
+                      {layer.valRight}
+                    </text>
+                  </>
                 ) : (
                   <>
                     <text x={leftMidX} y={midY - 4} textAnchor="middle" dominantBaseline="middle" fontSize="13" fontWeight="700" fill="white">
@@ -187,6 +197,7 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
                   </>
                 )}
 
+                {/* Left label panel */}
                 <foreignObject x={0} y={y0} width={labelPanelW - 6} height={y1 - y0}>
                   <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 6 }}>
                     <span style={{ fontSize: 9, color: "#94a3b8", textAlign: "right", lineHeight: 1.3, whiteSpace: "pre-line" }}>
@@ -194,6 +205,17 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
                     </span>
                   </div>
                 </foreignObject>
+
+                {/* Right label panel — only for base layer */}
+                {i === layers.length - 1 && layer.labelRight && (
+                  <foreignObject x={ox + W + 4} y={y0} width={labelPanelW - 4} height={y1 - y0}>
+                    <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: 6 }}>
+                      <span style={{ fontSize: 9, color: "#94a3b8", textAlign: "left", lineHeight: 1.3, whiteSpace: "pre-line" }}>
+                        {layer.labelRight}
+                      </span>
+                    </div>
+                  </foreignObject>
+                )}
               </g>
             );
           })}
