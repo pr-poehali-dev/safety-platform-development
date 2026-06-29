@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { AppUser } from "@/lib/auth";
 import { Template, DEFAULT_TEMPLATE } from "@/lib/template";
+import ChangePasswordModal from "@/components/ChangePasswordModal";
 import { Prescription, overallStatus } from "@/lib/prescriptionTypes";
 import { AddForm } from "@/components/prescriptions/PrescriptionForm";
 import { PrescriptionDetail } from "@/components/prescriptions/PrescriptionDetail";
@@ -19,7 +20,9 @@ const API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69"
 
 type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents";
 
-export default function Index({ user, onLogout }: IndexProps) {
+export default function Index({ user: initialUser, onLogout }: IndexProps) {
+  const [user, setUser] = useState<AppUser>(initialUser);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [tab, setTab] = useState<Tab>("dashboard");
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +89,14 @@ export default function Index({ user, onLogout }: IndexProps) {
             <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
             {user.name}
           </div>
+          <button
+            onClick={() => setShowChangePassword(true)}
+            title="Сменить пароль"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors"
+          >
+            <Icon name="KeyRound" size={13} />
+            Пароль
+          </button>
           <button onClick={onLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors">
             <Icon name="LogOut" size={13} />
             Выйти
@@ -111,6 +122,13 @@ export default function Index({ user, onLogout }: IndexProps) {
           ))}
         </div>
       </div>
+      {showChangePassword && (
+        <ChangePasswordModal
+          user={user}
+          onClose={() => setShowChangePassword(false)}
+          onSuccess={setUser}
+        />
+      )}
     </div>
   );
 
@@ -153,12 +171,27 @@ export default function Index({ user, onLogout }: IndexProps) {
               <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
               {user.name}
             </div>
+            <button
+              onClick={() => setShowChangePassword(true)}
+              title="Сменить пароль"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors"
+            >
+              <Icon name="KeyRound" size={13} />
+              Пароль
+            </button>
             <button onClick={onLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors">
               <Icon name="LogOut" size={13} />
               Выйти
             </button>
           </div>
         </header>
+        {showChangePassword && (
+          <ChangePasswordModal
+            user={user}
+            onClose={() => setShowChangePassword(false)}
+            onSuccess={setUser}
+          />
+        )}
         <div className="border-b border-border bg-background">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-1 pt-2">
             {NAV_TABS.map(t => (
