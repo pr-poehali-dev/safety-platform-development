@@ -121,10 +121,10 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
             const isTop = i === 0;
             const hasSplit = layer.valRight !== null;
             const midY = (y0 + y1) / 2;
-            // Split line parallel to right side of pyramid: 20% of BASE width from right edge
-            const pbWidthAtBase = (baseRight - baseLeft) * 0.2;
-            const cx0 = ox + t0.right - pbWidthAtBase * ((y0 - apexY) / totalH);
-            const cx1 = ox + t1.right - pbWidthAtBase * ((y1 - apexY) / totalH);
+            // Split line parallel to right side: fixed horizontal offset from right edge
+            const pbOffset = (baseRight - baseLeft) * 0.2;
+            const cx0 = ox + t0.right - pbOffset;
+            const cx1 = ox + t1.right - pbOffset;
             const cxMid = (cx0 + cx1) / 2;
 
             const fullPoints = isTop
