@@ -98,6 +98,7 @@ export interface Remark {
   id: string;
   place: string;
   category: string;
+  work_suspended: boolean;
   description: string;
   normRef: string;
   deadline: string;
@@ -172,5 +173,5 @@ export function overallStatus(remarks: Remark[]): Status {
 }
 
 export function newRemark(): Remark {
-  return { id: Date.now().toString() + Math.random(), place: "", category: "", description: "", normRef: "", deadline: "", status: "Выдано" };
+  return { id: Date.now().toString() + Math.random(), place: "", category: "", work_suspended: false, description: "", normRef: "", deadline: "", status: "Выдано" };
 }

@@ -185,6 +185,12 @@ function RemarkRow({
           {categories.map(c => <option key={c} value={c}>{c}</option>)}
         </SelectBase>
       </Field>
+      <Field label="Работы приостановлены">
+        <SelectBase value={remark.work_suspended ? "yes" : "no"} onChange={e => set("work_suspended", e.target.value === "yes")}>
+          <option value="no">Нет</option>
+          <option value="yes">Да</option>
+        </SelectBase>
+      </Field>
       <Field label="Описание нарушения *">
         <TextareaBase value={remark.description} onChange={e => set("description", e.target.value)} placeholder="Опишите выявленное нарушение" rows={4} />
       </Field>
