@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as XLSX from "xlsx";
 import Icon from "@/components/ui/icon";
 
 const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
@@ -152,6 +153,55 @@ export function PrescriptionsTab() {
     setEditPrescription(null);
   };
 
+  const handleExport = () => {
+    const rows: Record<string, string | number>[] = [];
+    filteredPrescriptions.forEach(p => {
+      const status = overallStatus(p.remarks);
+      if (p.remarks.length === 0) {
+        rows.push({
+          "Номер": p.number,
+          "Дата": p.date,
+          "Объект": p.object,
+          "Подрядчик": p.contractor,
+          "Инспектор": p.inspector,
+          "В присутствии": p.representative,
+          "Ответственный": p.responsible,
+          "Статус предписания": status,
+          "Замечание №": "",
+          "Место нарушения": "",
+          "Описание нарушения": "",
+          "НПА/ЛНА": "",
+          "Срок устранения": "",
+          "Статус замечания": "",
+        });
+      } else {
+        p.remarks.forEach((r, idx) => {
+          rows.push({
+            "Номер": idx === 0 ? p.number : "",
+            "Дата": idx === 0 ? p.date : "",
+            "Объект": idx === 0 ? p.object : "",
+            "Подрядчик": idx === 0 ? p.contractor : "",
+            "Инспектор": idx === 0 ? p.inspector : "",
+            "В присутствии": idx === 0 ? p.representative : "",
+            "Ответственный": idx === 0 ? p.responsible : "",
+            "Статус предписания": idx === 0 ? status : "",
+            "Замечание №": idx + 1,
+            "Место нарушения": r.place,
+            "Описание нарушения": r.description,
+            "НПА/ЛНА": r.normRef,
+            "Срок устранения": r.deadline,
+            "Статус замечания": effectiveStatus(r),
+          });
+        });
+      }
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [8, 12, 22, 22, 20, 20, 20, 16, 10, 20, 35, 20, 14, 14].map(w => ({ wch: w }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Предписания");
+    XLSX.writeFile(wb, `Предписания_${new Date().toLocaleDateString("ru-RU").replace(/\./g, "-")}.xlsx`);
+  };
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -161,14 +211,24 @@ export function PrescriptionsTab() {
             {pLoading ? "Загрузка..." : `Всего: ${prescriptions.length}`}
           </p>
         </div>
-        <div className="relative max-w-xs w-full">
-          <Icon name="Search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={pSearch}
-            onChange={e => setPSearch(e.target.value)}
-            placeholder="Поиск по номеру, объекту..."
-            className="w-full bg-card border border-border rounded-lg pl-8 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-          />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
+            <Icon name="Search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={pSearch}
+              onChange={e => setPSearch(e.target.value)}
+              placeholder="Поиск по номеру, объекту..."
+              className="w-full bg-card border border-border rounded-lg pl-8 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+            />
+          </div>
+          <button
+            onClick={handleExport}
+            disabled={filteredPrescriptions.length === 0}
+            className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+          >
+            <Icon name="Download" size={14} />
+            Экспорт в Excel
+          </button>
         </div>
       </div>
 
