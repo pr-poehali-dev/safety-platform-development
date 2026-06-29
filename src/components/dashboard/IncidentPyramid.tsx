@@ -100,7 +100,7 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
     <div className="bg-card border border-border rounded-xl p-4 flex flex-col h-full py-0 my-0">
       {year && (
         <div className="text-center mb-0.5">
-          <span className="text-sm text-foreground font-black">{year} год</span>
+          <span className="text-foreground font-black text-sm"></span>
         </div>
       )}
       <h3 className="text-sm font-semibold text-primary text-center mb-2">Пирамида происшествий (НИТ)</h3>

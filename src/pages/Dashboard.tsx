@@ -319,7 +319,7 @@ export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateT
 
           {/* Предписания 2x2 */}
           <div>
-            <h2 className="text-base font-semibold mb-3">Предписания</h2>
+            <h2 className="text-base font-semibold mb-3 py-[15px]">Предписания</h2>
             <div className="grid grid-cols-2 gap-3">
               <StatCard label="Всего предписаний" value={presTotal} icon="ClipboardList" color="bg-indigo-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Все") : undefined} />
               <StatCard label="Выдано" value={presIssued} icon="Send" color="bg-primary" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Выдано") : undefined} />
