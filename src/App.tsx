@@ -19,7 +19,22 @@ const App = () => {
 
   useEffect(() => {
     fetchUsers()
-      .then(setUsers)
+      .then(fetched => {
+        setUsers(fetched);
+        // Обновляем данные залогиненного пользователя из свежего списка
+        const session = loadSession();
+        if (session) {
+          const fresh = fetched.find(u => u.id === session.id);
+          if (fresh) {
+            saveSession(fresh);
+            setUser(fresh);
+          } else {
+            // Пользователь удалён — разлогиниваем
+            clearSession();
+            setUser(null);
+          }
+        }
+      })
       .catch(() => setUsers([]))
       .finally(() => setUsersLoading(false));
   }, []);
