@@ -14,14 +14,14 @@ import Icon from "@/components/ui/icon";
 interface IndexProps {
   user: AppUser;
   onLogout: () => void;
+  onUserUpdate?: (u: AppUser) => void;
 }
 
 const API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
 
 type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents";
 
-export default function Index({ user: initialUser, onLogout }: IndexProps) {
-  const [user, setUser] = useState<AppUser>(initialUser);
+export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
   const [tab, setTab] = useState<Tab>("dashboard");
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +84,7 @@ export default function Index({ user: initialUser, onLogout }: IndexProps) {
           <span className="text-sm font-semibold tracking-tight">Охрана Труда Онлайн</span>
         </div>
         <div className="flex items-center gap-3">
-          <UserMenu user={user} onLogout={onLogout} onUserUpdate={setUser} />
+          <UserMenu user={user} onLogout={onLogout} onUserUpdate={onUserUpdate} />
         </div>
       </header>
 
@@ -143,7 +143,7 @@ export default function Index({ user: initialUser, onLogout }: IndexProps) {
             </div>
             <span className="text-sm font-semibold tracking-tight">Охрана Труда Онлайн</span>
           </div>
-          <UserMenu user={user} onLogout={onLogout} onUserUpdate={setUser} />
+          <UserMenu user={user} onLogout={onLogout} onUserUpdate={onUserUpdate} />
         </header>
         <div className="border-b border-border bg-background">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-1 pt-2">

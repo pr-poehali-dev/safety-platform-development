@@ -38,7 +38,10 @@ const App = () => {
     setUsers(updated);
     if (user) {
       const updatedSelf = updated.find(u => u.id === user.id);
-      if (updatedSelf) saveSession(updatedSelf);
+      if (updatedSelf) {
+        saveSession(updatedSelf);
+        setUser(updatedSelf);
+      }
     }
   };
 
@@ -70,7 +73,7 @@ const App = () => {
                 !user ? <Navigate to="/login" replace /> :
                 user.role === "admin"
                   ? <Admin currentUser={user} users={users} onUsersChange={handleUsersChange} onLogout={handleLogout} />
-                  : <Index user={user} onLogout={handleLogout} />
+                  : <Index user={user} onLogout={handleLogout} onUserUpdate={u => { saveSession(u); setUser(u); }} />
               }
             />
             <Route path="*" element={<NotFound />} />
