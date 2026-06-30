@@ -9,6 +9,8 @@ import PivotTable from "@/components/dashboard/PivotTable";
 import RemarksChart from "@/components/dashboard/RemarksChart";
 import IncidentPyramid from "@/components/dashboard/IncidentPyramid";
 import { type PivotRow } from "@/components/dashboard/PivotTable";
+import { useTasks } from "@/hooks/useTasks";
+import { TASK_STATUS_LABELS, TASK_STATUS_COLORS, TaskStatus } from "@/lib/taskTypes";
 
 const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
 const INSPECTIONS_API = "https://functions.poehali.dev/b2222d00-a1b0-43fd-966d-3f39732867c3";
@@ -37,6 +39,7 @@ interface DashboardProps {
   onNavigateToPrescriptions?: (status?: string) => void;
   onNavigateToInspections?: (suspended?: boolean) => void;
   onNavigateToIncidents?: () => void;
+  onNavigateToTasks?: () => void;
 }
 
 function StatCard({ label, value, icon, color, onClick }: {
@@ -66,7 +69,7 @@ function parseDate(str: string): Date | null {
   return new Date(y, m - 1, d);
 }
 
-export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateToInspections, onNavigateToIncidents }: DashboardProps) {
+export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateToInspections, onNavigateToIncidents, onNavigateToTasks }: DashboardProps) {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -78,6 +81,8 @@ export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateT
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [contractorOpen, setContractorOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
+
+  const { assignments: taskAssignments } = useTasks(user);
 
   useEffect(() => {
     Promise.all([
@@ -337,6 +342,95 @@ export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateT
               <StatCard label="Приостановлено работ" value={inspSuspended} icon="OctagonX" color="bg-red-600" onClick={onNavigateToInspections ? () => onNavigateToInspections(true) : undefined} />
             </div>
           </div>
+
+          {/* Задачи */}
+          {taskAssignments.length > 0 && (() => {
+            const overdue = taskAssignments.filter(a => a.status === "overdue").length;
+            const active = taskAssignments.filter(a => a.status === "active").length;
+            const pending = taskAssignments.filter(a => ["extension_pending", "pending_report"].includes(a.status)).length;
+            const done = taskAssignments.filter(a => a.status === "done").length;
+            const statusGroups = (["overdue", "active", "extension_pending", "pending_report", "revision", "done"] as TaskStatus[])
+              .map(s => ({ status: s, count: taskAssignments.filter(a => a.status === s).length }))
+              .filter(g => g.count > 0);
+
+            return (
+              <div>
+                <div className="flex items-center justify-between mb-3 py-[15px]">
+                  <h2 className="text-base font-semibold">Задачи</h2>
+                  {onNavigateToTasks && (
+                    <button onClick={onNavigateToTasks} className="text-xs text-primary hover:opacity-80 transition-opacity flex items-center gap-1">
+                      Все задачи <Icon name="ChevronRight" size={12} />
+                    </button>
+                  )}
+                </div>
+                <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div
+                      onClick={onNavigateToTasks}
+                      className={`rounded-lg p-3 flex items-center gap-3 ${overdue > 0 ? "bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors" : "bg-muted/30"}`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${overdue > 0 ? "bg-red-500" : "bg-muted"}`}>
+                        <Icon name="AlertCircle" size={15} className="text-white" />
+                      </div>
+                      <div>
+                        <p className={`text-lg font-bold leading-tight ${overdue > 0 ? "text-red-400" : ""}`}>{overdue}</p>
+                        <p className="text-xs text-muted-foreground">Просрочено</p>
+                      </div>
+                    </div>
+                    <div
+                      onClick={onNavigateToTasks}
+                      className={`rounded-lg p-3 flex items-center gap-3 ${pending > 0 ? "bg-yellow-500/10 border border-yellow-500/20 cursor-pointer hover:bg-yellow-500/20 transition-colors" : "bg-muted/30"}`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${pending > 0 ? "bg-yellow-500" : "bg-muted"}`}>
+                        <Icon name="Clock" size={15} className="text-white" />
+                      </div>
+                      <div>
+                        <p className={`text-lg font-bold leading-tight ${pending > 0 ? "text-yellow-400" : ""}`}>{pending}</p>
+                        <p className="text-xs text-muted-foreground">Требует внимания</p>
+                      </div>
+                    </div>
+                    <div className="rounded-lg p-3 flex items-center gap-3 bg-muted/30">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-500">
+                        <Icon name="ListChecks" size={15} className="text-white" />
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold leading-tight">{active}</p>
+                        <p className="text-xs text-muted-foreground">В работе</p>
+                      </div>
+                    </div>
+                    <div className="rounded-lg p-3 flex items-center gap-3 bg-muted/30">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-green-500">
+                        <Icon name="CheckCircle2" size={15} className="text-white" />
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold leading-tight">{done}</p>
+                        <p className="text-xs text-muted-foreground">Выполнено</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Мини-список последних требующих внимания */}
+                  {(overdue > 0 || pending > 0) && (
+                    <div className="border-t border-border pt-3 space-y-1.5">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Требуют действий</p>
+                      {taskAssignments
+                        .filter(a => ["overdue", "extension_pending", "pending_report", "revision"].includes(a.status))
+                        .slice(0, 3)
+                        .map(a => (
+                          <div key={a.id} onClick={onNavigateToTasks} className="flex items-center gap-2 cursor-pointer hover:bg-muted/40 rounded-lg px-2 py-1.5 transition-colors -mx-2">
+                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full border flex-shrink-0 ${TASK_STATUS_COLORS[a.status]}`}>
+                              {TASK_STATUS_LABELS[a.status]}
+                            </span>
+                            <p className="text-xs text-muted-foreground truncate flex-1">{a.description}</p>
+                            <span className="text-xs text-muted-foreground flex-shrink-0">{a.assignee_name.split(" ")[0]}</span>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Правая колонка: СПБ + Пирамида */}

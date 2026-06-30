@@ -245,6 +245,7 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
             setInspectionsSuspended(suspended ?? false);
             setTab("inspections");
           }}
+          onNavigateToTasks={() => setTab("tasks")}
         />
       </div>
     );
