@@ -30,6 +30,7 @@ export interface Template {
   isDefault: boolean;
   paperSize: "A4" | "A3";
   orientation: "portrait" | "landscape";
+  content?: string;
 }
 
 export const DEFAULT_TEMPLATE: Omit<Template, "id" | "name" | "isDefault"> = {
