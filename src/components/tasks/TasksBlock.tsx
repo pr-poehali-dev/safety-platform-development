@@ -11,6 +11,7 @@ interface TasksBlockProps {
   assignments: TaskAssignment[];
   loading: boolean;
   initialFilter?: string;
+  initialTaskId?: number;
   onCreateTask: (description: string, assignees: { login: string; name: string; role: string; due_date: string }[]) => Promise<void>;
   onUpdateTask: (task_id: number, description: string, assignees: { login: string; name: string; assignment_id?: number; due_date: string }[]) => Promise<void>;
   onDeleteTask: (task_id: number) => Promise<void>;
@@ -40,7 +41,7 @@ function fmt(dt: string | null | undefined) {
   return new Date(dt).toLocaleDateString("ru-RU");
 }
 
-export default function TasksBlock({ user, availableUsers, assignments, loading, initialFilter, onCreateTask, onUpdateTask, onDeleteTask, onAction, onSendComment, onFetchComments }: TasksBlockProps) {
+export default function TasksBlock({ user, availableUsers, assignments, loading, initialFilter, initialTaskId, onCreateTask, onUpdateTask, onDeleteTask, onAction, onSendComment, onFetchComments }: TasksBlockProps) {
 
   const [selected, setSelected] = useState<TaskAssignment | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -53,6 +54,13 @@ export default function TasksBlock({ user, availableUsers, assignments, loading,
   useEffect(() => {
     if (initialFilter) setStatusFilter(initialFilter);
   }, [initialFilter]);
+
+  useEffect(() => {
+    if (initialTaskId && assignments.length > 0) {
+      const found = assignments.find(a => a.id === initialTaskId);
+      if (found) setSelected(found);
+    }
+  }, [initialTaskId, assignments]);
 
   const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set());
   const [showBulkDate, setShowBulkDate] = useState(false);

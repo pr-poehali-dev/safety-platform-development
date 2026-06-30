@@ -39,7 +39,7 @@ interface DashboardProps {
   onNavigateToPrescriptions?: (status?: string) => void;
   onNavigateToInspections?: (suspended?: boolean) => void;
   onNavigateToIncidents?: () => void;
-  onNavigateToTasks?: (filter?: string) => void;
+  onNavigateToTasks?: (filter?: string, taskId?: number) => void;
 }
 
 function StatCard({ label, value, icon, color, onClick }: {
@@ -430,7 +430,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
                         .filter(a => ["overdue", "extension_pending", "pending_report", "revision"].includes(a.status))
                         .slice(0, 3)
                         .map(a => (
-                          <div key={a.id} onClick={() => onNavigateToTasks?.()} className="flex items-center gap-2 cursor-pointer hover:bg-muted/40 rounded-lg px-2 py-1.5 transition-colors -mx-2">
+                          <div key={a.id} onClick={() => onNavigateToTasks?.(undefined, a.id)} className="flex items-center gap-2 cursor-pointer hover:bg-muted/40 rounded-lg px-2 py-1.5 transition-colors -mx-2">
                             <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full border flex-shrink-0 ${TASK_STATUS_COLORS[a.status]}`}>
                               {TASK_STATUS_LABELS[a.status]}
                             </span>
