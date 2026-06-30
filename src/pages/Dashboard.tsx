@@ -386,7 +386,7 @@ export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateT
                       </div>
                       <div>
                         <p className={`text-lg font-bold leading-tight ${pending > 0 ? "text-yellow-400" : ""}`}>{pending}</p>
-                        <p className="text-xs text-muted-foreground">Требует внимания</p>
+                        <p className="text-xs text-muted-foreground">На согласовании</p>
                       </div>
                     </div>
                     <div className="rounded-lg p-3 flex items-center gap-3 bg-muted/30">
