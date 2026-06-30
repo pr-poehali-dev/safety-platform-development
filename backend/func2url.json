@@ -1,4 +1,8 @@
 {
+  "task-comments": "https://functions.poehali.dev/c2751a4b-682c-4ef9-ac9e-8dfb976f5758",
+  "task-notifications": "https://functions.poehali.dev/644be78f-101c-4b5a-9b70-fe30ce8f0bdd",
+  "tasks": "https://functions.poehali.dev/3cd2f397-c85b-47cf-88b9-f1d303552101",
+  "task-actions": "https://functions.poehali.dev/570e5413-e4df-4335-9a01-f1ae1c598955",
   "incidents": "https://functions.poehali.dev/4aedfdd0-d096-43ad-b4e7-b7b2aec3f753",
   "contractors": "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b",
   "objects": "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839",
