@@ -39,7 +39,7 @@ interface DashboardProps {
   onNavigateToPrescriptions?: (status?: string) => void;
   onNavigateToInspections?: (suspended?: boolean) => void;
   onNavigateToIncidents?: () => void;
-  onNavigateToTasks?: () => void;
+  onNavigateToTasks?: (filter?: string) => void;
 }
 
 function StatCard({ label, value, icon, color, onClick }: {
@@ -349,64 +349,77 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
             const active = taskAssignments.filter(a => ["active", "revision"].includes(a.status)).length;
             const pending = taskAssignments.filter(a => ["extension_pending", "pending_report"].includes(a.status)).length;
             const done = taskAssignments.filter(a => a.status === "done").length;
-            const statusGroups = (["overdue", "active", "extension_pending", "pending_report", "revision", "done"] as TaskStatus[])
-              .map(s => ({ status: s, count: taskAssignments.filter(a => a.status === s).length }))
-              .filter(g => g.count > 0);
+
+            const badges = [
+              {
+                filter: "overdue",
+                count: overdue,
+                label: "Просрочено",
+                icon: "AlertCircle",
+                activeColor: "bg-red-500/10 border-red-500/30",
+                iconColor: "bg-red-500",
+                textColor: "text-red-400",
+              },
+              {
+                filter: "pending",
+                count: pending,
+                label: "На согласовании",
+                icon: "Clock",
+                activeColor: "bg-yellow-500/10 border-yellow-500/30",
+                iconColor: "bg-yellow-500",
+                textColor: "text-yellow-400",
+              },
+              {
+                filter: "active",
+                count: active,
+                label: "В работе",
+                icon: "ListChecks",
+                activeColor: "bg-blue-500/10 border-blue-500/30",
+                iconColor: "bg-blue-500",
+                textColor: "text-blue-400",
+              },
+              {
+                filter: "done",
+                count: done,
+                label: "Выполнено",
+                icon: "CheckCircle2",
+                activeColor: "bg-green-500/10 border-green-500/30",
+                iconColor: "bg-green-500",
+                textColor: "text-green-400",
+              },
+            ];
 
             return (
               <div>
                 <div className="flex items-center justify-between py-0 my-0">
                   <h2 className="text-base font-semibold">Задачи</h2>
                   {onNavigateToTasks && (
-                    <button onClick={onNavigateToTasks} className="text-xs text-primary hover:opacity-80 transition-opacity flex items-center gap-1">
+                    <button onClick={() => onNavigateToTasks()} className="text-xs text-primary hover:opacity-80 transition-opacity flex items-center gap-1">
                       Все задачи <Icon name="ChevronRight" size={12} />
                     </button>
                   )}
                 </div>
                 <div className="bg-card border border-border rounded-xl p-4 space-y-3">
                   <div className="grid grid-cols-2 gap-3">
-                    <div
-                      onClick={onNavigateToTasks}
-                      className={`rounded-lg p-3 flex items-center gap-3 ${overdue > 0 ? "bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors" : "bg-muted/30"}`}
-                    >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${overdue > 0 ? "bg-red-500" : "bg-muted"}`}>
-                        <Icon name="AlertCircle" size={15} className="text-white" />
+                    {badges.map(b => (
+                      <div
+                        key={b.filter}
+                        onClick={() => onNavigateToTasks?.(b.filter)}
+                        className={`rounded-lg p-3 flex items-center gap-3 border cursor-pointer transition-all select-none ${
+                          b.count > 0
+                            ? `${b.activeColor} hover:opacity-80`
+                            : "bg-muted/30 border-transparent hover:bg-muted/50"
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${b.count > 0 ? b.iconColor : "bg-muted"}`}>
+                          <Icon name={b.icon as never} size={15} className="text-white" />
+                        </div>
+                        <div>
+                          <p className={`text-lg font-bold leading-tight ${b.count > 0 ? b.textColor : ""}`}>{b.count}</p>
+                          <p className="text-xs text-muted-foreground">{b.label}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className={`text-lg font-bold leading-tight ${overdue > 0 ? "text-red-400" : ""}`}>{overdue}</p>
-                        <p className="text-xs text-muted-foreground">Просрочено</p>
-                      </div>
-                    </div>
-                    <div
-                      onClick={onNavigateToTasks}
-                      className={`rounded-lg p-3 flex items-center gap-3 ${pending > 0 ? "bg-yellow-500/10 border border-yellow-500/20 cursor-pointer hover:bg-yellow-500/20 transition-colors" : "bg-muted/30"}`}
-                    >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${pending > 0 ? "bg-yellow-500" : "bg-muted"}`}>
-                        <Icon name="Clock" size={15} className="text-white" />
-                      </div>
-                      <div>
-                        <p className={`text-lg font-bold leading-tight ${pending > 0 ? "text-yellow-400" : ""}`}>{pending}</p>
-                        <p className="text-xs text-muted-foreground">На согласовании</p>
-                      </div>
-                    </div>
-                    <div className="rounded-lg p-3 flex items-center gap-3 bg-muted/30">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-500">
-                        <Icon name="ListChecks" size={15} className="text-white" />
-                      </div>
-                      <div>
-                        <p className="text-lg font-bold leading-tight">{active}</p>
-                        <p className="text-xs text-muted-foreground">В работе</p>
-                      </div>
-                    </div>
-                    <div className="rounded-lg p-3 flex items-center gap-3 bg-muted/30">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-green-500">
-                        <Icon name="CheckCircle2" size={15} className="text-white" />
-                      </div>
-                      <div>
-                        <p className="text-lg font-bold leading-tight">{done}</p>
-                        <p className="text-xs text-muted-foreground">Выполнено</p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
 
                   {/* Мини-список последних требующих внимания */}
@@ -417,7 +430,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
                         .filter(a => ["overdue", "extension_pending", "pending_report", "revision"].includes(a.status))
                         .slice(0, 3)
                         .map(a => (
-                          <div key={a.id} onClick={onNavigateToTasks} className="flex items-center gap-2 cursor-pointer hover:bg-muted/40 rounded-lg px-2 py-1.5 transition-colors -mx-2">
+                          <div key={a.id} onClick={() => onNavigateToTasks?.()} className="flex items-center gap-2 cursor-pointer hover:bg-muted/40 rounded-lg px-2 py-1.5 transition-colors -mx-2">
                             <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full border flex-shrink-0 ${TASK_STATUS_COLORS[a.status]}`}>
                               {TASK_STATUS_LABELS[a.status]}
                             </span>

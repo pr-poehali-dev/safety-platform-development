@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TaskAssignment, TaskComment, TASK_STATUS_LABELS, TASK_STATUS_COLORS } from "@/lib/taskTypes";
 import { AppUser } from "@/lib/auth";
 import TaskCard from "./TaskCard";
@@ -10,6 +10,7 @@ interface TasksBlockProps {
   availableUsers: { login: string; name: string; role: string }[];
   assignments: TaskAssignment[];
   loading: boolean;
+  initialFilter?: string;
   onCreateTask: (description: string, assignees: { login: string; name: string; role: string; due_date: string }[]) => Promise<void>;
   onUpdateTask: (task_id: number, description: string, assignees: { login: string; name: string; assignment_id?: number; due_date: string }[]) => Promise<void>;
   onDeleteTask: (task_id: number) => Promise<void>;
@@ -22,26 +23,36 @@ const STATUS_FILTERS: { value: string; label: string }[] = [
   { value: "all", label: "Все" },
   { value: "active", label: "В работе" },
   { value: "overdue", label: "Просроченные" },
-  { value: "extension_pending", label: "На согласовании" },
-  { value: "pending_report", label: "Отчёт на проверке" },
-  { value: "revision", label: "Доработка" },
+  { value: "pending", label: "На согласовании" },
   { value: "done", label: "Выполненные" },
 ];
+
+// Составные фильтры: один ключ → несколько статусов
+const FILTER_STATUSES: Record<string, string[]> = {
+  active: ["active", "revision"],
+  pending: ["extension_pending", "pending_report"],
+  overdue: ["overdue"],
+  done: ["done"],
+};
 
 function fmt(dt: string | null | undefined) {
   if (!dt) return "—";
   return new Date(dt).toLocaleDateString("ru-RU");
 }
 
-export default function TasksBlock({ user, availableUsers, assignments, loading, onCreateTask, onUpdateTask, onDeleteTask, onAction, onSendComment, onFetchComments }: TasksBlockProps) {
+export default function TasksBlock({ user, availableUsers, assignments, loading, initialFilter, onCreateTask, onUpdateTask, onDeleteTask, onAction, onSendComment, onFetchComments }: TasksBlockProps) {
 
   const [selected, setSelected] = useState<TaskAssignment | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<TaskAssignment | null>(null);
 
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(initialFilter ?? "all");
   const [assigneeFilter, setAssigneeFilter] = useState("");
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    if (initialFilter) setStatusFilter(initialFilter);
+  }, [initialFilter]);
 
   const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set());
   const [showBulkDate, setShowBulkDate] = useState(false);
@@ -56,7 +67,10 @@ export default function TasksBlock({ user, availableUsers, assignments, loading,
   const canCreate = isManager || isSpecialist || isAdmin;
 
   const filtered = assignments.filter(a => {
-    if (statusFilter !== "all" && a.status !== statusFilter) return false;
+    if (statusFilter !== "all") {
+      const allowed = FILTER_STATUSES[statusFilter] ?? [statusFilter];
+      if (!allowed.includes(a.status)) return false;
+    }
     if (assigneeFilter && a.assignee_login !== assigneeFilter) return false;
     if (search && !a.description.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
@@ -105,7 +119,7 @@ export default function TasksBlock({ user, availableUsers, assignments, loading,
     if (selected?.task_id === a.task_id) setSelected(null);
   };
 
-  const pendingCount = assignments.filter(a => ["extension_pending", "pending_report"].includes(a.status)).length;
+  const pendingCount = assignments.filter(a => (FILTER_STATUSES.pending ?? []).includes(a.status)).length;
   const overdueCount = assignments.filter(a => a.status === "overdue").length;
 
   return (

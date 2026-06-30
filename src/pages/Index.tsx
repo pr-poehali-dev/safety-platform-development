@@ -33,6 +33,7 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
   const [filterStatus, setFilterStatus] = useState<string>("Все");
   const [search, setSearch] = useState("");
   const [inspectionsSuspended, setInspectionsSuspended] = useState(false);
+  const [taskFilter, setTaskFilter] = useState<string | undefined>(undefined);
   const [activeTemplate, setActiveTemplate] = useState<Template>({ ...DEFAULT_TEMPLATE, id: "default", name: "По умолчанию", isDefault: true });
   const [availableUsers, setAvailableUsers] = useState<{ login: string; name: string; role: string }[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -236,6 +237,7 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
             availableUsers={availableUsers}
             assignments={assignments}
             loading={false}
+            initialFilter={taskFilter}
             onCreateTask={createTask}
             onUpdateTask={updateTask}
             onDeleteTask={deleteTask}
@@ -264,7 +266,7 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
             setInspectionsSuspended(suspended ?? false);
             setTab("inspections");
           }}
-          onNavigateToTasks={() => setTab("tasks")}
+          onNavigateToTasks={(filter) => { setTaskFilter(filter); setTab("tasks"); }}
         />
       </div>
     );
