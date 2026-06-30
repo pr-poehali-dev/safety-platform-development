@@ -78,7 +78,7 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm());
 
-  const canAdd = user.role === "admin" || user.role === "specialist";
+  const canAdd = user.role === "admin" || user.role === "specialist" || user.role === "manager";
 
   const load = () => {
     setLoading(true);
