@@ -324,7 +324,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
 
           {/* Предписания 2x2 */}
           <div>
-            <h2 className="text-base font-semibold mb-3 py-[15px]">Предписания</h2>
+            <h2 className="text-base font-semibold py-0 my-0">Предписания</h2>
             <div className="grid grid-cols-2 gap-3">
               <StatCard label="Всего предписаний" value={presTotal} icon="ClipboardList" color="bg-indigo-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Все") : undefined} />
               <StatCard label="Выдано" value={presIssued} icon="Send" color="bg-primary" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Выдано") : undefined} />
@@ -335,7 +335,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
 
           {/* Проверки 1 колонка */}
           <div>
-            <h2 className="text-base font-semibold mb-3 py-[15px]">Проверки</h2>
+            <h2 className="text-base font-semibold py-0 my-0">Проверки</h2>
             <div className="flex flex-col gap-3">
               <StatCard label="Всего проверок" value={inspTotal} icon="TableProperties" color="bg-violet-500" onClick={onNavigateToInspections ? () => onNavigateToInspections(false) : undefined} />
               <StatCard label="Всего замечаний" value={inspRemarks} icon="AlertTriangle" color="bg-amber-500" onClick={onNavigateToInspections ? () => onNavigateToInspections(false) : undefined} />
@@ -355,7 +355,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
 
             return (
               <div>
-                <div className="flex items-center justify-between mb-3 py-[15px]">
+                <div className="flex items-center justify-between mb-3 py-0">
                   <h2 className="text-base font-semibold">Задачи</h2>
                   {onNavigateToTasks && (
                     <button onClick={onNavigateToTasks} className="text-xs text-primary hover:opacity-80 transition-opacity flex items-center gap-1">
