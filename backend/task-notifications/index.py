@@ -32,14 +32,16 @@ def handler(event: dict, context) -> dict:
         today = date.today()
         today_str = today.isoformat()
 
-        # Один запрос для всех дедлайнов (за 1, 2, 3 дня) вместо 3 отдельных
-        deadline_dates = [(today + timedelta(days=d)).isoformat() for d in [1, 2, 3]]
+        # Запрос для дедлайнов за 1, 2, 3 дня — раскрываем список в явные плейсхолдеры
+        d1 = (today + timedelta(days=1)).isoformat()
+        d2 = (today + timedelta(days=2)).isoformat()
+        d3 = (today + timedelta(days=3)).isoformat()
         cur.execute(
             f"""SELECT ta.id, t.description, ta.due_date
                 FROM {SCHEMA}.task_assignments ta
                 JOIN {SCHEMA}.tasks t ON t.id = ta.task_id
                 WHERE ta.assignee_login = %s
-                  AND ta.due_date = ANY(%s)
+                  AND ta.due_date IN (%s, %s, %s)
                   AND ta.status IN ('active', 'revision')
                   AND NOT EXISTS (
                     SELECT 1 FROM {SCHEMA}.task_notifications tn
@@ -47,7 +49,7 @@ def handler(event: dict, context) -> dict:
                       AND tn.event_type LIKE 'deadline_%%'
                       AND tn.created_at::date = %s
                   )""",
-            (login, deadline_dates, today_str)
+            (login, d1, d2, d3, today_str)
         )
         deadline_rows = cur.fetchall()
 
