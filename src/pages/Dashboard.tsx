@@ -7,9 +7,11 @@ import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import TopContractors from "@/components/dashboard/TopContractors";
 import PivotTable from "@/components/dashboard/PivotTable";
 import RemarksChart from "@/components/dashboard/RemarksChart";
-import IncidentPyramid from "@/components/dashboard/IncidentPyramid";
+import DashboardStatCards from "@/components/dashboard/DashboardStatCards";
+import DashboardTasksWidget from "@/components/dashboard/DashboardTasksWidget";
+import DashboardSpbPanel from "@/components/dashboard/DashboardSpbPanel";
 import { type PivotRow } from "@/components/dashboard/PivotTable";
-import { TASK_STATUS_LABELS, TASK_STATUS_COLORS, TaskStatus, TaskAssignment } from "@/lib/taskTypes";
+import { TaskAssignment } from "@/lib/taskTypes";
 
 const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
 const INSPECTIONS_API = "https://functions.poehali.dev/b2222d00-a1b0-43fd-966d-3f39732867c3";
@@ -42,25 +44,6 @@ interface DashboardProps {
   onNavigateToTasks?: (filter?: string, taskId?: number) => void;
 }
 
-function StatCard({ label, value, icon, color, onClick }: {
-  label: string; value: number | string; icon: string; color: string; onClick?: () => void;
-}) {
-  return (
-    <div
-      className={`bg-card border border-border rounded-xl px-5 py-4 flex items-start gap-4 ${onClick ? "cursor-pointer hover:border-primary/50 hover:bg-card/80 transition-colors" : ""}`}
-      onClick={onClick}
-    >
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
-        <Icon name={icon as never} size={18} className="text-white" />
-      </div>
-      <div>
-        <p className="text-2xl font-bold leading-tight">{value}</p>
-        <p className="text-sm text-muted-foreground mt-0.5">{label}</p>
-      </div>
-    </div>
-  );
-}
-
 function parseDate(str: string): Date | null {
   if (!str) return null;
   if (str.includes("-")) return new Date(str);
@@ -81,8 +64,6 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [contractorOpen, setContractorOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
-
-
 
   useEffect(() => {
     Promise.all([
@@ -316,176 +297,33 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
         toggleItem={toggleItem}
       />
 
-      {/* Статистика + Пирамида */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-        {/* Левая колонка: Предписания + Проверки */}
         <div className="flex flex-col gap-4">
+          <DashboardStatCards
+            presTotal={presTotal}
+            presIssued={presIssued}
+            presFixed={presFixed}
+            presOverdue={presOverdue}
+            inspTotal={inspTotal}
+            inspRemarks={inspRemarks}
+            inspSuspended={inspSuspended}
+            onNavigateToPrescriptions={onNavigateToPrescriptions}
+            onNavigateToInspections={onNavigateToInspections}
+          />
 
-          {/* Предписания 2x2 */}
-          <div>
-            <h2 className="text-base font-semibold py-0 my-0">Предписания</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <StatCard label="Всего предписаний" value={presTotal} icon="ClipboardList" color="bg-indigo-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Все") : undefined} />
-              <StatCard label="Выдано" value={presIssued} icon="Send" color="bg-primary" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Выдано") : undefined} />
-              <StatCard label="Устранено" value={presFixed} icon="CheckCircle" color="bg-green-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Устранено") : undefined} />
-              <StatCard label="Просрочено" value={presOverdue} icon="AlertCircle" color="bg-red-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Просрочено") : undefined} />
-            </div>
-          </div>
-
-          {/* Проверки 1 колонка */}
-          <div>
-            <h2 className="text-base font-semibold py-0 my-0">Проверки</h2>
-            <div className="flex flex-col gap-3">
-              <StatCard label="Всего проверок" value={inspTotal} icon="TableProperties" color="bg-violet-500" onClick={onNavigateToInspections ? () => onNavigateToInspections(false) : undefined} />
-              <StatCard label="Всего замечаний" value={inspRemarks} icon="AlertTriangle" color="bg-amber-500" onClick={onNavigateToInspections ? () => onNavigateToInspections(false) : undefined} />
-              <StatCard label="Приостановлено работ" value={inspSuspended} icon="OctagonX" color="bg-red-600" onClick={onNavigateToInspections ? () => onNavigateToInspections(true) : undefined} />
-            </div>
-          </div>
-
-          {/* Задачи */}
-          {taskAssignments.length > 0 && (() => {
-            const overdue = taskAssignments.filter(a => a.status === "overdue").length;
-            const active = taskAssignments.filter(a => ["active", "revision"].includes(a.status)).length;
-            const pending = taskAssignments.filter(a => ["extension_pending", "pending_report"].includes(a.status)).length;
-            const done = taskAssignments.filter(a => a.status === "done").length;
-
-            const badges = [
-              {
-                filter: "overdue",
-                count: overdue,
-                label: "Просрочено",
-                icon: "AlertCircle",
-                activeColor: "bg-red-500/10 border-red-500/30",
-                iconColor: "bg-red-500",
-                textColor: "text-red-400",
-              },
-              {
-                filter: "pending",
-                count: pending,
-                label: "На согласовании",
-                icon: "Clock",
-                activeColor: "bg-yellow-500/10 border-yellow-500/30",
-                iconColor: "bg-yellow-500",
-                textColor: "text-yellow-400",
-              },
-              {
-                filter: "active",
-                count: active,
-                label: "В работе",
-                icon: "ListChecks",
-                activeColor: "bg-blue-500/10 border-blue-500/30",
-                iconColor: "bg-blue-500",
-                textColor: "text-blue-400",
-              },
-              {
-                filter: "done",
-                count: done,
-                label: "Выполнено",
-                icon: "CheckCircle2",
-                activeColor: "bg-green-500/10 border-green-500/30",
-                iconColor: "bg-green-500",
-                textColor: "text-green-400",
-              },
-            ];
-
-            return (
-              <div>
-                <div className="flex items-center justify-between py-0 my-0">
-                  <h2 className="text-base font-semibold">Задачи</h2>
-                  {onNavigateToTasks && (
-                    <button onClick={() => onNavigateToTasks()} className="text-xs text-primary hover:opacity-80 transition-opacity flex items-center gap-1">
-                      Все задачи <Icon name="ChevronRight" size={12} />
-                    </button>
-                  )}
-                </div>
-                <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    {badges.map(b => (
-                      <div
-                        key={b.filter}
-                        onClick={() => onNavigateToTasks?.(b.filter)}
-                        className={`rounded-lg p-3 flex items-center gap-3 border cursor-pointer transition-all select-none ${
-                          b.count > 0
-                            ? `${b.activeColor} hover:opacity-80`
-                            : "bg-muted/30 border-transparent hover:bg-muted/50"
-                        }`}
-                      >
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${b.count > 0 ? b.iconColor : "bg-muted"}`}>
-                          <Icon name={b.icon as never} size={15} className="text-white" />
-                        </div>
-                        <div>
-                          <p className={`text-lg font-bold leading-tight ${b.count > 0 ? b.textColor : ""}`}>{b.count}</p>
-                          <p className="text-xs text-muted-foreground">{b.label}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Мини-список последних требующих внимания */}
-                  {(overdue > 0 || pending > 0 || taskAssignments.some(a => a.status === "revision")) && (
-                    <div className="border-t border-border pt-3 space-y-1.5">
-                      <p className="text-xs font-medium text-muted-foreground mb-2">Требуют действий</p>
-                      {taskAssignments
-                        .filter(a => ["overdue", "extension_pending", "pending_report", "revision"].includes(a.status))
-                        .slice(0, 3)
-                        .map(a => (
-                          <div key={a.id} onClick={() => onNavigateToTasks?.(undefined, a.id)} className="flex items-center gap-2 cursor-pointer hover:bg-muted/40 rounded-lg px-2 py-1.5 transition-colors -mx-2">
-                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full border flex-shrink-0 ${TASK_STATUS_COLORS[a.status]}`}>
-                              {TASK_STATUS_LABELS[a.status]}
-                            </span>
-                            <p className="text-xs text-muted-foreground truncate flex-1">{a.description}</p>
-                            <span className="text-xs text-muted-foreground flex-shrink-0">{a.assignee_name.split(" ")[0]}</span>
-                          </div>
-                        ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
+          <DashboardTasksWidget
+            taskAssignments={taskAssignments}
+            onNavigateToTasks={onNavigateToTasks}
+          />
         </div>
 
-        {/* Правая колонка: СПБ + Пирамида */}
-        <div className="flex flex-col gap-4">
-
-          {/* Счётчик СПБ */}
-          {spbCategories.length > 0 && (
-            <div className="bg-card border border-primary/30 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center bg-primary/10 text-primary border border-primary/20 rounded px-2 py-0.5 font-bold text-xs tracking-wide">СПБ</span>
-                  <span className="text-sm font-semibold text-foreground">Стратегические приоритеты безопасности</span>
-                </div>
-                <span className="font-bold text-primary text-3xl">{spbTotal}</span>
-              </div>
-              <div className="space-y-1.5">
-                {spbStats.map(stat => (
-                  <div key={stat.name} className="flex items-center gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2 mb-0.5">
-                        <span className="text-xs text-muted-foreground truncate">{stat.name}</span>
-                        <span className="text-xs font-semibold text-foreground flex-shrink-0">{stat.count}</span>
-                      </div>
-                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all bg-blue-500"
-                          style={{ width: spbTotal > 0 ? `${(stat.count / spbTotal) * 100}%` : "0%" }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {spbStats.every(s => s.count === 0) && (
-                  <p className="text-xs text-muted-foreground text-center py-1">Нарушений по СПБ не зафиксировано</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Пирамида */}
-          <IncidentPyramid data={pyramidData} year={new Date().getFullYear()} />
-        </div>
+        <DashboardSpbPanel
+          spbCategories={spbCategories}
+          spbStats={spbStats}
+          spbTotal={spbTotal}
+          pyramidData={pyramidData}
+        />
       </div>
 
       <TopContractors topContractors={topContractors} />
