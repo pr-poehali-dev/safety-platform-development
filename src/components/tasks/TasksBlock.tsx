@@ -116,11 +116,7 @@ export default function TasksBlock({ user, availableUsers }: TasksBlockProps) {
               {overdueCount} просрочено
             </span>
           )}
-          {pendingCount > 0 && (
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-400/10 border border-yellow-400/20 text-yellow-400">
-              {pendingCount} требует внимания
-            </span>
-          )}
+
         </div>
         {canCreate && (
           <button
