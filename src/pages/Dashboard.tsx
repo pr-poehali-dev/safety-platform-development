@@ -346,7 +346,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
           {/* Задачи */}
           {taskAssignments.length > 0 && (() => {
             const overdue = taskAssignments.filter(a => a.status === "overdue").length;
-            const active = taskAssignments.filter(a => a.status === "active").length;
+            const active = taskAssignments.filter(a => ["active", "revision"].includes(a.status)).length;
             const pending = taskAssignments.filter(a => ["extension_pending", "pending_report"].includes(a.status)).length;
             const done = taskAssignments.filter(a => a.status === "done").length;
             const statusGroups = (["overdue", "active", "extension_pending", "pending_report", "revision", "done"] as TaskStatus[])
@@ -410,7 +410,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
                   </div>
 
                   {/* Мини-список последних требующих внимания */}
-                  {(overdue > 0 || pending > 0) && (
+                  {(overdue > 0 || pending > 0 || taskAssignments.some(a => a.status === "revision")) && (
                     <div className="border-t border-border pt-3 space-y-1.5">
                       <p className="text-xs font-medium text-muted-foreground mb-2">Требуют действий</p>
                       {taskAssignments
