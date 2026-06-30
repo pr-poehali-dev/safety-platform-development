@@ -82,7 +82,15 @@ export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateT
   const [contractorOpen, setContractorOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
 
-  const { assignments: taskAssignments } = useTasks(user);
+  const { assignments: taskAssignments, load: reloadTasks } = useTasks(user);
+
+  // Обновляем задачи при возврате в вкладку и каждые 30 сек
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") reloadTasks(); };
+    document.addEventListener("visibilitychange", onVisible);
+    const timer = setInterval(reloadTasks, 30000);
+    return () => { document.removeEventListener("visibilitychange", onVisible); clearInterval(timer); };
+  }, [reloadTasks]);
 
   useEffect(() => {
     Promise.all([
