@@ -204,12 +204,14 @@ def handler(event: dict, context) -> dict:
                  p.get("contractNumber") or None,
                  p.get("createdBy", ""))
             )
-            for i, r in enumerate(p.get("remarks", [])):
-                cur.execute(
+            remarks = p.get("remarks", [])
+            if remarks:
+                cur.executemany(
                     f"INSERT INTO {SCHEMA}.remarks (id, prescription_id, place, category, description, norm_ref, deadline, status, sort_order, photos, work_suspended) "
                     f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                    (r["id"], pid, r.get("place", ""), r.get("category", ""), r.get("description", ""), r.get("normRef", ""), r.get("deadline", ""), r.get("status", "Выдано"), i,
-                     json.dumps(r.get("photos", []), ensure_ascii=False), bool(r.get("work_suspended", False)))
+                    [(r["id"], pid, r.get("place", ""), r.get("category", ""), r.get("description", ""), r.get("normRef", ""), r.get("deadline", ""), r.get("status", "Выдано"), i,
+                      json.dumps(r.get("photos", []), ensure_ascii=False), bool(r.get("work_suspended", False)))
+                     for i, r in enumerate(remarks)]
                 )
             conn.commit()
             return ok({"ok": True, "number": number})
@@ -227,12 +229,14 @@ def handler(event: dict, context) -> dict:
                  p.get("contractNumber") or None, pid)
             )
             cur.execute(f"DELETE FROM {SCHEMA}.remarks WHERE prescription_id = %s", (pid,))
-            for i, r in enumerate(p.get("remarks", [])):
-                cur.execute(
+            remarks = p.get("remarks", [])
+            if remarks:
+                cur.executemany(
                     f"INSERT INTO {SCHEMA}.remarks (id, prescription_id, place, category, description, norm_ref, deadline, status, sort_order, photos, work_suspended) "
                     f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                    (r["id"], pid, r.get("place", ""), r.get("category", ""), r.get("description", ""), r.get("normRef", ""), r.get("deadline", ""), r.get("status", "Выдано"), i,
-                     json.dumps(r.get("photos", []), ensure_ascii=False), bool(r.get("work_suspended", False)))
+                    [(r["id"], pid, r.get("place", ""), r.get("category", ""), r.get("description", ""), r.get("normRef", ""), r.get("deadline", ""), r.get("status", "Выдано"), i,
+                      json.dumps(r.get("photos", []), ensure_ascii=False), bool(r.get("work_suspended", False)))
+                     for i, r in enumerate(remarks)]
                 )
             conn.commit()
             return ok({"ok": True})
