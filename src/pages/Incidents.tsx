@@ -130,7 +130,7 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
   const NAV_TABS: { id: Tab; label: string; icon: string }[] = [
     { id: "dashboard", label: "Главная", icon: "LayoutDashboard" },
     { id: "prescriptions", label: "Предписания", icon: "ClipboardList" },
-    ...(user.role === "admin" || user.role === "specialist"
+    ...(user.role === "admin" || user.role === "specialist" || user.role === "manager"
       ? [{ id: "inspections" as Tab, label: "Проверки", icon: "TableProperties" }]
       : []),
     { id: "incidents", label: "Происшествия", icon: "TriangleAlert" },
