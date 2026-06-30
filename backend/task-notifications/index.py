@@ -29,36 +29,29 @@ def handler(event: dict, context) -> dict:
 
         conn = get_conn()
         cur = conn.cursor()
-
-        # Генерируем уведомления о приближении сроков при входе
         today = date.today()
-        for days_left in [3, 2, 1]:
-            target_date = today + timedelta(days=days_left)
-            cur.execute(
-                f"""SELECT ta.id, t.description
-                    FROM {SCHEMA}.task_assignments ta
-                    JOIN {SCHEMA}.tasks t ON t.id = ta.task_id
-                    WHERE ta.assignee_login = %s
-                      AND ta.due_date = %s
-                      AND ta.status IN ('active', 'revision')
-                      AND NOT EXISTS (
-                        SELECT 1 FROM {SCHEMA}.task_notifications tn
-                        WHERE tn.assignment_id = ta.id
-                          AND tn.event_type = %s
-                          AND tn.created_at::date = %s
-                      )""",
-                (login, target_date.isoformat(), f"deadline_{days_left}d", today.isoformat())
-            )
-            for row in cur.fetchall():
-                cur.execute(
-                    f"""INSERT INTO {SCHEMA}.task_notifications
-                        (user_login, assignment_id, event_type, message)
-                        VALUES (%s, %s, %s, %s)""",
-                    (login, row[0], f"deadline_{days_left}d",
-                     f"До срока {days_left} {'день' if days_left == 1 else 'дня'}: {row[1][:70]}")
-                )
+        today_str = today.isoformat()
 
-        # Уведомления о просрочке
+        # Один запрос для всех дедлайнов (за 1, 2, 3 дня) вместо 3 отдельных
+        deadline_dates = [(today + timedelta(days=d)).isoformat() for d in [1, 2, 3]]
+        cur.execute(
+            f"""SELECT ta.id, t.description, ta.due_date
+                FROM {SCHEMA}.task_assignments ta
+                JOIN {SCHEMA}.tasks t ON t.id = ta.task_id
+                WHERE ta.assignee_login = %s
+                  AND ta.due_date = ANY(%s)
+                  AND ta.status IN ('active', 'revision')
+                  AND NOT EXISTS (
+                    SELECT 1 FROM {SCHEMA}.task_notifications tn
+                    WHERE tn.assignment_id = ta.id
+                      AND tn.event_type LIKE 'deadline_%%'
+                      AND tn.created_at::date = %s
+                  )""",
+            (login, deadline_dates, today_str)
+        )
+        deadline_rows = cur.fetchall()
+
+        # Один запрос для просроченных
         cur.execute(
             f"""SELECT ta.id, t.description
                 FROM {SCHEMA}.task_assignments ta
@@ -72,17 +65,33 @@ def handler(event: dict, context) -> dict:
                       AND tn.event_type = 'overdue'
                       AND tn.created_at::date = %s
                   )""",
-            (login, today.isoformat(), today.isoformat())
+            (login, today_str, today_str)
         )
-        for row in cur.fetchall():
-            cur.execute(
+        overdue_rows = cur.fetchall()
+
+        # Bulk INSERT всех новых уведомлений одним executemany
+        notif_values = []
+        for row in deadline_rows:
+            days_left = (date.fromisoformat(row[2].isoformat() if hasattr(row[2], 'isoformat') else row[2]) - today).days
+            label = "день" if days_left == 1 else "дня"
+            notif_values.append((
+                login, row[0], f"deadline_{days_left}d",
+                f"До срока {days_left} {label}: {row[1][:70]}"
+            ))
+        for row in overdue_rows:
+            notif_values.append((
+                login, row[0], "overdue",
+                f"Задача просрочена: {row[1][:70]}"
+            ))
+
+        if notif_values:
+            cur.executemany(
                 f"""INSERT INTO {SCHEMA}.task_notifications
                     (user_login, assignment_id, event_type, message)
-                    VALUES (%s, %s, 'overdue', %s)""",
-                (login, row[0], f"Задача просрочена: {row[1][:70]}")
+                    VALUES (%s, %s, %s, %s)""",
+                notif_values
             )
-
-        conn.commit()
+            conn.commit()
 
         cur.execute(
             f"""SELECT id, assignment_id, event_type, message, is_read, created_at

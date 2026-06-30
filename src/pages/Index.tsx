@@ -38,7 +38,7 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const { notifications, unreadCount, markAllRead } = useTasks(user);
+  const { assignments, notifications, unreadCount, markAllRead, createTask, updateTask, deleteTask, action, sendComment, fetchComments, load: reloadTasks } = useTasks(user);
 
   useEffect(() => {
     fetch(API)
@@ -67,6 +67,13 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
       })
       .catch(() => {});
   }, [user.login]);
+
+  // Обновляем задачи при возврате в браузерную вкладку
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") reloadTasks(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [reloadTasks]);
 
   // Закрытие панели уведомлений при клике вне
   useEffect(() => {
@@ -224,7 +231,18 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
         {renderHeader()}
         {renderNav()}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-          <TasksBlock user={user} availableUsers={availableUsers} />
+          <TasksBlock
+            user={user}
+            availableUsers={availableUsers}
+            assignments={assignments}
+            loading={false}
+            onCreateTask={createTask}
+            onUpdateTask={updateTask}
+            onDeleteTask={deleteTask}
+            onAction={action}
+            onSendComment={sendComment}
+            onFetchComments={fetchComments}
+          />
         </div>
       </div>
     );
@@ -237,6 +255,7 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
         {renderNav()}
         <Dashboard
           user={user}
+          taskAssignments={assignments}
           onNavigateToPrescriptions={(status) => {
             if (status) setFilterStatus(status);
             setTab("prescriptions");

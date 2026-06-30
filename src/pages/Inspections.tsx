@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AppUser } from "@/lib/auth";
 import Icon from "@/components/ui/icon";
 import UserMenu from "@/components/UserMenu";
@@ -36,7 +36,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
 
   const inspectorName = user.name || "";
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
     if (dateFrom) params.set("date_from", dateFrom);
@@ -47,9 +47,14 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
       .then(r => r.json())
       .then(data => setRows(Array.isArray(data) ? data : []))
       .finally(() => setLoading(false));
-  };
+  }, [dateFrom, dateTo, filterContractor, filterObject]);
 
-  useEffect(() => { load(); }, [dateFrom, dateTo, filterContractor, filterObject]);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(load, 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [load]);
 
   useEffect(() => {
     fetch(CATEGORIES_API)

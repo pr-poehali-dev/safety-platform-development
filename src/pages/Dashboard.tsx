@@ -9,8 +9,7 @@ import PivotTable from "@/components/dashboard/PivotTable";
 import RemarksChart from "@/components/dashboard/RemarksChart";
 import IncidentPyramid from "@/components/dashboard/IncidentPyramid";
 import { type PivotRow } from "@/components/dashboard/PivotTable";
-import { useTasks } from "@/hooks/useTasks";
-import { TASK_STATUS_LABELS, TASK_STATUS_COLORS, TaskStatus } from "@/lib/taskTypes";
+import { TASK_STATUS_LABELS, TASK_STATUS_COLORS, TaskStatus, TaskAssignment } from "@/lib/taskTypes";
 
 const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
 const INSPECTIONS_API = "https://functions.poehali.dev/b2222d00-a1b0-43fd-966d-3f39732867c3";
@@ -36,6 +35,7 @@ interface Incident {
 
 interface DashboardProps {
   user: AppUser;
+  taskAssignments: TaskAssignment[];
   onNavigateToPrescriptions?: (status?: string) => void;
   onNavigateToInspections?: (suspended?: boolean) => void;
   onNavigateToIncidents?: () => void;
@@ -69,7 +69,7 @@ function parseDate(str: string): Date | null {
   return new Date(y, m - 1, d);
 }
 
-export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateToInspections, onNavigateToIncidents, onNavigateToTasks }: DashboardProps) {
+export default function Dashboard({ user, taskAssignments, onNavigateToPrescriptions, onNavigateToInspections, onNavigateToIncidents, onNavigateToTasks }: DashboardProps) {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -82,15 +82,7 @@ export default function Dashboard({ user, onNavigateToPrescriptions, onNavigateT
   const [contractorOpen, setContractorOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
 
-  const { assignments: taskAssignments, load: reloadTasks } = useTasks(user);
 
-  // Обновляем задачи при возврате в вкладку и каждые 30 сек
-  useEffect(() => {
-    const onVisible = () => { if (document.visibilityState === "visible") reloadTasks(); };
-    document.addEventListener("visibilitychange", onVisible);
-    const timer = setInterval(reloadTasks, 30000);
-    return () => { document.removeEventListener("visibilitychange", onVisible); clearInterval(timer); };
-  }, [reloadTasks]);
 
   useEffect(() => {
     Promise.all([

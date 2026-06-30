@@ -152,39 +152,68 @@ def handler(event: dict, context) -> dict:
                        f"Продление срока отклонено по задаче: {task[0][:60]}")
 
     elif action == "bulk_close":
+        # Один UPDATE + один SELECT для всех id вместо цикла
         ids = body.get("assignment_ids", [])
-        for aid in ids:
+        if ids:
             cur.execute(
                 f"""UPDATE {SCHEMA}.task_assignments
                     SET status = 'done', updated_at = NOW()
-                    WHERE id = %s RETURNING assignee_login, task_id""",
-                (aid,)
+                    WHERE id = ANY(%s)
+                    RETURNING id, assignee_login, task_id""",
+                (ids,)
             )
-            row = cur.fetchone()
-            if row:
-                cur.execute(f"SELECT description FROM {SCHEMA}.tasks WHERE id = %s", (row[1],))
-                task = cur.fetchone()
-                if task:
-                    notify(cur, row[0], aid, "report_accepted",
-                           f"Задача закрыта руководителем: {task[0][:60]}")
+            updated = cur.fetchall()
+            if updated:
+                task_ids = list({r[2] for r in updated})
+                cur.execute(
+                    f"SELECT id, description FROM {SCHEMA}.tasks WHERE id = ANY(%s)",
+                    (task_ids,)
+                )
+                task_map = {r[0]: r[1] for r in cur.fetchall()}
+                # Bulk INSERT уведомлений одним запросом
+                notif_values = [
+                    (r[1], r[0], "report_accepted",
+                     f"Задача закрыта руководителем: {task_map.get(r[2], '')[:60]}")
+                    for r in updated
+                ]
+                cur.executemany(
+                    f"""INSERT INTO {SCHEMA}.task_notifications
+                        (user_login, assignment_id, event_type, message)
+                        VALUES (%s, %s, %s, %s)""",
+                    notif_values
+                )
 
     elif action == "bulk_extend":
+        # Один UPDATE + bulk INSERT уведомлений
         ids = body.get("assignment_ids", [])
         new_date = body["new_date"]
-        for aid in ids:
+        if ids:
             cur.execute(
                 f"""UPDATE {SCHEMA}.task_assignments
                     SET due_date = %s, updated_at = NOW()
-                    WHERE id = %s RETURNING assignee_login, task_id""",
-                (new_date, aid)
+                    WHERE id = ANY(%s)
+                    RETURNING id, assignee_login, task_id""",
+                (new_date, ids)
             )
-            row = cur.fetchone()
-            if row:
-                cur.execute(f"SELECT description FROM {SCHEMA}.tasks WHERE id = %s", (row[1],))
-                task = cur.fetchone()
-                if task:
-                    notify(cur, row[0], aid, "due_date_changed",
-                           f"Срок продлён до {new_date} по задаче: {task[0][:60]}")
+            updated = cur.fetchall()
+            if updated:
+                task_ids = list({r[2] for r in updated})
+                cur.execute(
+                    f"SELECT id, description FROM {SCHEMA}.tasks WHERE id = ANY(%s)",
+                    (task_ids,)
+                )
+                task_map = {r[0]: r[1] for r in cur.fetchall()}
+                notif_values = [
+                    (r[1], r[0], "due_date_changed",
+                     f"Срок продлён до {new_date} по задаче: {task_map.get(r[2], '')[:60]}")
+                    for r in updated
+                ]
+                cur.executemany(
+                    f"""INSERT INTO {SCHEMA}.task_notifications
+                        (user_login, assignment_id, event_type, message)
+                        VALUES (%s, %s, %s, %s)""",
+                    notif_values
+                )
 
     elif action == "reassign":
         assignment_id = body["assignment_id"]

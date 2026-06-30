@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { TaskAssignment, TaskComment, TASK_STATUS_LABELS, TASK_STATUS_COLORS, TaskStatus } from "@/lib/taskTypes";
+import { TaskAssignment, TaskComment, TASK_STATUS_LABELS, TASK_STATUS_COLORS } from "@/lib/taskTypes";
 import { AppUser } from "@/lib/auth";
-import { useTasks } from "@/hooks/useTasks";
 import TaskCard from "./TaskCard";
 import TaskForm from "./TaskForm";
 import Icon from "@/components/ui/icon";
@@ -9,6 +8,14 @@ import Icon from "@/components/ui/icon";
 interface TasksBlockProps {
   user: AppUser;
   availableUsers: { login: string; name: string; role: string }[];
+  assignments: TaskAssignment[];
+  loading: boolean;
+  onCreateTask: (description: string, assignees: { login: string; name: string; role: string; due_date: string }[]) => Promise<void>;
+  onUpdateTask: (task_id: number, description: string, assignees: { login: string; name: string; assignment_id?: number; due_date: string }[]) => Promise<void>;
+  onDeleteTask: (task_id: number) => Promise<void>;
+  onAction: (payload: Record<string, unknown>) => Promise<void>;
+  onSendComment: (assignment_id: number, message: string) => Promise<void>;
+  onFetchComments: (assignment_id: number) => Promise<TaskComment[]>;
 }
 
 const STATUS_FILTERS: { value: string; label: string }[] = [
@@ -26,8 +33,7 @@ function fmt(dt: string | null | undefined) {
   return new Date(dt).toLocaleDateString("ru-RU");
 }
 
-export default function TasksBlock({ user, availableUsers }: TasksBlockProps) {
-  const { assignments, loading, createTask, updateTask, deleteTask, action, sendComment, fetchComments } = useTasks(user);
+export default function TasksBlock({ user, availableUsers, assignments, loading, onCreateTask, onUpdateTask, onDeleteTask, onAction, onSendComment, onFetchComments }: TasksBlockProps) {
 
   const [selected, setSelected] = useState<TaskAssignment | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -78,7 +84,7 @@ export default function TasksBlock({ user, availableUsers }: TasksBlockProps) {
 
   const handleBulkClose = async () => {
     setBulkSaving(true);
-    await action({ action: "bulk_close", assignment_ids: Array.from(checkedIds) });
+    await onAction({ action: "bulk_close", assignment_ids: Array.from(checkedIds) });
     setCheckedIds(new Set());
     setBulkSaving(false);
   };
@@ -86,7 +92,7 @@ export default function TasksBlock({ user, availableUsers }: TasksBlockProps) {
   const handleBulkExtend = async () => {
     if (!bulkDate) return;
     setBulkSaving(true);
-    await action({ action: "bulk_extend", assignment_ids: Array.from(checkedIds), new_date: bulkDate });
+    await onAction({ action: "bulk_extend", assignment_ids: Array.from(checkedIds), new_date: bulkDate });
     setCheckedIds(new Set());
     setShowBulkDate(false);
     setBulkDate("");
@@ -94,7 +100,7 @@ export default function TasksBlock({ user, availableUsers }: TasksBlockProps) {
   };
 
   const handleDelete = async (a: TaskAssignment) => {
-    await deleteTask(a.task_id);
+    await onDeleteTask(a.task_id);
     setConfirmDelete(null);
     if (selected?.task_id === a.task_id) setSelected(null);
   };
@@ -320,11 +326,11 @@ export default function TasksBlock({ user, availableUsers }: TasksBlockProps) {
           user={user}
           onClose={() => setSelected(null)}
           onAction={async (payload) => {
-            await action(payload);
+            await onAction(payload);
             setSelected(null);
           }}
-          onSendComment={sendComment}
-          fetchComments={fetchComments}
+          onSendComment={onSendComment}
+          fetchComments={onFetchComments}
           allUsers={availableUsers}
           onEdit={canCreate ? () => { setEditing(selected); setShowForm(true); setSelected(null); } : undefined}
           onDelete={canCreate ? () => { setConfirmDelete(selected); setSelected(null); } : undefined}
@@ -336,8 +342,8 @@ export default function TasksBlock({ user, availableUsers }: TasksBlockProps) {
         <TaskForm
           user={user}
           onClose={() => { setShowForm(false); setEditing(null); }}
-          onSave={createTask}
-          onUpdate={updateTask}
+          onSave={onCreateTask}
+          onUpdate={onUpdateTask}
           editing={editing}
           availableUsers={availableUsers}
         />
