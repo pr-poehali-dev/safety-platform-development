@@ -1,16 +1,13 @@
-import { useEditor, EditorContent, Editor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import TextStyle from "@tiptap/extension-text-style";
-import FontFamily from "@tiptap/extension-font-family";
-import Color from "@tiptap/extension-color";
-import Highlight from "@tiptap/extension-highlight";
-import Underline from "@tiptap/extension-underline";
-import TextAlign from "@tiptap/extension-text-align";
-import Subscript from "@tiptap/extension-subscript";
-import Superscript from "@tiptap/extension-superscript";
+import { useEditor, EditorContent } from "@tiptap/react";
+import { StarterKit } from "@tiptap/starter-kit";
+import { TextStyle, FontFamily, Color, FontSize } from "@tiptap/extension-text-style";
+import { Highlight } from "@tiptap/extension-highlight";
+import { Underline } from "@tiptap/extension-underline";
+import { TextAlign } from "@tiptap/extension-text-align";
+import { Subscript } from "@tiptap/extension-subscript";
+import { Superscript } from "@tiptap/extension-superscript";
 import { Table as TableExtension, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import { Image } from "@tiptap/extension-image";
-import { Extension } from "@tiptap/core";
 import { useState, useCallback, useRef } from "react";
 import Icon from "@/components/ui/icon";
 
@@ -32,29 +29,6 @@ const MARGINS: Record<string, { top: number; right: number; bottom: number; left
   "Широкие": { top: 25, right: 50, bottom: 25, left: 50 },
 };
 
-const FontSize = Extension.create({
-  name: "fontSize",
-  addGlobalAttributes() {
-    return [{
-      types: ["textStyle"],
-      attributes: {
-        fontSize: {
-          default: null,
-          parseHTML: el => el.style.fontSize?.replace("pt", "") || null,
-          renderHTML: attrs => attrs.fontSize ? { style: `font-size: ${attrs.fontSize}pt` } : {},
-        },
-      },
-    }];
-  },
-  addCommands() {
-    return {
-      setFontSize: (size: string) => ({ chain }: { chain: () => ReturnType<Editor["chain"]> }) =>
-        chain().setMark("textStyle", { fontSize: size }).run(),
-      unsetFontSize: () => ({ chain }: { chain: () => ReturnType<Editor["chain"]> }) =>
-        chain().setMark("textStyle", { fontSize: null }).run(),
-    } as ReturnType<typeof this.parent>;
-  },
-});
 
 interface PageSettings {
   paperSize: string;
@@ -182,7 +156,7 @@ export default function WordEditor({ content, onChange, pageSettings, onPageSett
 
   const setFs = useCallback((v: string) => {
     setFontSize(v);
-    if (editor && v) (editor.chain().focus() as unknown as Record<string, (s: string) => unknown>).setFontSize(v).run();
+    if (editor && v) editor.chain().focus().setMark("textStyle", { fontSize: `${v}pt` }).run();
   }, [editor]);
 
   const setFf = useCallback((v: string) => {
