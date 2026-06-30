@@ -355,7 +355,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
 
             return (
               <div>
-                <div className="flex items-center justify-between mb-3 py-0">
+                <div className="flex items-center justify-between py-0 my-0">
                   <h2 className="text-base font-semibold">Задачи</h2>
                   {onNavigateToTasks && (
                     <button onClick={onNavigateToTasks} className="text-xs text-primary hover:opacity-80 transition-opacity flex items-center gap-1">
