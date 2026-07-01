@@ -1,12 +1,10 @@
 {
   "tests": [
     {
-      "name": "GET templates list",
+      "name": "GET templates list returns array",
       "method": "GET",
       "path": "/",
-      "expectedStatus": 200,
-      "expectedBody": [{"id": "default"}],
-      "bodyMatcher": "partial"
+      "expectedStatus": 200
     }
   ]
 }

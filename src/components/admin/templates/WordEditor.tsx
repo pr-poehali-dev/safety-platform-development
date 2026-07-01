@@ -128,7 +128,7 @@ export default function WordEditor({ content, onChange, pageSettings, onPageSett
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+      StarterKit.configure({ heading: { levels: [1, 2, 3] }, underline: false }),
       TextStyle,
       FontFamily,
       FontSize,

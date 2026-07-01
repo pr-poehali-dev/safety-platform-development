@@ -1,9 +1,10 @@
 """
 CRUD для шаблонов актов-предписаний. GET — список, POST — создать, PUT — обновить, DELETE — удалить.
-v2
+v3 — добавлены поля content, paper_size, orientation
 """
 import json
 import os
+import time
 import psycopg2
 
 SCHEMA = "t_p5901577_safety_platform_deve"
@@ -12,6 +13,15 @@ CORS = {
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, X-User-Id, X-Auth-Token, X-Session-Id",
 }
+
+FIELDS = (
+    "id, name, title, subtitle, company_name, table_columns, "
+    "block_object_label, block_contractor_label, block_inspector_label, "
+    "block_representative_label, block_violations_title, block_copies_text, "
+    "block_report_text, font_size, font_family, margin_top, margin_right, "
+    "margin_bottom, margin_left, sig_issuer_label, sig_receiver_label, "
+    "is_default, paper_size, orientation, content"
+)
 
 
 def get_conn():
@@ -50,6 +60,9 @@ def row_to_template(row):
         "sigIssuerLabel": row[19],
         "sigReceiverLabel": row[20],
         "isDefault": row[21],
+        "paperSize": row[22],
+        "orientation": row[23],
+        "content": row[24],
     }
 
 
@@ -66,33 +79,43 @@ def handler(event: dict, context) -> dict:
     cur = conn.cursor()
 
     try:
-        FIELDS = "id, name, title, subtitle, company_name, table_columns, block_object_label, block_contractor_label, block_inspector_label, block_representative_label, block_violations_title, block_copies_text, block_report_text, font_size, font_family, margin_top, margin_right, margin_bottom, margin_left, sig_issuer_label, sig_receiver_label, is_default"
-
         if method == "GET":
             cur.execute(f"SELECT {FIELDS} FROM {SCHEMA}.templates ORDER BY is_default DESC, created_at ASC")
             return ok([row_to_template(r) for r in cur.fetchall()])
 
         if method == "POST":
             t = body
-            tid = t.get("id", str(__import__("time").time_ns()))
+            tid = t.get("id", str(time.time_ns()))
             cur.execute(
-                f"INSERT INTO {SCHEMA}.templates (id, name, title, subtitle, company_name, table_columns, block_object_label, block_contractor_label, block_inspector_label, block_representative_label, block_violations_title, block_copies_text, block_report_text, font_size, font_family, margin_top, margin_right, margin_bottom, margin_left, sig_issuer_label, sig_receiver_label, is_default) "
-                f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                (tid, t["name"], t.get("title","АКТ-ПРЕДПИСАНИЕ № {{number}}"),
-                 t.get("subtitle","о нарушении требований охраны труда, пожарной, промышленной безопасности и экологии"),
-                 t.get("companyName","СБД"),
-                 json.dumps(t.get("tableColumns",[]), ensure_ascii=False),
-                 t.get("blockObjectLabel","Проверяемый объект:"),
-                 t.get("blockContractorLabel","Работы проводит подрядная организация:"),
-                 t.get("blockInspectorLabel","Проверка проведена"),
-                 t.get("blockRepresentativeLabel","в присутствии представителя подрядной организации"),
-                 t.get("blockViolationsTitle","В ходе проверки выявлены следующие нарушения:"),
-                 t.get("blockCopiesText",""),
-                 t.get("blockReportText",""),
-                 t.get("fontSize",11), t.get("fontFamily","Times New Roman"),
-                 t.get("marginTop",15), t.get("marginRight",15), t.get("marginBottom",15), t.get("marginLeft",20),
-                 t.get("sigIssuerLabel","Выдал:"), t.get("sigReceiverLabel","С Актом ознакомлен, согласен и принял к исполнению:"),
-                 t.get("isDefault", False))
+                f"INSERT INTO {SCHEMA}.templates "
+                f"(id, name, title, subtitle, company_name, table_columns, "
+                f"block_object_label, block_contractor_label, block_inspector_label, "
+                f"block_representative_label, block_violations_title, block_copies_text, "
+                f"block_report_text, font_size, font_family, margin_top, margin_right, "
+                f"margin_bottom, margin_left, sig_issuer_label, sig_receiver_label, "
+                f"is_default, paper_size, orientation, content) "
+                f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                (tid, t["name"],
+                 t.get("title", "АКТ-ПРЕДПИСАНИЕ № {{number}}"),
+                 t.get("subtitle", "о нарушении требований охраны труда, пожарной, промышленной безопасности и экологии"),
+                 t.get("companyName", "СБД"),
+                 json.dumps(t.get("tableColumns", []), ensure_ascii=False),
+                 t.get("blockObjectLabel", "Проверяемый объект:"),
+                 t.get("blockContractorLabel", "Работы проводит подрядная организация:"),
+                 t.get("blockInspectorLabel", "Проверка проведена"),
+                 t.get("blockRepresentativeLabel", "в присутствии представителя подрядной организации"),
+                 t.get("blockViolationsTitle", "В ходе проверки выявлены следующие нарушения:"),
+                 t.get("blockCopiesText", ""),
+                 t.get("blockReportText", ""),
+                 t.get("fontSize", 11), t.get("fontFamily", "Times New Roman"),
+                 t.get("marginTop", 15), t.get("marginRight", 15),
+                 t.get("marginBottom", 15), t.get("marginLeft", 20),
+                 t.get("sigIssuerLabel", "Выдал:"),
+                 t.get("sigReceiverLabel", "С Актом ознакомлен, согласен и принял к исполнению:"),
+                 t.get("isDefault", False),
+                 t.get("paperSize", "A4"),
+                 t.get("orientation", "portrait"),
+                 t.get("content"))
             )
             conn.commit()
             return ok({"ok": True, "id": tid})
@@ -101,16 +124,29 @@ def handler(event: dict, context) -> dict:
             t = body
             tid = t["id"]
             cur.execute(
-                f"UPDATE {SCHEMA}.templates SET name=%s, title=%s, subtitle=%s, company_name=%s, table_columns=%s, block_object_label=%s, block_contractor_label=%s, block_inspector_label=%s, block_representative_label=%s, block_violations_title=%s, block_copies_text=%s, block_report_text=%s, font_size=%s, font_family=%s, margin_top=%s, margin_right=%s, margin_bottom=%s, margin_left=%s, sig_issuer_label=%s, sig_receiver_label=%s, is_default=%s, updated_at=now() WHERE id=%s",
+                f"UPDATE {SCHEMA}.templates SET "
+                f"name=%s, title=%s, subtitle=%s, company_name=%s, table_columns=%s, "
+                f"block_object_label=%s, block_contractor_label=%s, block_inspector_label=%s, "
+                f"block_representative_label=%s, block_violations_title=%s, block_copies_text=%s, "
+                f"block_report_text=%s, font_size=%s, font_family=%s, "
+                f"margin_top=%s, margin_right=%s, margin_bottom=%s, margin_left=%s, "
+                f"sig_issuer_label=%s, sig_receiver_label=%s, is_default=%s, "
+                f"paper_size=%s, orientation=%s, content=%s, updated_at=now() "
+                f"WHERE id=%s",
                 (t["name"], t.get("title"), t.get("subtitle"), t.get("companyName"),
-                 json.dumps(t.get("tableColumns",[]), ensure_ascii=False),
-                 t.get("blockObjectLabel"), t.get("blockContractorLabel"), t.get("blockInspectorLabel"),
-                 t.get("blockRepresentativeLabel"), t.get("blockViolationsTitle"),
-                 t.get("blockCopiesText"), t.get("blockReportText"),
+                 json.dumps(t.get("tableColumns", []), ensure_ascii=False),
+                 t.get("blockObjectLabel"), t.get("blockContractorLabel"),
+                 t.get("blockInspectorLabel"), t.get("blockRepresentativeLabel"),
+                 t.get("blockViolationsTitle"), t.get("blockCopiesText"), t.get("blockReportText"),
                  t.get("fontSize"), t.get("fontFamily"),
-                 t.get("marginTop"), t.get("marginRight"), t.get("marginBottom"), t.get("marginLeft"),
+                 t.get("marginTop"), t.get("marginRight"),
+                 t.get("marginBottom"), t.get("marginLeft"),
                  t.get("sigIssuerLabel"), t.get("sigReceiverLabel"),
-                 t.get("isDefault", False), tid)
+                 t.get("isDefault", False),
+                 t.get("paperSize", "A4"),
+                 t.get("orientation", "portrait"),
+                 t.get("content"),
+                 tid)
             )
             conn.commit()
             return ok({"ok": True})
@@ -119,7 +155,6 @@ def handler(event: dict, context) -> dict:
             tid = body.get("id") or (event.get("queryStringParameters") or {}).get("id")
             if not tid:
                 return err("id required")
-            # Нельзя удалить шаблон по умолчанию
             cur.execute(f"SELECT is_default FROM {SCHEMA}.templates WHERE id = %s", (tid,))
             row = cur.fetchone()
             if not row:

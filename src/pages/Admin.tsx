@@ -8,7 +8,7 @@ import { TemplatesTab } from "@/components/admin/TemplatesTab";
 import { DataTab } from "@/components/admin/DataTab";
 import { InspectionsTab } from "@/components/admin/InspectionsTab";
 
-const TEMPLATES_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69?type=templates";
+const TEMPLATES_API = "https://functions.poehali.dev/41ec60df-3f38-4561-ba9d-ca17ebd71553";
 
 interface AdminProps {
   currentUser: AppUser;
