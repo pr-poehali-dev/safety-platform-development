@@ -221,6 +221,59 @@ export function WordEditorToolbar({
         </>)}
 
         {activeTab === "insert" && (<>
+          {/* Переменные */}
+          <div className="relative group flex-shrink-0">
+            <button
+              onMouseDown={e => e.preventDefault()}
+              className="h-7 px-2 rounded text-xs text-white/60 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1.5"
+            >
+              <Icon name="Braces" size={13} />
+              Переменные
+              <Icon name="ChevronDown" size={10} />
+            </button>
+            <div className="absolute top-full left-0 mt-1 bg-[#1e1f23] border border-white/15 rounded-lg p-2 shadow-xl z-50 hidden group-hover:block min-w-[220px]">
+              <p className="text-[10px] text-white/40 mb-2 px-1">Вставить переменную</p>
+              <div className="space-y-0.5">
+                {([
+                  ["{{number}}", "Номер предписания"],
+                  ["{{date}}", "Дата"],
+                  ["{{object}}", "Объект проверки"],
+                  ["{{contractor}}", "Подрядчик"],
+                  ["{{inspector}}", "Инспектор"],
+                  ["{{representative}}", "Представитель ПО"],
+                  ["{{responsible}}", "Ответственный"],
+                  ["{{companyName}}", "Название компании"],
+                  ["{{replyEmail}}", "Email для ответа"],
+                  ["{{reportDeadline}}", "Срок устранения"],
+                ] as [string, string][]).map(([tag, label]) => (
+                  <button
+                    key={tag}
+                    onMouseDown={e => { e.preventDefault(); editor.chain().focus().insertContent(tag).run(); }}
+                    className="w-full flex items-center justify-between gap-3 px-2 py-1 rounded text-[11px] text-white/70 hover:text-white hover:bg-white/10 transition-colors text-left"
+                  >
+                    <span className="font-mono text-primary/80">{tag}</span>
+                    <span className="text-white/40 text-[10px]">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <Divider />
+
+          {/* Таблица замечаний */}
+          <ToolBtn
+            title="Вставить таблицу замечаний из предписания (заполняется автоматически при печати)"
+            onClick={() => editor.chain().focus().insertContent(
+              '<p><strong>{{remarks_table}}</strong></p>'
+            ).run()}
+          >
+            <Icon name="TableProperties" size={13} />
+            <span className="text-xs ml-1">Таблица замечаний</span>
+          </ToolBtn>
+
+          <Divider />
+
           {/* Таблица */}
           <div className="relative group flex-shrink-0">
             <button

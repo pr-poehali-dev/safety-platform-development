@@ -3,18 +3,52 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Template, DEFAULT_TEMPLATE } from "@/lib/template";
 import PrescriptionDocument, { PrescriptionData } from "@/components/PrescriptionDocument";
 
+function esc(s: string): string {
+  return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function buildRemarksTable(p: PrescriptionData): string {
+  const colStyle = "border:1px solid #000;padding:4px 6px;vertical-align:top;";
+  const thStyle = `${colStyle}font-weight:bold;text-align:center;background:#f5f5f5;font-size:9pt;`;
+  const rows = (p.remarks || []).map((r, i) => {
+    const photos = (r.photos || []).map(url =>
+      `<div style="margin-top:4px;line-height:0"><img src="${esc(url)}" data-photo="1" style="max-width:100%;width:100%;height:auto;display:block;border:1px solid #ccc;object-fit:contain;" /></div>`
+    ).join("");
+    return `<tr>
+      <td style="${colStyle}text-align:center;">${i + 1}</td>
+      <td style="${colStyle}">${esc(r.place || "—")}</td>
+      <td style="${colStyle}">${esc(r.description || "—")}${photos}</td>
+      <td style="${colStyle}">${esc(r.normRef || "—")}</td>
+      <td style="${colStyle}">${esc(r.deadline || "—")}</td>
+    </tr>`;
+  }).join("");
+  return `<table style="width:100%;border-collapse:collapse;table-layout:fixed;margin:8px 0;font-size:9pt;">
+    <thead><tr>
+      <th style="${thStyle}width:5%;">№ п/п</th>
+      <th style="${thStyle}width:18%;">Место нарушения</th>
+      <th style="${thStyle}">Описание нарушения / Фото нарушения (при наличии)</th>
+      <th style="${thStyle}width:22%;">Нарушен пункт НПА/ЛНА</th>
+      <th style="${thStyle}width:12%;">Срок устранения</th>
+    </tr></thead>
+    <tbody>${rows || `<tr><td colspan="5" style="${colStyle}text-align:center;">Нарушения не зафиксированы</td></tr>`}</tbody>
+  </table>`;
+}
+
 function fillVars(html: string, p: PrescriptionData, companyName: string): string {
+  const remarksHtml = buildRemarksTable(p);
   return html
-    .replace(/\{\{number\}\}/g, p.number)
-    .replace(/\{\{date\}\}/g, p.date)
-    .replace(/\{\{object\}\}/g, p.object)
-    .replace(/\{\{contractor\}\}/g, p.contractor)
-    .replace(/\{\{inspector\}\}/g, p.inspector)
-    .replace(/\{\{representative\}\}/g, p.representative || "")
-    .replace(/\{\{responsible\}\}/g, p.responsible || "")
-    .replace(/\{\{replyEmail\}\}/g, p.replyEmail || "")
-    .replace(/\{\{reportDeadline\}\}/g, p.reportDeadline || "")
-    .replace(/\{\{companyName\}\}/g, companyName);
+    .replace(/\{\{remarks_table\}\}/g, remarksHtml)
+    .replace(/<[^>]*>\s*\{\{remarks_table\}\}\s*<\/[^>]*>/g, remarksHtml)
+    .replace(/\{\{number\}\}/g, esc(p.number))
+    .replace(/\{\{date\}\}/g, esc(p.date))
+    .replace(/\{\{object\}\}/g, esc(p.object))
+    .replace(/\{\{contractor\}\}/g, esc(p.contractor))
+    .replace(/\{\{inspector\}\}/g, esc(p.inspector))
+    .replace(/\{\{representative\}\}/g, esc(p.representative || ""))
+    .replace(/\{\{responsible\}\}/g, esc(p.responsible || ""))
+    .replace(/\{\{replyEmail\}\}/g, esc(p.replyEmail || ""))
+    .replace(/\{\{reportDeadline\}\}/g, esc(p.reportDeadline || ""))
+    .replace(/\{\{companyName\}\}/g, esc(companyName));
 }
 
 export function printPrescription(p: PrescriptionData, tmpl?: Template): void {
