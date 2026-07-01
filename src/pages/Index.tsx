@@ -20,6 +20,7 @@ interface IndexProps {
 }
 
 const API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
+const TEMPLATES_API = "https://functions.poehali.dev/41ec60df-3f38-4561-ba9d-ca17ebd71553";
 const USERS_URL = "https://functions.poehali.dev/9f213d27-a6a3-4ce0-b6b1-0d26003c43eb";
 
 type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks";
@@ -51,7 +52,7 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
   }, []);
 
   useEffect(() => {
-    fetch(`${API}?type=templates`)
+    fetch(TEMPLATES_API)
       .then(r => r.json())
       .then((data: Template[]) => {
         const parsed = typeof data === "string" ? JSON.parse(data) : data;
