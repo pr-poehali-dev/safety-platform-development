@@ -263,10 +263,10 @@ export function WordEditorToolbar({
 
           {/* Таблица замечаний */}
           <ToolBtn
-            title="Вставить таблицу замечаний из предписания (заполняется автоматически при печати)"
-            onClick={() => editor.chain().focus().insertContent(
-              '<p><strong>{{remarks_table}}</strong></p>'
-            ).run()}
+            title="Вставить таблицу замечаний (заполняется данными предписания при печати)"
+            onClick={() => {
+              editor.chain().focus().insertContent(`<table data-remarks-table="1"><tbody><tr><th data-col-key="num"><p>№ п/п</p></th><th data-col-key="place"><p>Место нарушения</p></th><th data-col-key="description"><p>Описание нарушения / Фото (при наличии)</p></th><th data-col-key="normRef"><p>Нарушен пункт НПА/ЛНА</p></th><th data-col-key="deadline"><p>Срок устранения</p></th></tr><tr><td><p style="text-align:center;color:#888;font-style:italic;">1</p></td><td><p style="color:#888;font-style:italic;">Место нарушения…</p></td><td><p style="color:#888;font-style:italic;">Описание + фото…</p></td><td><p style="color:#888;font-style:italic;">НПА/ЛНА…</p></td><td><p style="color:#888;font-style:italic;">Срок…</p></td></tr></tbody></table>`).run();
+            }}
           >
             <Icon name="TableProperties" size={13} />
             <span className="text-xs ml-1">Таблица замечаний</span>

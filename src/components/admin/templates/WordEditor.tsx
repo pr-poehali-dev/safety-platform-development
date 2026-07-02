@@ -13,6 +13,16 @@ import { type PageSettings } from "./wordEditorTypes";
 import { WordEditorToolbar } from "./WordEditorToolbar";
 import { WordEditorCanvas } from "./WordEditorCanvas";
 
+const REMARKS_TABLE_VISUAL = `<table data-remarks-table="1"><tbody><tr><th data-col-key="num"><p>№ п/п</p></th><th data-col-key="place"><p>Место нарушения</p></th><th data-col-key="description"><p>Описание нарушения / Фото (при наличии)</p></th><th data-col-key="normRef"><p>Нарушен пункт НПА/ЛНА</p></th><th data-col-key="deadline"><p>Срок устранения</p></th></tr><tr><td><p style="text-align:center;color:#888;font-style:italic;">1</p></td><td><p style="color:#888;font-style:italic;">Место нарушения…</p></td><td><p style="color:#888;font-style:italic;">Описание + фото…</p></td><td><p style="color:#888;font-style:italic;">НПА/ЛНА…</p></td><td><p style="color:#888;font-style:italic;">Срок…</p></td></tr></tbody></table>`;
+
+function migrateContent(html: string): string {
+  if (!html) return html;
+  // Заменяем старый текстовый маркер (в любом обёрточном теге) на визуальную таблицу
+  return html
+    .replace(/<[^>]+>\s*\{\{remarks_table\}\}\s*<\/[^>]+>/g, REMARKS_TABLE_VISUAL)
+    .replace(/\{\{remarks_table\}\}/g, REMARKS_TABLE_VISUAL);
+}
+
 interface WordEditorProps {
   content: string;
   onChange: (html: string) => void;
@@ -46,7 +56,7 @@ export default function WordEditor({ content, onChange, pageSettings, onPageSett
       TableHeader,
       Image.configure({ resizable: true }),
     ],
-    content: content || "<p></p>",
+    content: migrateContent(content) || "<p></p>",
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
     editorProps: {
       attributes: {
