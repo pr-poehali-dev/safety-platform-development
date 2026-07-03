@@ -180,7 +180,9 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
       const fromPrescriptions = filteredPrescriptions
         .reduce((s, p) => s + (p.remarks || []).filter(r => r.category === cat.name).length, 0);
       return { name: cat.name, count: fromInspections + fromPrescriptions };
-    }).filter(s => s.count > 0 || spbCategories.length <= 10);
+    })
+      .filter(s => s.count > 0 || spbCategories.length <= 10)
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "ru"));
   }, [spbCategories, filteredInspections, filteredPrescriptions]);
 
   const spbTotal = spbStats.reduce((s, c) => s + c.count, 0);
