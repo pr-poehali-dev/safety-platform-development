@@ -136,7 +136,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
   }, [inspections, user, dateFrom, dateTo, selectedContractors, selectedCategories]);
 
   const presTotal = filteredPrescriptions.length;
-  const presIssued = filteredPrescriptions.filter(p => overallStatus(p.remarks) === "Выдано").length;
+  const presIssued = filteredPrescriptions.filter(p => overallStatus(p.remarks) === "В работе").length;
   const presFixed = filteredPrescriptions.filter(p => overallStatus(p.remarks) === "Устранено").length;
   const presOverdue = filteredPrescriptions.filter(p => overallStatus(p.remarks) === "Просрочено").length;
 

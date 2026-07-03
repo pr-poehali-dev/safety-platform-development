@@ -209,7 +209,7 @@ def handler(event: dict, context) -> dict:
                 cur.executemany(
                     f"INSERT INTO {SCHEMA}.remarks (id, prescription_id, place, category, description, norm_ref, deadline, status, sort_order, photos, work_suspended) "
                     f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                    [(r["id"], pid, r.get("place", ""), r.get("category", ""), r.get("description", ""), r.get("normRef", ""), r.get("deadline", ""), r.get("status", "Выдано"), i,
+                    [(r["id"], pid, r.get("place", ""), r.get("category", ""), r.get("description", ""), r.get("normRef", ""), r.get("deadline", ""), r.get("status", "В работе"), i,
                       json.dumps(r.get("photos", []), ensure_ascii=False), bool(r.get("work_suspended", False)))
                      for i, r in enumerate(remarks)]
                 )
@@ -234,7 +234,7 @@ def handler(event: dict, context) -> dict:
                 cur.executemany(
                     f"INSERT INTO {SCHEMA}.remarks (id, prescription_id, place, category, description, norm_ref, deadline, status, sort_order, photos, work_suspended) "
                     f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                    [(r["id"], pid, r.get("place", ""), r.get("category", ""), r.get("description", ""), r.get("normRef", ""), r.get("deadline", ""), r.get("status", "Выдано"), i,
+                    [(r["id"], pid, r.get("place", ""), r.get("category", ""), r.get("description", ""), r.get("normRef", ""), r.get("deadline", ""), r.get("status", "В работе"), i,
                       json.dumps(r.get("photos", []), ensure_ascii=False), bool(r.get("work_suspended", False)))
                      for i, r in enumerate(remarks)]
                 )

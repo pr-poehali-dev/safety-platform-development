@@ -4,13 +4,13 @@ import Icon from "@/components/ui/icon";
 
 const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
 
-type Status = "Черновик" | "Выдано" | "Устранено" | "Просрочено";
+type Status = "Черновик" | "В работе" | "Устранено" | "Просрочено";
 interface Remark { id: string; place: string; description: string; normRef: string; deadline: string; status: Status; }
 interface Prescription { id: string; number: string; date: string; object: string; contractor: string; inspector: string; representative: string; responsible: string; replyEmail: string; reportDeadline: string; remarks: Remark[]; comments: unknown[]; }
 
 const STATUS_STYLE: Record<Status, string> = {
   "Черновик":   "text-muted-foreground bg-muted border-border",
-  "Выдано":     "text-primary bg-primary/10 border-primary/20",
+  "В работе":   "text-primary bg-primary/10 border-primary/20",
   "Устранено":  "text-green-400 bg-green-400/10 border-green-400/20",
   "Просрочено": "text-red-400 bg-red-400/10 border-red-400/20",
 };
@@ -31,7 +31,7 @@ function overallStatus(remarks: Remark[]): Status {
   const ss = remarks.map(effectiveStatus);
   if (ss.some(s => s === "Просрочено")) return "Просрочено";
   if (ss.every(s => s === "Устранено")) return "Устранено";
-  if (ss.some(s => s === "Выдано")) return "Выдано";
+  if (ss.some(s => s === "В работе")) return "В работе";
   return "Черновик";
 }
 
@@ -98,7 +98,7 @@ function PrescriptionEditModal({ prescription: initial, onClose, onSave }: {
                   <div className="space-y-1.5">
                     <label className={lbl}>Статус</label>
                     <select value={r.status} onChange={e => setRemark(i, "status", e.target.value)} className={inp}>
-                      {(["Черновик","Выдано","Устранено","Просрочено"] as Status[]).map(s => <option key={s} value={s}>{s}</option>)}
+                      {(["Черновик","В работе","Устранено","Просрочено"] as Status[]).map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                 </div>

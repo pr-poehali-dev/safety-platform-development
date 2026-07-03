@@ -75,7 +75,7 @@ export function detectGenderFromName(fullName: string): boolean {
 }
 
 // --- Типы ---
-export type Status = "Черновик" | "Выдано" | "Устранено" | "Просрочено";
+export type Status = "Черновик" | "В работе" | "Устранено" | "Просрочено";
 
 export const VIOLATION_CATEGORIES = [
   "Работы на высоте",
@@ -140,12 +140,12 @@ export interface Comment {
 // --- Вспомогательные ---
 export const STATUS_STYLE: Record<Status, string> = {
   "Черновик":   "text-muted-foreground bg-muted border-border",
-  "Выдано":     "text-primary bg-primary/10 border-primary/20",
+  "В работе":   "text-primary bg-primary/10 border-primary/20",
   "Устранено":  "text-green-400 bg-green-400/10 border-green-400/20",
   "Просрочено": "text-red-400 bg-red-400/10 border-red-400/20",
 };
 
-export const ALL_STATUSES: Status[] = ["Черновик", "Выдано", "Устранено", "Просрочено"];
+export const ALL_STATUSES: Status[] = ["Черновик", "В работе", "Устранено", "Просрочено"];
 
 export function isOverdue(remark: Remark): boolean {
   if (remark.status === "Устранено") return false;
@@ -168,10 +168,10 @@ export function overallStatus(remarks: Remark[]): Status {
   const statuses = remarks.map(effectiveStatus);
   if (statuses.some(s => s === "Просрочено")) return "Просрочено";
   if (statuses.every(s => s === "Устранено")) return "Устранено";
-  if (statuses.some(s => s === "Выдано")) return "Выдано";
+  if (statuses.some(s => s === "В работе")) return "В работе";
   return "Черновик";
 }
 
 export function newRemark(): Remark {
-  return { id: Date.now().toString() + Math.random(), place: "", category: "", work_suspended: false, description: "", normRef: "", deadline: "", status: "Выдано" };
+  return { id: Date.now().toString() + Math.random(), place: "", category: "", work_suspended: false, description: "", normRef: "", deadline: "", status: "В работе" };
 }

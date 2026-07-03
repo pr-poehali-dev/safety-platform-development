@@ -42,7 +42,7 @@ export default function DashboardStatCards({
         <h2 className="text-base font-semibold py-0 my-0">Предписания</h2>
         <div className="grid grid-cols-2 gap-3">
           <StatCard label="Всего предписаний" value={presTotal} icon="ClipboardList" color="bg-indigo-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Все") : undefined} />
-          <StatCard label="Выдано" value={presIssued} icon="Send" color="bg-primary" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Выдано") : undefined} />
+          <StatCard label="В работе" value={presIssued} icon="Send" color="bg-primary" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("В работе") : undefined} />
           <StatCard label="Устранено" value={presFixed} icon="CheckCircle" color="bg-green-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Устранено") : undefined} />
           <StatCard label="Просрочено" value={presOverdue} icon="AlertCircle" color="bg-red-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Просрочено") : undefined} />
         </div>

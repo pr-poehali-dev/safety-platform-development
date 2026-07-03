@@ -225,7 +225,7 @@ export function PrescriptionList({
             <p className="text-sm text-muted-foreground mt-0.5">
               {isContractor
                 ? <>Организация: <span className="text-foreground">{user.contractor}</span> · Показаны только ваши предписания</>
-                : <>Всего: {prescriptions.length} · Активных: {prescriptions.filter(p => overallStatus(p.remarks) === "Выдано").length} · Просрочено: {prescriptions.filter(p => overallStatus(p.remarks) === "Просрочено").length}</>
+                : <>Всего: {prescriptions.length} · Активных: {prescriptions.filter(p => overallStatus(p.remarks) === "В работе").length} · Просрочено: {prescriptions.filter(p => overallStatus(p.remarks) === "Просрочено").length}</>
               }
             </p>
           </div>
