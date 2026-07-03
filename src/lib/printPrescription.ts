@@ -29,28 +29,50 @@ function getCellHtml(key: string, r: RemarkRow, idx: number, colStyle: string): 
   }
 }
 
+// Сопоставление текста заголовка с ключом колонки (fallback, если data-col-key отсутствует)
+const HEADER_KEY_MAP: [RegExp, string][] = [
+  [/№|п\/п/i, "num"],
+  [/место/i, "place"],
+  [/описан/i, "description"],
+  [/нпа|лна|пункт/i, "normRef"],
+  [/срок/i, "deadline"],
+  [/статус/i, "status"],
+];
+
+function guessColKeyFromHeaderText(text: string): string | null {
+  const t = text.trim();
+  for (const [re, key] of HEADER_KEY_MAP) {
+    if (re.test(t)) return key;
+  }
+  return null;
+}
+
 /**
- * Находит таблицу замечаний (data-remarks-table="1") в HTML шаблона,
- * читает data-col-key из <th>, и генерирует строки для каждого замечания.
- * Также обрабатывает старый маркер {{remarks_table}}.
+ * Находит таблицу замечаний в HTML шаблона (через DOMParser — устойчиво к
+ * порядку атрибутов, лишним пробелам, вложенным тегам) и разворачивает
+ * строку-заготовку в реальные строки данных предписания.
+ * Ищет по:
+ *   1) атрибуту data-remarks-table="1" на <table>
+ *   2) fallback: таблица, чьи заголовки текстово совпадают с ожидаемым набором
+ * Также обрабатывает старый текстовый маркер {{remarks_table}}.
  */
 function expandRemarksTable(html: string, p: PrescriptionData): string {
-  // --- Обратная совместимость: старый маркер {{remarks_table}} ---
+  const colStyle = "border:1px solid #000;padding:4px 6px;vertical-align:top;";
+
+  const buildRows = (colKeys: string[]): string => {
+    const remarks = p.remarks || [];
+    if (remarks.length === 0) {
+      return `<tr><td colspan="${colKeys.length || 5}" style="${colStyle}text-align:center;color:#888;">Нарушения не зафиксированы</td></tr>`;
+    }
+    return remarks.map((r, i) =>
+      `<tr>${colKeys.map(key => getCellHtml(key, r as RemarkRow, i, colStyle)).join("")}</tr>`
+    ).join("");
+  };
+
+  // --- Обратная совместимость: старый текстовый маркер {{remarks_table}} ---
   if (/\{\{remarks_table\}\}/.test(html)) {
-    const colStyle = "border:1px solid #000;padding:4px 6px;vertical-align:top;";
     const thStyle = `${colStyle}font-weight:bold;text-align:center;background:#f5f5f5;font-size:9pt;`;
-    const rows = (p.remarks || []).map((r, i) => {
-      const photos = (r.photos || []).map(url =>
-        `<div style="margin-top:4px;line-height:0;"><img src="${url}" data-photo="1" style="max-width:100%;width:100%;height:auto;display:block;border:1px solid #ccc;object-fit:contain;" /></div>`
-      ).join("");
-      return `<tr>
-        <td style="${colStyle}text-align:center;">${i + 1}</td>
-        <td style="${colStyle}">${esc(r.place || "—")}</td>
-        <td style="${colStyle}">${esc(r.description || "—")}${photos}</td>
-        <td style="${colStyle}">${esc(r.normRef || "—")}</td>
-        <td style="${colStyle}">${esc(r.deadline || "—")}</td>
-      </tr>`;
-    }).join("");
+    const colKeys = ["num", "place", "description", "normRef", "deadline"];
     const table = `<table style="width:100%;border-collapse:collapse;table-layout:fixed;margin:8px 0;font-size:9pt;">
       <thead><tr>
         <th style="${thStyle}width:5%;">№ п/п</th>
@@ -59,51 +81,77 @@ function expandRemarksTable(html: string, p: PrescriptionData): string {
         <th style="${thStyle}width:22%;">Нарушен пункт НПА/ЛНА</th>
         <th style="${thStyle}width:12%;">Срок устранения</th>
       </tr></thead>
-      <tbody>${rows || `<tr><td colspan="5" style="${colStyle}text-align:center;">Нарушения не зафиксированы</td></tr>`}</tbody>
+      <tbody>${buildRows(colKeys)}</tbody>
     </table>`;
     return html
       .replace(/\{\{remarks_table\}\}/g, table)
       .replace(/<[^>]*>\s*\{\{remarks_table\}\}\s*<\/[^>]*>/g, table);
   }
 
-  // --- Новый формат: таблица с data-remarks-table="1" ---
-  if (!html.includes('data-remarks-table="1"')) return html;
+  // --- Новый формат: парсим HTML через DOMParser (устойчиво к атрибутам/пробелам) ---
+  if (typeof DOMParser === "undefined") return html;
 
-  // Ищем блок <table ... data-remarks-table="1" ...>...</table>
-  const tableMatch = html.match(/<table[^>]*data-remarks-table="1"[^>]*>[\s\S]*?<\/table>/);
-  if (!tableMatch) return html;
+  const doc = new DOMParser().parseFromString(`<div id="__root">${html}</div>`, "text/html");
+  const root = doc.getElementById("__root");
+  if (!root) return html;
 
-  const tableHtml = tableMatch[0];
+  const tables = Array.from(root.querySelectorAll("table"));
+  let targetTable: HTMLTableElement | null = null;
+  let colKeys: string[] = [];
 
-  // Извлекаем все <th ...data-col-key="KEY"...> — порядок ключей
-  const colKeys: string[] = [];
-  const thRe = /<th[^>]*data-col-key="([^"]+)"[^>]*>/g;
-  let m: RegExpExecArray | null;
-  while ((m = thRe.exec(tableHtml)) !== null) {
-    colKeys.push(m[1]);
+  for (const table of tables) {
+    const headerCells = Array.from(table.querySelectorAll("tr:first-child th, tr:first-child td"));
+    if (headerCells.length === 0) continue;
+
+    // Пытаемся прочитать data-col-key
+    const keysFromAttr = headerCells.map(c => c.getAttribute("data-col-key"));
+    if (keysFromAttr.every(k => !!k)) {
+      targetTable = table as HTMLTableElement;
+      colKeys = keysFromAttr as string[];
+      break;
+    }
+
+    // Fallback: явный маркер на самой таблице
+    if (table.getAttribute("data-remarks-table") === "1") {
+      targetTable = table as HTMLTableElement;
+      colKeys = headerCells.map(c => guessColKeyFromHeaderText(c.textContent || "") ?? "description");
+      break;
+    }
+
+    // Fallback: угадываем по тексту заголовков (минимум 3 совпадения из известного набора)
+    const guessed = headerCells.map(c => guessColKeyFromHeaderText(c.textContent || ""));
+    const matchCount = guessed.filter(Boolean).length;
+    if (matchCount >= 3 && matchCount === headerCells.length) {
+      targetTable = table as HTMLTableElement;
+      colKeys = guessed as string[];
+      break;
+    }
   }
 
-  // Извлекаем стиль таблицы (сохраняем как есть, очищаем от лишних атрибутов)
-  const tableOpenRaw = tableHtml.match(/^<table[^>]*>/)?.[0] ?? "<table>";
+  if (!targetTable || colKeys.length === 0) return html;
 
-  // Строим шапку из исходного <tr> с <th>
-  const theadMatch = tableHtml.match(/<tr[\s\S]*?<\/tr>/);
-  const theadRow = theadMatch ? theadMatch[0] : "";
+  // Сохраняем первую строку (шапку), удаляем остальные строки, добавляем строки данных.
+  // Модифицируем DOM напрямую и сериализуем весь документ — надёжнее, чем string-replace outerHTML,
+  // т.к. DOMParser может изменить порядок/кавычки атрибутов при парсинге.
+  const allRows = Array.from(targetTable.querySelectorAll("tr"));
+  const headerRow = allRows[0] ?? null;
 
-  // Стили ячеек
-  const colStyle = "border:1px solid #000;padding:4px 6px;vertical-align:top;";
+  // Убираем существующий thead/tbody, если есть, и лишние строки
+  const existingThead = targetTable.querySelector("thead");
+  const existingTbody = targetTable.querySelector("tbody");
+  if (existingThead) existingThead.remove();
+  if (existingTbody) existingTbody.remove();
+  allRows.forEach(r => r.remove());
 
-  // Строим строки данных
-  const remarks = p.remarks || [];
-  const dataRows = remarks.length > 0
-    ? remarks.map((r, i) =>
-        `<tr>${colKeys.map(key => getCellHtml(key, r as RemarkRow, i, colStyle)).join("")}</tr>`
-      ).join("")
-    : `<tr><td colspan="${colKeys.length || 5}" style="${colStyle}text-align:center;color:#888;">Нарушения не зафиксированы</td></tr>`;
+  const thead = doc.createElement("thead");
+  if (headerRow) thead.appendChild(headerRow);
+  const tbody = doc.createElement("tbody");
+  tbody.innerHTML = buildRows(colKeys);
 
-  const newTable = `${tableOpenRaw}<thead>${theadRow}</thead><tbody>${dataRows}</tbody></table>`;
+  targetTable.appendChild(thead);
+  targetTable.appendChild(tbody);
 
-  return html.replace(tableMatch[0], newTable);
+  return root.innerHTML;
 }
 
 function fillVars(html: string, p: PrescriptionData, companyName: string): string {

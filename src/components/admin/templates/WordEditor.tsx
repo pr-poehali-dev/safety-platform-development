@@ -13,6 +13,34 @@ import { type PageSettings } from "./wordEditorTypes";
 import { WordEditorToolbar } from "./WordEditorToolbar";
 import { WordEditorCanvas } from "./WordEditorCanvas";
 
+// Расширяем Table, чтобы data-remarks-table сохранялся при парсинге/сериализации HTML
+const RemarksTable = TableExtension.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      remarksTable: {
+        default: null,
+        parseHTML: el => el.getAttribute("data-remarks-table"),
+        renderHTML: attrs => attrs.remarksTable ? { "data-remarks-table": attrs.remarksTable } : {},
+      },
+    };
+  },
+});
+
+// Расширяем TableHeader, чтобы data-col-key сохранялся при парсинге/сериализации HTML
+const RemarksTableHeader = TableHeader.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      colKey: {
+        default: null,
+        parseHTML: el => el.getAttribute("data-col-key"),
+        renderHTML: attrs => attrs.colKey ? { "data-col-key": attrs.colKey } : {},
+      },
+    };
+  },
+});
+
 const REMARKS_TABLE_VISUAL = `<table data-remarks-table="1"><tbody><tr><th data-col-key="num"><p>№ п/п</p></th><th data-col-key="place"><p>Место нарушения</p></th><th data-col-key="description"><p>Описание нарушения / Фото (при наличии)</p></th><th data-col-key="normRef"><p>Нарушен пункт НПА/ЛНА</p></th><th data-col-key="deadline"><p>Срок устранения</p></th></tr><tr><td><p style="text-align:center;color:#888;font-style:italic;">1</p></td><td><p style="color:#888;font-style:italic;">Место нарушения…</p></td><td><p style="color:#888;font-style:italic;">Описание + фото…</p></td><td><p style="color:#888;font-style:italic;">НПА/ЛНА…</p></td><td><p style="color:#888;font-style:italic;">Срок…</p></td></tr></tbody></table>`;
 
 function migrateContent(html: string): string {
@@ -50,10 +78,10 @@ export default function WordEditor({ content, onChange, pageSettings, onPageSett
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Subscript,
       Superscript,
-      TableExtension.configure({ resizable: true }),
+      RemarksTable.configure({ resizable: true }),
       TableRow,
       TableCell,
-      TableHeader,
+      RemarksTableHeader,
       Image.configure({ resizable: true }),
     ],
     content: migrateContent(content) || "<p></p>",
