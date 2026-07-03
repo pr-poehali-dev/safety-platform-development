@@ -174,7 +174,8 @@ export function printPrescription(p: PrescriptionData, tmpl?: Template): void {
       tr { page-break-inside: auto; }
       thead tr { page-break-inside: avoid; page-break-after: avoid; }
     }
-    p { margin: 0 0 4px; }
+    p, li, td, th { white-space: pre-wrap; }
+    p { margin: 0 0 4px; min-height: 1.5em; }
     h1 { font-size: 20pt; font-weight: bold; margin: 12px 0 6px; }
     h2 { font-size: 16pt; font-weight: bold; margin: 10px 0 5px; }
     h3 { font-size: 13pt; font-weight: bold; margin: 8px 0 4px; }

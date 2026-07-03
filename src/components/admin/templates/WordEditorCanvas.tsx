@@ -35,7 +35,8 @@ export function WordEditorCanvas({ editor, pageSettings: pg }: WordEditorCanvasP
       >
         <style>{`
           .tiptap-editor { color: #000; font-size: 11pt; line-height: 1.5; font-family: 'Times New Roman', serif; }
-          .tiptap-editor p { margin: 0 0 4px; }
+          .tiptap-editor p, .tiptap-editor li, .tiptap-editor td, .tiptap-editor th { white-space: pre-wrap; }
+          .tiptap-editor p { margin: 0 0 4px; min-height: 1.5em; }
           .tiptap-editor h1 { font-size: 20pt; font-weight: bold; margin: 12px 0 6px; }
           .tiptap-editor h2 { font-size: 16pt; font-weight: bold; margin: 10px 0 5px; }
           .tiptap-editor h3 { font-size: 13pt; font-weight: bold; margin: 8px 0 4px; }

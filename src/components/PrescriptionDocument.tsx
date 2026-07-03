@@ -159,6 +159,7 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
     color: "#000",
     background: "#fff",
     lineHeight: 1.5,
+    whiteSpace: "pre-wrap",
     // Поля управляются через @page в printPrescription.ts — не дублируем padding
   } : {
     padding: `${px(t.marginTop)}px ${px(t.marginRight)}px ${px(t.marginBottom)}px ${px(t.marginLeft)}px`,
@@ -167,6 +168,7 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
     fontSize: `${t.fontSize}pt`,
     color: "#000",
     lineHeight: 1.5,
+    whiteSpace: "pre-wrap",
     width: "100%",
     height: "100%",
   };
