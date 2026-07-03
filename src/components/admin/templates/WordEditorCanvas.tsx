@@ -43,8 +43,11 @@ export function WordEditorCanvas({ editor, pageSettings: pg }: WordEditorCanvasP
           .tiptap-editor ul { padding-left: 20px; margin: 4px 0; }
           .tiptap-editor ol { padding-left: 20px; margin: 4px 0; }
           .tiptap-editor li { margin: 2px 0; }
-          .tiptap-editor table { border-collapse: collapse; width: 100%; margin: 8px 0; }
-          .tiptap-editor td, .tiptap-editor th { border: 1px solid #000; padding: 4px 6px; min-width: 40px; vertical-align: top; }
+          .tiptap-editor table { border-collapse: collapse; width: 100%; margin: 8px 0; table-layout: fixed; }
+          .tiptap-editor td, .tiptap-editor th {
+            border: 1px solid #000; padding: 4px 6px; min-width: 40px; vertical-align: top;
+            word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;
+          }
           .tiptap-editor th { font-weight: bold; background: #f5f5f5; }
           .tiptap-editor img { max-width: 100%; height: auto; }
           .tiptap-editor .selectedCell { background: rgba(59,130,246,0.15); }

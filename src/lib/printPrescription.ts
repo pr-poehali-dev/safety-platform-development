@@ -230,8 +230,12 @@ export function printPrescription(p: PrescriptionData, tmpl?: Template): void {
     ul { padding-left: 20px; margin: 4px 0; }
     ol { padding-left: 20px; margin: 4px 0; }
     li { margin: 2px 0; }
-    table { border-collapse: collapse; width: 100%; margin: 8px 0; }
-    td, th { border: 1px solid #000; padding: 4px 6px; min-width: 20px; vertical-align: top; }
+    table { border-collapse: collapse; width: 100%; margin: 8px 0; table-layout: fixed; }
+    td, th {
+      border: 1px solid #000; padding: 4px 6px; vertical-align: top;
+      word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;
+      hyphens: auto;
+    }
     th { font-weight: bold; background: #f5f5f5; }
     img { max-width: 100%; height: auto; }
     hr { border: none; border-top: 1px solid #999; margin: 8px 0; }
