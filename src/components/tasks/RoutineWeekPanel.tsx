@@ -18,6 +18,17 @@ export default function RoutineWeekPanel({ user }: RoutineWeekPanelProps) {
 
   const entriesForDate = (iso: string) => entries.filter(e => e.entry_date === iso);
 
+  const weekTotalHours = entries.reduce((s, e) => s + e.hours, 0);
+
+  const categoryBreakdown = Object.values(
+    entries.reduce<Record<string, { name: string; hours: number }>>((acc, e) => {
+      const key = e.category_name || "Без категории";
+      if (!acc[key]) acc[key] = { name: key, hours: 0 };
+      acc[key].hours += e.hours;
+      return acc;
+    }, {})
+  ).sort((a, b) => b.hours - a.hours);
+
   const openAddModal = (iso?: string) => {
     setEntryDefaultDate(iso ?? weekDays.find(d => d.isToday)?.iso ?? weekDays[0].iso);
     setShowEntryModal(true);
@@ -72,6 +83,34 @@ export default function RoutineWeekPanel({ user }: RoutineWeekPanelProps) {
               </button>
             );
           })}
+        </div>
+      )}
+
+      {!loading && entries.length > 0 && (
+        <div className="border border-border rounded-xl p-4 space-y-3 bg-muted/20">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Icon name="BarChart3" size={14} className="text-primary" />
+              Итого за неделю
+            </h3>
+            <span className="text-sm font-bold text-primary">{weekTotalHours} ч</span>
+          </div>
+          <div className="space-y-2">
+            {categoryBreakdown.map(({ name, hours }) => (
+              <div key={name}>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-xs text-muted-foreground truncate">{name}</span>
+                  <span className="text-xs font-medium text-foreground flex-shrink-0">{hours} ч</span>
+                </div>
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: weekTotalHours > 0 ? `${(hours / weekTotalHours) * 100}%` : "0%" }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
