@@ -1,0 +1,10 @@
+{
+  "tests": [
+    {
+      "name": "GET routine categories list returns array",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}

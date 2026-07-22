@@ -1,0 +1,16 @@
+{
+  "tests": [
+    {
+      "name": "GET routine entries without login returns 400",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 400
+    },
+    {
+      "name": "GET routine entries for user returns array",
+      "method": "GET",
+      "path": "/?login=test_user_nonexistent",
+      "expectedStatus": 200
+    }
+  ]
+}

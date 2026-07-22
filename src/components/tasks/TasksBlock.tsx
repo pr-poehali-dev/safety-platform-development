@@ -3,6 +3,7 @@ import { TaskAssignment, TaskComment, TASK_STATUS_LABELS, TASK_STATUS_COLORS } f
 import { AppUser } from "@/lib/auth";
 import TaskCard from "./TaskCard";
 import TaskForm from "./TaskForm";
+import RoutineWeekPanel from "./RoutineWeekPanel";
 import Icon from "@/components/ui/icon";
 
 interface TasksBlockProps {
@@ -156,41 +157,43 @@ export default function TasksBlock({ user, availableUsers, assignments, loading,
         )}
       </div>
 
-      {/* Фильтры */}
-      <div className="flex flex-wrap gap-2">
-        <div className="relative flex-1 min-w-[180px]">
-          <Icon name="Search" size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input
-            className="w-full text-sm bg-muted/40 border border-border rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
-            placeholder="Поиск по задаче..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
+      {/* Фильтры (руководитель/admin/подрядчик — над общим списком) */}
+      {!isSpecialist && (
+        <div className="flex flex-wrap gap-2">
+          <div className="relative flex-1 min-w-[180px]">
+            <Icon name="Search" size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              className="w-full text-sm bg-muted/40 border border-border rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+              placeholder="Поиск по задаче..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
 
-        <select
-          className="text-sm bg-muted/40 border border-border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-        >
-          {STATUS_FILTERS.map(f => (
-            <option key={f.value} value={f.value}>{f.label}</option>
-          ))}
-        </select>
-
-        {(isManager || isAdmin) && uniqueAssignees.length > 0 && (
           <select
             className="text-sm bg-muted/40 border border-border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
-            value={assigneeFilter}
-            onChange={e => setAssigneeFilter(e.target.value)}
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
           >
-            <option value="">Все исполнители</option>
-            {uniqueAssignees.map(a => (
-              <option key={a.login} value={a.login}>{a.name}</option>
+            {STATUS_FILTERS.map(f => (
+              <option key={f.value} value={f.value}>{f.label}</option>
             ))}
           </select>
-        )}
-      </div>
+
+          {(isManager || isAdmin) && uniqueAssignees.length > 0 && (
+            <select
+              className="text-sm bg-muted/40 border border-border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+              value={assigneeFilter}
+              onChange={e => setAssigneeFilter(e.target.value)}
+            >
+              <option value="">Все исполнители</option>
+              {uniqueAssignees.map(a => (
+                <option key={a.login} value={a.login}>{a.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
 
       {/* Массовые действия (только руководитель/admin) */}
       {(isManager || isAdmin) && checkedIds.size > 0 && (
@@ -300,8 +303,82 @@ export default function TasksBlock({ user, availableUsers, assignments, loading,
         </div>
       )}
 
-      {/* Список для специалиста / подрядчика */}
-      {(isSpecialist || user.role === "contractor") && (
+      {/* Специалист ОТ: двухколоночный макет — задачи от руководителя + рутина */}
+      {isSpecialist && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Левая колонка: задачи от руководителя */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-muted-foreground">Задачи от руководителя</h3>
+
+            <div className="flex flex-wrap gap-2">
+              <div className="relative flex-1 min-w-[160px]">
+                <Icon name="Search" size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  className="w-full text-sm bg-muted/40 border border-border rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+                  placeholder="Поиск по задаче..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+              </div>
+              <select
+                className="text-sm bg-muted/40 border border-border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+              >
+                {STATUS_FILTERS.map(f => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              {loading ? (
+                <div className="py-12 text-center text-sm text-muted-foreground">Загрузка...</div>
+              ) : filtered.length === 0 ? (
+                <div className="py-12 text-center">
+                  <Icon name="ListChecks" size={32} className="text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">Задач нет</p>
+                </div>
+              ) : (
+                filtered.map(a => {
+                  const isOverdue = a.status === "overdue";
+                  return (
+                    <div
+                      key={a.id}
+                      onClick={() => setSelected(a)}
+                      className={`border border-border rounded-xl px-4 py-3 cursor-pointer transition-colors hover:bg-muted/30 ${isOverdue ? "border-red-400/30 bg-red-500/5" : ""}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-sm line-clamp-2 flex-1">{a.description}</p>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full border flex-shrink-0 ${TASK_STATUS_COLORS[a.status] ?? ""}`}>
+                          {TASK_STATUS_LABELS[a.status] ?? a.status}
+                        </span>
+                      </div>
+                      <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Icon name="Calendar" size={11} />
+                          Срок: <span className={`font-medium ${isOverdue ? "text-red-400" : "text-foreground"}`}>{fmt(a.due_date)}</span>
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Icon name="UserCheck" size={11} /> {a.created_by_name}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Правая колонка: рутина */}
+          <div className="lg:border-l lg:border-border lg:pl-6">
+            <RoutineWeekPanel user={user} />
+          </div>
+        </div>
+      )}
+
+      {/* Список для подрядчика */}
+      {user.role === "contractor" && (
         <div className="space-y-2">
           {loading ? (
             <div className="py-12 text-center text-sm text-muted-foreground">Загрузка...</div>
