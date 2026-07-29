@@ -27,6 +27,8 @@ def handler(event: dict, context) -> dict:
         date_to = params.get("date_to")
         contractor = params.get("contractor")
         object_name = params.get("object_name")
+        inspector_name = params.get("inspector_name")
+        violation_type = params.get("violation_type")
 
         where = []
         args = []
@@ -43,6 +45,12 @@ def handler(event: dict, context) -> dict:
         if object_name:
             where.append("object_name ILIKE %s")
             args.append(f"%{object_name}%")
+        if inspector_name:
+            where.append("inspector_name ILIKE %s")
+            args.append(f"%{inspector_name}%")
+        if violation_type:
+            where.append("violation_type ILIKE %s")
+            args.append(f"%{violation_type}%")
 
         where_sql = ("WHERE " + " AND ".join(where)) if where else ""
 

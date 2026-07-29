@@ -32,6 +32,8 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
   const [dateTo, setDateTo] = useState("");
   const [filterContractor, setFilterContractor] = useState("");
   const [filterObject, setFilterObject] = useState("");
+  const [filterInspector, setFilterInspector] = useState("");
+  const [filterViolationType, setFilterViolationType] = useState("");
   const [filterSuspended, setFilterSuspended] = useState(initialSuspended ?? false);
 
   const inspectorName = user.name || "";
@@ -43,11 +45,13 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
     if (dateTo) params.set("date_to", dateTo);
     if (filterContractor) params.set("contractor", filterContractor);
     if (filterObject) params.set("object_name", filterObject);
+    if (filterInspector) params.set("inspector_name", filterInspector);
+    if (filterViolationType) params.set("violation_type", filterViolationType);
     fetch(`${API}?${params}`)
       .then(r => r.json())
       .then(data => setRows(Array.isArray(data) ? data : []))
       .finally(() => setLoading(false));
-  }, [dateFrom, dateTo, filterContractor, filterObject]);
+  }, [dateFrom, dateTo, filterContractor, filterObject, filterInspector, filterViolationType]);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -88,6 +92,8 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
 
   const uniqueContractors = [...new Set(rows.map(r => r.contractor))].filter(Boolean);
   const uniqueObjects = [...new Set(rows.map(r => r.object_name))].filter(Boolean);
+  const uniqueInspectors = [...new Set(rows.map(r => r.inspector_name))].filter(Boolean);
+  const uniqueViolationTypes = [...new Set(rows.map(r => r.violation_type))].filter(Boolean);
   const displayedRows = filterSuspended ? rows.filter(r => r.works_suspended) : rows;
 
   return (
@@ -161,6 +167,8 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
           <div className="w-px h-4 bg-border" />
           <FilterDropdown label="Подрядчик" options={uniqueContractors} value={filterContractor} onChange={setFilterContractor} />
           <FilterDropdown label="Объект" options={uniqueObjects} value={filterObject} onChange={setFilterObject} />
+          <FilterDropdown label="Проверяющий" options={uniqueInspectors} value={filterInspector} onChange={setFilterInspector} />
+          <FilterDropdown label="Вид нарушения" options={uniqueViolationTypes} value={filterViolationType} onChange={setFilterViolationType} />
           <button
             onClick={() => setFilterSuspended(v => !v)}
             className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${filterSuspended ? "border-red-500 bg-red-500/10 text-red-400" : "border-border bg-secondary/30 text-muted-foreground hover:text-foreground"}`}
@@ -168,9 +176,9 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
             <Icon name="OctagonX" size={12} />
             Приостановлено
           </button>
-          {(dateFrom || dateTo || filterContractor || filterObject || filterSuspended) && (
+          {(dateFrom || dateTo || filterContractor || filterObject || filterInspector || filterViolationType || filterSuspended) && (
             <button
-              onClick={() => { setDateFrom(""); setDateTo(""); setFilterContractor(""); setFilterObject(""); setFilterSuspended(false); }}
+              onClick={() => { setDateFrom(""); setDateTo(""); setFilterContractor(""); setFilterObject(""); setFilterInspector(""); setFilterViolationType(""); setFilterSuspended(false); }}
               className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
             >
               <Icon name="X" size={11} />
