@@ -122,7 +122,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
   const filteredInspections = useMemo(() => {
     return inspections.filter(i => {
       if (isContractor && i.contractor !== user.contractor) return false;
-      if (isSpecialist && i.created_by !== user.login) return false;
+      if (isSpecialist && i.created_by !== user.id) return false;
       if (from || to) {
         const d = parseDate(i.inspection_date);
         if (!d) return false;
