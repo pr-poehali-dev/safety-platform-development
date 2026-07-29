@@ -6,6 +6,7 @@ interface PyramidData {
   no_consequences: number;
   totalViolations: number;
   suspendedWorks: number;
+  suspendedWorksWithAct?: number;
 }
 
 interface IncidentPyramidProps {
@@ -14,7 +15,8 @@ interface IncidentPyramidProps {
 }
 
 export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
-  const { fatal, severe_injury, light_injury, microtrauma, no_consequences, totalViolations, suspendedWorks } = data;
+  const { fatal, severe_injury, light_injury, microtrauma, no_consequences, totalViolations, suspendedWorks, suspendedWorksWithAct } = data;
+  const suspendedWorksLabel = suspendedWorksWithAct ? `${suspendedWorks}(${suspendedWorksWithAct})` : String(suspendedWorks);
 
   const W = 420;
   const H = 340;
@@ -83,6 +85,7 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
       label: "Опасные действия/\nопасные условия\n(нарушения)",
       valLeft: totalViolations,
       valRight: suspendedWorks,
+      valRightDisplay: suspendedWorksLabel as string | number,
       labelRight: "Приостановки\nработ",
       fillLeft: "#8a9bb0",
       fillRight: "#7a8ba0",
@@ -182,7 +185,7 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
                       {layer.valLeft}
                     </text>
                     <text x={((cx0 + cx1) / 2 + (ox + t0.right + ox + t1.right) / 2) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
-                      {layer.valRight}
+                      {"valRightDisplay" in layer ? layer.valRightDisplay : layer.valRight}
                     </text>
                   </>
                 ) : (

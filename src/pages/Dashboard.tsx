@@ -144,6 +144,17 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
   const inspSuspended = filteredInspections.filter(i => i.works_suspended).length;
   const inspRemarks = filteredInspections.reduce((s, i) => s + (i.remarks_count || 0), 0);
 
+  const presSuspendedRemarks = useMemo(() => {
+    return filteredPrescriptions.reduce((acc, p) => acc + (p.remarks || []).filter(r => r.work_suspended).length, 0);
+  }, [filteredPrescriptions]);
+
+  const presSuspendedActs = useMemo(() => {
+    return filteredPrescriptions.reduce((acc, p) => acc + (p.remarks || []).filter(r => r.work_suspended && r.suspension_act_drawn).length, 0);
+  }, [filteredPrescriptions]);
+
+  const totalSuspended = inspSuspended + presSuspendedRemarks;
+  const totalSuspendedActs = presSuspendedActs;
+
   const filteredIncidents = useMemo(() => {
     return incidents.filter(i => {
       if (isContractor && i.contractor !== user.contractor) return false;
@@ -168,9 +179,10 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
       microtrauma: filteredIncidents.reduce((s, i) => s + (i.microtrauma || 0), 0),
       no_consequences: filteredIncidents.reduce((s, i) => s + (i.no_consequences || 0), 0),
       totalViolations,
-      suspendedWorks: inspSuspended,
+      suspendedWorks: totalSuspended,
+      suspendedWorksWithAct: totalSuspendedActs,
     };
-  }, [filteredIncidents, filteredPrescriptions, inspRemarks, inspSuspended]);
+  }, [filteredIncidents, filteredPrescriptions, inspRemarks, totalSuspended, totalSuspendedActs]);
 
   const spbStats = useMemo(() => {
     return spbCategories.map(cat => {
