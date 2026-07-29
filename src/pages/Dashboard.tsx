@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { AppUser } from "@/lib/auth";
-import { Prescription, overallStatus } from "@/lib/prescriptionTypes";
+import { Prescription, overallStatus, effectiveStatus } from "@/lib/prescriptionTypes";
 import { Inspection } from "@/components/inspections/types";
 import Icon from "@/components/ui/icon";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
@@ -170,7 +170,10 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
   }, [incidents, user, dateFrom, dateTo, selectedContractors]);
 
   const pyramidData = useMemo(() => {
-    const presViolations = filteredPrescriptions.reduce((s, p) => s + (p.remarks || []).length, 0);
+    const presViolations = filteredPrescriptions.reduce(
+      (s, p) => s + (p.remarks || []).filter(r => effectiveStatus(r) !== "Просрочено").length,
+      0
+    );
     const totalViolations = inspRemarks + presViolations;
     return {
       fatal: filteredIncidents.reduce((s, i) => s + (i.fatal || 0), 0),
