@@ -65,6 +65,78 @@ TEMPLATE_FIELDS = (
 )
 
 
+def handle_numbering(method, body, cur, conn):
+    if method == "GET":
+        cur.execute(
+            f"SELECT id, prefix, start_number, next_number, auto_reset_yearly, last_year "
+            f"FROM {SCHEMA}.prescription_numbering ORDER BY id LIMIT 1"
+        )
+        row = cur.fetchone()
+        if not row:
+            return ok({"prefix": "", "start_number": 1, "next_number": 1, "auto_reset_yearly": False})
+        return ok({
+            "id": row[0], "prefix": row[1], "start_number": row[2],
+            "next_number": row[3], "auto_reset_yearly": row[4], "last_year": row[5],
+        })
+
+    if method == "PUT":
+        s = body
+        prefix = (s.get("prefix") or "").strip()
+        start_number = int(s.get("start_number", 1))
+        auto_reset_yearly = bool(s.get("auto_reset_yearly", False))
+        cur.execute(f"SELECT id FROM {SCHEMA}.prescription_numbering ORDER BY id LIMIT 1")
+        row = cur.fetchone()
+        if row:
+            cur.execute(
+                f"UPDATE {SCHEMA}.prescription_numbering "
+                f"SET prefix=%s, start_number=%s, next_number=%s, auto_reset_yearly=%s, updated_at=now() WHERE id=%s",
+                (prefix, start_number, start_number, auto_reset_yearly, row[0])
+            )
+        else:
+            cur.execute(
+                f"INSERT INTO {SCHEMA}.prescription_numbering (prefix, start_number, next_number, auto_reset_yearly) "
+                f"VALUES (%s,%s,%s,%s)",
+                (prefix, start_number, start_number, auto_reset_yearly)
+            )
+        conn.commit()
+        return ok({"ok": True})
+
+    return err("Method not allowed", 405)
+
+
+def next_prescription_number(cur, conn):
+    import datetime
+    cur.execute(
+        f"SELECT id, prefix, start_number, next_number, auto_reset_yearly, last_year "
+        f"FROM {SCHEMA}.prescription_numbering ORDER BY id LIMIT 1 FOR UPDATE"
+    )
+    row = cur.fetchone()
+    current_year = datetime.datetime.now().year
+
+    if not row:
+        cur.execute(
+            f"INSERT INTO {SCHEMA}.prescription_numbering (prefix, start_number, next_number, auto_reset_yearly, last_year) "
+            f"VALUES ('', 1, 2, FALSE, %s) RETURNING id",
+            (current_year,)
+        )
+        return "1"
+
+    nid, prefix, start_number, next_number, auto_reset_yearly, last_year = row
+
+    if auto_reset_yearly and last_year is not None and last_year != current_year:
+        next_number = start_number
+
+    number_value = next_number
+    upcoming_next = next_number + 1
+
+    cur.execute(
+        f"UPDATE {SCHEMA}.prescription_numbering SET next_number=%s, last_year=%s, updated_at=now() WHERE id=%s",
+        (upcoming_next, current_year, nid)
+    )
+
+    return f"{prefix}{number_value}" if prefix else str(number_value)
+
+
 def handle_templates(method, body, cur, conn):
     if method == "GET":
         cur.execute(f"SELECT {TEMPLATE_FIELDS} FROM {SCHEMA}.templates ORDER BY is_default DESC, created_at ASC")
@@ -159,10 +231,12 @@ def handler(event: dict, context) -> dict:
     cur = conn.cursor()
 
     try:
-        # Роутинг по query-параметру ?type=templates
+        # Роутинг по query-параметру ?type=templates / ?type=numbering
         qs = event.get("queryStringParameters") or {}
         if qs.get("type") == "templates" or body.get("_type") == "templates":
             return handle_templates(method, body, cur, conn)
+        if qs.get("type") == "numbering" or body.get("_type") == "numbering":
+            return handle_numbering(method, body, cur, conn)
 
         # --- ПРЕДПИСАНИЯ ---
         if method == "GET":
@@ -190,9 +264,7 @@ def handler(event: dict, context) -> dict:
         if method == "POST":
             p = body
             pid = p["id"]
-            cur.execute(f"SELECT COUNT(*) FROM {SCHEMA}.prescriptions")
-            count = cur.fetchone()[0]
-            number = str(count + 1)
+            number = next_prescription_number(cur, conn)
             cur.execute(
                 f"INSERT INTO {SCHEMA}.prescriptions (id, number, date, object, contractor, inspector, representative, responsible, reply_email, report_deadline, comments, contract_number, created_by, inspector_nominative) "
                 f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
