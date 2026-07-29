@@ -14,6 +14,7 @@ export interface Inspection {
   inspector_name: string;
   note: string | null;
   created_by: string;
+  photos?: string[];
 }
 
 export interface InspectionFormData {
@@ -24,6 +25,7 @@ export interface InspectionFormData {
   remarks_count: number;
   works_suspended: boolean;
   note: string;
+  photos: string[];
 }
 
 export interface ContractorItem {
@@ -39,6 +41,7 @@ export const emptyForm = (): InspectionFormData => ({
   remarks_count: 1,
   works_suspended: false,
   note: "",
+  photos: [],
 });
 
 export const inp = "w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50";

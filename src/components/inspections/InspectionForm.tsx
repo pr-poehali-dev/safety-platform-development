@@ -6,6 +6,32 @@ import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { InspectionFormData, ContractorItem, inp, lbl } from "./types";
 
+const UPLOAD_URL = "https://functions.poehali.dev/b1d2899a-a609-43c1-81e8-34e4c4922136";
+const MAX_PHOTOS = 5;
+const MAX_PHOTO_SIZE = 1.5 * 1024 * 1024;
+const MAX_PHOTO_WIDTH = 600;
+
+function resizeImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = e => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = img.width > MAX_PHOTO_WIDTH ? MAX_PHOTO_WIDTH / img.width : 1;
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 interface Props {
   initial: InspectionFormData;
   inspectorName: string;
@@ -23,8 +49,44 @@ export default function InspectionForm({
   const [form, setForm] = useState<InspectionFormData>(initial);
   const [calOpen, setCalOpen] = useState(false);
   const calRef = useRef<HTMLDivElement>(null);
-  const set = (key: keyof InspectionFormData, val: string | number | boolean) =>
+  const set = (key: keyof InspectionFormData, val: string | number | boolean | string[]) =>
     setForm(prev => ({ ...prev, [key]: val }));
+
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const photos = form.photos ?? [];
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || !files.length) return;
+    const remaining = MAX_PHOTOS - photos.length;
+    if (remaining <= 0) return;
+    const oversized = Array.from(files).filter(f => f.size > MAX_PHOTO_SIZE);
+    if (oversized.length > 0) {
+      alert(`Файл "${oversized[0].name}" превышает допустимый размер 1,5 МБ.`);
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+    setUploading(true);
+    const toUpload = Array.from(files).slice(0, remaining);
+    const urls: string[] = [];
+    for (const file of toUpload) {
+      const dataUrl = await resizeImage(file);
+      const res = await fetch(UPLOAD_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataUrl }),
+      });
+      const data = await res.json();
+      if (data.url) urls.push(data.url);
+    }
+    set("photos", [...photos, ...urls]);
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const removePhoto = (idx: number) => {
+    set("photos", photos.filter((_, i) => i !== idx));
+  };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -158,6 +220,48 @@ export default function InspectionForm({
               className={inp + " resize-none" + (noteRequired && !form.note.trim() ? " border-red-400/60 focus:ring-red-400/50" : "")}
             />
             <p className="text-[10px] text-muted-foreground text-right mt-0.5">{form.note.length}/300</p>
+          </div>
+
+          {/* Фото проверки */}
+          <div className="space-y-3">
+            <label className={lbl}>Фотографии (не обязательно, до {MAX_PHOTOS})</label>
+            <div className="flex items-center gap-3 flex-wrap">
+              {photos.map((url, i) => (
+                <div key={i} className="relative group w-24 h-24 rounded-lg overflow-hidden border border-border flex-shrink-0">
+                  <img src={url} alt={`Фото ${i + 1}`} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                  >
+                    <Icon name="X" size={16} className="text-white" />
+                  </button>
+                </div>
+              ))}
+              {photos.length < MAX_PHOTOS && (
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
+                  className="w-24 h-24 rounded-lg border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary flex-shrink-0"
+                >
+                  {uploading
+                    ? <Icon name="Loader2" size={20} className="animate-spin" />
+                    : <Icon name="Camera" size={20} />}
+                  <span className="text-xs leading-tight text-center">
+                    {uploading ? "Загрузка" : `Фото\n${photos.length}/${MAX_PHOTOS}`}
+                  </span>
+                </button>
+              )}
+            </div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={e => handleFiles(e.target.files)}
+            />
           </div>
         </div>
 

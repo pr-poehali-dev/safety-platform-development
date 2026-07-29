@@ -50,7 +50,7 @@ def handler(event: dict, context) -> dict:
         cur = conn.cursor()
         cur.execute(
             f"""SELECT id, inspection_date, contractor, violation_type, object_name,
-                       remarks_count, works_suspended, inspector_name, note, created_by, created_at
+                       remarks_count, works_suspended, inspector_name, note, created_by, created_at, photos
                 FROM {SCHEMA}.inspections {where_sql}
                 ORDER BY inspection_date DESC, created_at DESC""",
             args
@@ -60,6 +60,9 @@ def handler(event: dict, context) -> dict:
 
         result = []
         for r in rows:
+            photos = r[11] if r[11] else []
+            if isinstance(photos, str):
+                photos = json.loads(photos)
             result.append({
                 "id": r[0],
                 "inspection_date": r[1].isoformat() if r[1] else None,
@@ -72,6 +75,7 @@ def handler(event: dict, context) -> dict:
                 "note": r[8],
                 "created_by": r[9],
                 "created_at": r[10].isoformat() if r[10] else None,
+                "photos": photos,
             })
         return {"statusCode": 200, "headers": cors, "body": json.dumps(result, ensure_ascii=False)}
 
@@ -85,13 +89,14 @@ def handler(event: dict, context) -> dict:
                 return {"statusCode": 400, "headers": cors, "body": json.dumps({"error": f"{field} required"})}
 
         remarks_count = max(1, min(15, int(body.get("remarks_count", 1))))
+        photos = body.get("photos", [])[:5]
 
         conn = get_conn()
         cur = conn.cursor()
         cur.execute(
             f"""INSERT INTO {SCHEMA}.inspections
-                (inspection_date, contractor, violation_type, object_name, remarks_count, works_suspended, inspector_name, note, created_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                (inspection_date, contractor, violation_type, object_name, remarks_count, works_suspended, inspector_name, note, created_by, photos)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id, created_at""",
             (
                 body["inspection_date"],
@@ -103,6 +108,7 @@ def handler(event: dict, context) -> dict:
                 body["inspector_name"],
                 body.get("note") or None,
                 body["created_by"],
+                json.dumps(photos, ensure_ascii=False),
             )
         )
         row = cur.fetchone()
@@ -116,13 +122,14 @@ def handler(event: dict, context) -> dict:
         if not rec_id:
             return {"statusCode": 400, "headers": cors, "body": json.dumps({"error": "id required"})}
         remarks_count = max(1, min(15, int(body.get("remarks_count", 1))))
+        photos = body.get("photos", [])[:5]
 
         conn = get_conn()
         cur = conn.cursor()
         cur.execute(
             f"""UPDATE {SCHEMA}.inspections
                 SET inspection_date=%s, contractor=%s, violation_type=%s, object_name=%s,
-                    remarks_count=%s, works_suspended=%s, inspector_name=%s, note=%s
+                    remarks_count=%s, works_suspended=%s, inspector_name=%s, note=%s, photos=%s
                 WHERE id=%s""",
             (
                 body["inspection_date"],
@@ -133,6 +140,7 @@ def handler(event: dict, context) -> dict:
                 bool(body.get("works_suspended", False)),
                 body["inspector_name"],
                 body.get("note") or None,
+                json.dumps(photos, ensure_ascii=False),
                 rec_id,
             )
         )
