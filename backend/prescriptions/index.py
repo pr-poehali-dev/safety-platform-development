@@ -35,6 +35,7 @@ def row_to_prescription(row, remarks):
         "comments": row[10] if row[10] else [], "remarks": remarks,
         "contractNumber": row[11] if len(row) > 11 else None,
         "createdBy": row[12] if len(row) > 12 else "",
+        "inspectorNominative": row[13] if len(row) > 13 else "",
     }
 
 
@@ -166,7 +167,7 @@ def handler(event: dict, context) -> dict:
         # --- ПРЕДПИСАНИЯ ---
         if method == "GET":
             cur.execute(
-                f"SELECT id, number, date, object, contractor, inspector, representative, responsible, reply_email, report_deadline, comments, contract_number, created_by "
+                f"SELECT id, number, date, object, contractor, inspector, representative, responsible, reply_email, report_deadline, comments, contract_number, created_by, inspector_nominative "
                 f"FROM {SCHEMA}.prescriptions ORDER BY created_at DESC"
             )
             rows = cur.fetchall()
@@ -193,14 +194,15 @@ def handler(event: dict, context) -> dict:
             count = cur.fetchone()[0]
             number = str(count + 1)
             cur.execute(
-                f"INSERT INTO {SCHEMA}.prescriptions (id, number, date, object, contractor, inspector, representative, responsible, reply_email, report_deadline, comments, contract_number, created_by) "
-                f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                f"INSERT INTO {SCHEMA}.prescriptions (id, number, date, object, contractor, inspector, representative, responsible, reply_email, report_deadline, comments, contract_number, created_by, inspector_nominative) "
+                f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                 (pid, number, p["date"], p["object"], p["contractor"],
                  p.get("inspector", ""), p.get("representative", ""), p.get("responsible", ""),
                  p.get("replyEmail", ""), p.get("reportDeadline", ""),
                  json.dumps(p.get("comments", []), ensure_ascii=False),
                  p.get("contractNumber") or None,
-                 p.get("createdBy", ""))
+                 p.get("createdBy", ""),
+                 p.get("inspectorNominative", ""))
             )
             remarks = p.get("remarks", [])
             if remarks:
@@ -219,12 +221,12 @@ def handler(event: dict, context) -> dict:
             pid = p["id"]
             cur.execute(
                 f"UPDATE {SCHEMA}.prescriptions SET number=%s, date=%s, object=%s, contractor=%s, inspector=%s, "
-                f"representative=%s, responsible=%s, reply_email=%s, report_deadline=%s, comments=%s, contract_number=%s WHERE id=%s",
+                f"representative=%s, responsible=%s, reply_email=%s, report_deadline=%s, comments=%s, contract_number=%s, inspector_nominative=%s WHERE id=%s",
                 (p["number"], p["date"], p["object"], p["contractor"],
                  p.get("inspector", ""), p.get("representative", ""), p.get("responsible", ""),
                  p.get("replyEmail", ""), p.get("reportDeadline", ""),
                  json.dumps(p.get("comments", []), ensure_ascii=False),
-                 p.get("contractNumber") or None, pid)
+                 p.get("contractNumber") or None, p.get("inspectorNominative", ""), pid)
             )
             cur.execute(f"DELETE FROM {SCHEMA}.remarks WHERE prescription_id = %s", (pid,))
             remarks = p.get("remarks", [])

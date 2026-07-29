@@ -6,7 +6,7 @@ const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee
 
 type Status = "Черновик" | "В работе" | "Устранено" | "Просрочено";
 interface Remark { id: string; place: string; description: string; normRef: string; deadline: string; status: Status; }
-interface Prescription { id: string; number: string; date: string; object: string; contractor: string; inspector: string; representative: string; responsible: string; replyEmail: string; reportDeadline: string; remarks: Remark[]; comments: unknown[]; }
+interface Prescription { id: string; number: string; date: string; object: string; contractor: string; inspector: string; inspectorNominative?: string; representative: string; responsible: string; replyEmail: string; reportDeadline: string; remarks: Remark[]; comments: unknown[]; }
 
 const STATUS_STYLE: Record<Status, string> = {
   "Черновик":   "text-muted-foreground bg-muted border-border",

@@ -113,6 +113,7 @@ export interface Prescription {
   object: string;
   contractor: string;
   inspector: string;
+  inspectorNominative?: string;
   representative: string;
   responsible: string;
   replyEmail: string;

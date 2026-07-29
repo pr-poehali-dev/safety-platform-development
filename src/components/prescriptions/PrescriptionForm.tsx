@@ -278,6 +278,7 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
   const inspectorPosition = user.position ? declinePosition(user.position, isMale) : "";
   const inspectorName = user.name ? toInstrumental(user.name) : "";
   const inspectorLabel = [inspectorPosition, inspectorName].filter(Boolean).join(" ");
+  const inspectorNominativeLabel = [user.position || "", user.name || ""].filter(Boolean).join(" ");
 
   const [categories, setCategories] = useState<string[]>([]);
   const [objectsList, setObjectsList] = useState<{ id: number; name: string; places: { id: number; name: string }[] }[]>([]);
@@ -342,6 +343,7 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
       contractor: form.contractor,
       contractNumber: form.contractNumber || undefined,
       inspector: inspectorLabel,
+      inspectorNominative: inspectorNominativeLabel,
       representative: form.representative,
       responsible: "",
       replyEmail: form.replyEmail,

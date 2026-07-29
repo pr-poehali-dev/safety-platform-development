@@ -165,6 +165,7 @@ function fillVars(html: string, p: PrescriptionData, companyName: string): strin
     .replace(/\{\{object\}\}/g, esc(p.object))
     .replace(/\{\{contractor\}\}/g, esc(p.contractor))
     .replace(/\{\{inspector\}\}/g, esc(p.inspector))
+    .replace(/\{\{inspectorNominative\}\}/g, esc(p.inspectorNominative || ""))
     .replace(/\{\{representative\}\}/g, esc(p.representative || ""))
     .replace(/\{\{responsible\}\}/g, esc(p.responsible || ""))
     .replace(/\{\{replyEmail\}\}/g, esc(p.replyEmail || ""))

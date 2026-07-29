@@ -20,6 +20,7 @@ export interface PrescriptionData {
   contractor: string;
   contractNumber?: string;
   inspector: string;
+  inspectorNominative?: string;
   representative: string;
   responsible: string;
   replyEmail: string;
@@ -125,6 +126,7 @@ export default function PrescriptionDocument({ template: t, prescription: p, for
     companyName: t.companyName,
     replyEmail: p.replyEmail || "",
     reportDeadline: p.reportDeadline || "",
+    inspectorNominative: p.inspectorNominative || "",
   };
 
   const title = fill(t.title, vars);
