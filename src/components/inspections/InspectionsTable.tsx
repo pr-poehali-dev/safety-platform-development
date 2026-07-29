@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Icon from "@/components/ui/icon";
 import { format, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -17,9 +18,43 @@ const formatDate = (iso: string) => {
   try { return format(parseISO(iso), "dd.MM.yyyy", { locale: ru }); } catch { return iso; }
 };
 
+function PhotoLightbox({ photos, startIndex, onClose }: { photos: string[]; startIndex: number; onClose: () => void }) {
+  const [index, setIndex] = useState(startIndex);
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <button onClick={onClose} className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors">
+        <Icon name="X" size={26} />
+      </button>
+      {photos.length > 1 && (
+        <button
+          onClick={() => setIndex(i => (i - 1 + photos.length) % photos.length)}
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white transition-colors"
+        >
+          <Icon name="ChevronLeft" size={32} />
+        </button>
+      )}
+      <img src={photos[index]} alt={`Фото ${index + 1}`} className="relative max-w-[90vw] max-h-[85vh] rounded-lg object-contain" />
+      {photos.length > 1 && (
+        <button
+          onClick={() => setIndex(i => (i + 1) % photos.length)}
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white transition-colors"
+        >
+          <Icon name="ChevronRight" size={32} />
+        </button>
+      )}
+      {photos.length > 1 && (
+        <span className="absolute bottom-6 text-white/70 text-xs">{index + 1} / {photos.length}</span>
+      )}
+    </div>
+  );
+}
+
 export default function InspectionsTable({
   rows, loading, deleteConfirm, onDeleteRequest, onDeleteConfirm, onDeleteCancel, onAddFirst,
 }: Props) {
+  const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground gap-2">
@@ -52,6 +87,7 @@ export default function InspectionsTable({
             <col style={{ width: 50 }} />
             <col style={{ width: 100 }} />
             <col style={{ width: 100 }} />
+            <col style={{ width: 70 }} />
             <col style={{ width: 40 }} />
           </colgroup>
           <thead>
@@ -65,6 +101,7 @@ export default function InspectionsTable({
               <th className="text-center px-2 py-3 text-xs font-semibold text-muted-foreground leading-tight">Работы приостановлены</th>
               <th className="text-left px-3 py-3 text-xs font-semibold text-muted-foreground">Проверяющий</th>
               <th className="text-left px-3 py-3 text-xs font-semibold text-muted-foreground">Примечание</th>
+              <th className="text-center px-2 py-3 text-xs font-semibold text-muted-foreground">Фото</th>
               <th className="px-2 py-3" />
             </tr>
           </thead>
@@ -94,6 +131,33 @@ export default function InspectionsTable({
                     <span className="text-muted-foreground/30">—</span>
                   )}
                 </td>
+                <td className="px-2 py-3 align-top">
+                  {(row.photos ?? []).length > 0 ? (
+                    <div className="flex items-center gap-1 flex-wrap justify-center">
+                      {(row.photos ?? []).slice(0, 3).map((url, pi) => (
+                        <button
+                          key={pi}
+                          type="button"
+                          onClick={() => setLightbox({ photos: row.photos ?? [], index: pi })}
+                          className="w-9 h-9 rounded overflow-hidden border border-border hover:border-primary/50 transition-colors flex-shrink-0"
+                        >
+                          <img src={url} alt={`Фото ${pi + 1}`} className="w-full h-full object-cover" />
+                        </button>
+                      ))}
+                      {(row.photos ?? []).length > 3 && (
+                        <button
+                          type="button"
+                          onClick={() => setLightbox({ photos: row.photos ?? [], index: 3 })}
+                          className="text-[10px] text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          +{(row.photos ?? []).length - 3}
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground/30 text-center block">—</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 align-top">
                   {deleteConfirm === row.id ? (
                     <div className="flex items-center gap-1 whitespace-nowrap">
@@ -115,6 +179,9 @@ export default function InspectionsTable({
           </tbody>
         </table>
       </div>
+      {lightbox && (
+        <PhotoLightbox photos={lightbox.photos} startIndex={lightbox.index} onClose={() => setLightbox(null)} />
+      )}
     </div>
   );
 }
