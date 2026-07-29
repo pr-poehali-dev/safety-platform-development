@@ -100,7 +100,7 @@ export function RemarkRow({
             </SelectBase>
           </Field>
         </div>
-        <div style={{ flex: "0 0 20%" }}>
+        <div style={{ flex: "0 0 20%" }} className="space-y-3">
           <Field label="Работы приостановлены">
             <SelectBase
               value={remark.work_suspended ? "yes" : "no"}
@@ -113,17 +113,15 @@ export function RemarkRow({
               <option value="yes">Да</option>
             </SelectBase>
           </Field>
-        </div>
-        {remark.work_suspended && (
-          <div style={{ flex: "0 0 20%" }}>
+          {remark.work_suspended && (
             <Field label="Составлен акт о приостановке работ">
               <SelectBase value={remark.suspension_act_drawn ? "yes" : "no"} onChange={e => set("suspension_act_drawn", e.target.value === "yes")}>
                 <option value="no">Нет</option>
                 <option value="yes">Да</option>
               </SelectBase>
             </Field>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       <Field label="Описание нарушения *">
         <TextareaBase value={remark.description} onChange={e => set("description", e.target.value)} placeholder="Опишите выявленное нарушение" rows={4} />
