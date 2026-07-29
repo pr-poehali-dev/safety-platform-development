@@ -30,10 +30,10 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
 
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [filterContractor, setFilterContractor] = useState("");
-  const [filterObject, setFilterObject] = useState("");
-  const [filterInspector, setFilterInspector] = useState("");
-  const [filterViolationType, setFilterViolationType] = useState("");
+  const [filterContractor, setFilterContractor] = useState<string[]>([]);
+  const [filterObject, setFilterObject] = useState<string[]>([]);
+  const [filterInspector, setFilterInspector] = useState<string[]>([]);
+  const [filterViolationType, setFilterViolationType] = useState<string[]>([]);
   const [filterSuspended, setFilterSuspended] = useState(initialSuspended ?? false);
 
   const inspectorName = user.name || "";
@@ -43,10 +43,10 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
     const params = new URLSearchParams();
     if (dateFrom) params.set("date_from", dateFrom);
     if (dateTo) params.set("date_to", dateTo);
-    if (filterContractor) params.set("contractor", filterContractor);
-    if (filterObject) params.set("object_name", filterObject);
-    if (filterInspector) params.set("inspector_name", filterInspector);
-    if (filterViolationType) params.set("violation_type", filterViolationType);
+    if (filterContractor.length) params.set("contractor", filterContractor.join("|"));
+    if (filterObject.length) params.set("object_name", filterObject.join("|"));
+    if (filterInspector.length) params.set("inspector_name", filterInspector.join("|"));
+    if (filterViolationType.length) params.set("violation_type", filterViolationType.join("|"));
     fetch(`${API}?${params}`)
       .then(r => r.json())
       .then(data => setRows(Array.isArray(data) ? data : []))
@@ -176,9 +176,9 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
             <Icon name="OctagonX" size={12} />
             Приостановлено
           </button>
-          {(dateFrom || dateTo || filterContractor || filterObject || filterInspector || filterViolationType || filterSuspended) && (
+          {(dateFrom || dateTo || filterContractor.length > 0 || filterObject.length > 0 || filterInspector.length > 0 || filterViolationType.length > 0 || filterSuspended) && (
             <button
-              onClick={() => { setDateFrom(""); setDateTo(""); setFilterContractor(""); setFilterObject(""); setFilterInspector(""); setFilterViolationType(""); setFilterSuspended(false); }}
+              onClick={() => { setDateFrom(""); setDateTo(""); setFilterContractor([]); setFilterObject([]); setFilterInspector([]); setFilterViolationType([]); setFilterSuspended(false); }}
               className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
             >
               <Icon name="X" size={11} />

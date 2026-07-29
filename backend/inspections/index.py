@@ -25,10 +25,10 @@ def handler(event: dict, context) -> dict:
         params = event.get("queryStringParameters") or {}
         date_from = params.get("date_from")
         date_to = params.get("date_to")
-        contractor = params.get("contractor")
-        object_name = params.get("object_name")
-        inspector_name = params.get("inspector_name")
-        violation_type = params.get("violation_type")
+        contractor_list = [v for v in (params.get("contractor") or "").split("|") if v]
+        object_list = [v for v in (params.get("object_name") or "").split("|") if v]
+        inspector_list = [v for v in (params.get("inspector_name") or "").split("|") if v]
+        violation_list = [v for v in (params.get("violation_type") or "").split("|") if v]
 
         where = []
         args = []
@@ -39,18 +39,18 @@ def handler(event: dict, context) -> dict:
         if date_to:
             where.append("inspection_date <= %s")
             args.append(date_to)
-        if contractor:
-            where.append("contractor ILIKE %s")
-            args.append(f"%{contractor}%")
-        if object_name:
-            where.append("object_name ILIKE %s")
-            args.append(f"%{object_name}%")
-        if inspector_name:
-            where.append("inspector_name ILIKE %s")
-            args.append(f"%{inspector_name}%")
-        if violation_type:
-            where.append("violation_type ILIKE %s")
-            args.append(f"%{violation_type}%")
+        if contractor_list:
+            where.append("contractor = ANY(%s)")
+            args.append(contractor_list)
+        if object_list:
+            where.append("object_name = ANY(%s)")
+            args.append(object_list)
+        if inspector_list:
+            where.append("inspector_name = ANY(%s)")
+            args.append(inspector_list)
+        if violation_list:
+            where.append("violation_type = ANY(%s)")
+            args.append(violation_list)
 
         where_sql = ("WHERE " + " AND ".join(where)) if where else ""
 
