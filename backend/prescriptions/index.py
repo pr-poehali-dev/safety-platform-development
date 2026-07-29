@@ -187,13 +187,11 @@ def handler(event: dict, context) -> dict:
             return ok([row_to_prescription(row, remarks_map[row[0]]) for row in rows])
 
         if method == "POST":
-            from datetime import datetime
             p = body
             pid = p["id"]
-            year = datetime.now().year
-            cur.execute(f"SELECT COUNT(*) FROM {SCHEMA}.prescriptions WHERE date_part('year', created_at) = %s", (year,))
+            cur.execute(f"SELECT COUNT(*) FROM {SCHEMA}.prescriptions")
             count = cur.fetchone()[0]
-            number = f"МАН-{year}-{str(count + 1).zfill(2)}"
+            number = str(count + 1)
             cur.execute(
                 f"INSERT INTO {SCHEMA}.prescriptions (id, number, date, object, contractor, inspector, representative, responsible, reply_email, report_deadline, comments, contract_number, created_by) "
                 f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
