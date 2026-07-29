@@ -35,7 +35,8 @@ export default function InspectionForm({
   }, []);
 
   const noteRequired = form.violation_type === "Прочее";
-  const isValid = form.inspection_date && form.contractor.trim() && form.violation_type && form.object_name.trim() && (!noteRequired || form.note.trim());
+  const isValid = form.inspection_date && form.contractor.trim() && form.violation_type && form.object_name.trim() && (!noteRequired || form.note.trim())
+    && form.remarks_count >= 1 && form.remarks_count <= 15;
   const selectedContractor = contractors.find(c => c.name === form.contractor);
 
   return (
@@ -126,10 +127,10 @@ export default function InspectionForm({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={lbl}>Количество замечаний</label>
+              <label className={lbl}>Количество замечаний *</label>
               <input
-                type="number" min={0} value={form.remarks_count}
-                onChange={e => set("remarks_count", Math.max(0, parseInt(e.target.value) || 0))}
+                type="number" min={1} max={15} value={form.remarks_count}
+                onChange={e => set("remarks_count", Math.min(15, Math.max(1, parseInt(e.target.value) || 1)))}
                 className={inp}
               />
             </div>

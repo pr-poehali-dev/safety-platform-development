@@ -84,6 +84,8 @@ def handler(event: dict, context) -> dict:
             if not body.get(field):
                 return {"statusCode": 400, "headers": cors, "body": json.dumps({"error": f"{field} required"})}
 
+        remarks_count = max(1, min(15, int(body.get("remarks_count", 1))))
+
         conn = get_conn()
         cur = conn.cursor()
         cur.execute(
@@ -96,7 +98,7 @@ def handler(event: dict, context) -> dict:
                 body["contractor"],
                 body["violation_type"],
                 body["object_name"],
-                int(body.get("remarks_count", 0)),
+                remarks_count,
                 bool(body.get("works_suspended", False)),
                 body["inspector_name"],
                 body.get("note") or None,
@@ -113,6 +115,8 @@ def handler(event: dict, context) -> dict:
         rec_id = body.get("id")
         if not rec_id:
             return {"statusCode": 400, "headers": cors, "body": json.dumps({"error": "id required"})}
+        remarks_count = max(1, min(15, int(body.get("remarks_count", 1))))
+
         conn = get_conn()
         cur = conn.cursor()
         cur.execute(
@@ -125,7 +129,7 @@ def handler(event: dict, context) -> dict:
                 body["contractor"],
                 body["violation_type"],
                 body["object_name"],
-                int(body.get("remarks_count", 0)),
+                remarks_count,
                 bool(body.get("works_suspended", False)),
                 body["inspector_name"],
                 body.get("note") or None,

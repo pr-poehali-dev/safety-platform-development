@@ -36,7 +36,7 @@ export const emptyForm = (): InspectionFormData => ({
   contractor: "",
   violation_type: "",
   object_name: "",
-  remarks_count: 0,
+  remarks_count: 1,
   works_suspended: false,
   note: "",
 });
