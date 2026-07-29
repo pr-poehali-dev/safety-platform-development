@@ -192,12 +192,28 @@ function RemarkRow({
         </div>
         <div style={{ flex: "0 0 20%" }}>
           <Field label="Работы приостановлены">
-            <SelectBase value={remark.work_suspended ? "yes" : "no"} onChange={e => set("work_suspended", e.target.value === "yes")}>
+            <SelectBase
+              value={remark.work_suspended ? "yes" : "no"}
+              onChange={e => {
+                const suspended = e.target.value === "yes";
+                onChange({ ...remark, work_suspended: suspended, suspension_act_drawn: suspended ? remark.suspension_act_drawn : false });
+              }}
+            >
               <option value="no">Нет</option>
               <option value="yes">Да</option>
             </SelectBase>
           </Field>
         </div>
+        {remark.work_suspended && (
+          <div style={{ flex: "0 0 20%" }}>
+            <Field label="Составлен акт о приостановке работ">
+              <SelectBase value={remark.suspension_act_drawn ? "yes" : "no"} onChange={e => set("suspension_act_drawn", e.target.value === "yes")}>
+                <option value="no">Нет</option>
+                <option value="yes">Да</option>
+              </SelectBase>
+            </Field>
+          </div>
+        )}
       </div>
       <Field label="Описание нарушения *">
         <TextareaBase value={remark.description} onChange={e => set("description", e.target.value)} placeholder="Опишите выявленное нарушение" rows={4} />

@@ -1,0 +1,1 @@
+ALTER TABLE t_p5901577_safety_platform_deve.remarks ADD COLUMN suspension_act_drawn boolean NOT NULL DEFAULT false;

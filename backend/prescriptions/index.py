@@ -176,7 +176,7 @@ def handler(event: dict, context) -> dict:
             ids = [row[0] for row in rows]
             ids_list = ",".join(f"'{i}'" for i in ids)
             cur.execute(
-                f"SELECT prescription_id, id, place, description, norm_ref, deadline, status, photos, category, work_suspended "
+                f"SELECT prescription_id, id, place, description, norm_ref, deadline, status, photos, category, work_suspended, suspension_act_drawn "
                 f"FROM {SCHEMA}.remarks WHERE prescription_id IN ({ids_list}) ORDER BY prescription_id, sort_order, id"
             )
             remarks_map: dict = {pid: [] for pid in ids}
@@ -184,7 +184,7 @@ def handler(event: dict, context) -> dict:
                 photos = r[7] if r[7] else []
                 if isinstance(photos, str):
                     photos = json.loads(photos)
-                remarks_map[r[0]].append({"id": r[1], "place": r[2], "description": r[3], "normRef": r[4], "deadline": r[5], "status": r[6], "photos": photos, "category": r[8] or "", "work_suspended": bool(r[9])})
+                remarks_map[r[0]].append({"id": r[1], "place": r[2], "description": r[3], "normRef": r[4], "deadline": r[5], "status": r[6], "photos": photos, "category": r[8] or "", "work_suspended": bool(r[9]), "suspension_act_drawn": bool(r[10])})
             return ok([row_to_prescription(row, remarks_map[row[0]]) for row in rows])
 
         if method == "POST":
@@ -207,10 +207,10 @@ def handler(event: dict, context) -> dict:
             remarks = p.get("remarks", [])
             if remarks:
                 cur.executemany(
-                    f"INSERT INTO {SCHEMA}.remarks (id, prescription_id, place, category, description, norm_ref, deadline, status, sort_order, photos, work_suspended) "
-                    f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    f"INSERT INTO {SCHEMA}.remarks (id, prescription_id, place, category, description, norm_ref, deadline, status, sort_order, photos, work_suspended, suspension_act_drawn) "
+                    f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                     [(r["id"], pid, r.get("place", ""), r.get("category", ""), r.get("description", ""), r.get("normRef", ""), r.get("deadline", ""), r.get("status", "В работе"), i,
-                      json.dumps(r.get("photos", []), ensure_ascii=False), bool(r.get("work_suspended", False)))
+                      json.dumps(r.get("photos", []), ensure_ascii=False), bool(r.get("work_suspended", False)), bool(r.get("suspension_act_drawn", False)))
                      for i, r in enumerate(remarks)]
                 )
             conn.commit()
@@ -232,10 +232,10 @@ def handler(event: dict, context) -> dict:
             remarks = p.get("remarks", [])
             if remarks:
                 cur.executemany(
-                    f"INSERT INTO {SCHEMA}.remarks (id, prescription_id, place, category, description, norm_ref, deadline, status, sort_order, photos, work_suspended) "
-                    f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    f"INSERT INTO {SCHEMA}.remarks (id, prescription_id, place, category, description, norm_ref, deadline, status, sort_order, photos, work_suspended, suspension_act_drawn) "
+                    f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                     [(r["id"], pid, r.get("place", ""), r.get("category", ""), r.get("description", ""), r.get("normRef", ""), r.get("deadline", ""), r.get("status", "В работе"), i,
-                      json.dumps(r.get("photos", []), ensure_ascii=False), bool(r.get("work_suspended", False)))
+                      json.dumps(r.get("photos", []), ensure_ascii=False), bool(r.get("work_suspended", False)), bool(r.get("suspension_act_drawn", False)))
                      for i, r in enumerate(remarks)]
                 )
             conn.commit()
