@@ -90,7 +90,7 @@ export function GeneralInfoSection({ form, setField, setForm, objectsList, contr
               }}
               className="w-4 h-4 rounded border border-border accent-primary cursor-pointer"
             />
-            <span className="text-xs text-muted-foreground font-medium">В присутствии представителя подрядчика</span>
+            <span className="text-xs text-muted-foreground font-medium">В присутствии </span>
           </label>
           {(form.representativeEnabled || !!form.representative) && (
             <InputBase value={form.representative} onChange={e => setField("representative", e.target.value)} placeholder="ФИО представителя подрядчика" autoFocus />
