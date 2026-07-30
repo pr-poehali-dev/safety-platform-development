@@ -175,7 +175,7 @@ function fillVars(html: string, p: PrescriptionData, companyName: string): strin
   return result;
 }
 
-export function printPrescription(p: PrescriptionData, tmpl?: Template): void {
+function buildDocParts(p: PrescriptionData, tmpl?: Template) {
   const t = tmpl ?? { ...DEFAULT_TEMPLATE, id: "default", name: "По умолчанию", isDefault: true };
 
   const paper: Record<string, { w: number; h: number }> = {
@@ -199,6 +199,12 @@ export function printPrescription(p: PrescriptionData, tmpl?: Template): void {
       React.createElement(PrescriptionDocument, { template: t, prescription: p, forPrint: true })
     );
   }
+
+  return { t, pw, ph, maxImgH, bodyHtml };
+}
+
+export function printPrescription(p: PrescriptionData, tmpl?: Template): void {
+  const { t, pw, ph, maxImgH, bodyHtml } = buildDocParts(p, tmpl);
 
   const html = `<!DOCTYPE html>
 <html lang="ru">
@@ -295,4 +301,93 @@ export function printPrescription(p: PrescriptionData, tmpl?: Template): void {
     w.print();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   }, 1200);
+}
+
+// Загружает картинку по URL и возвращает data:base64, чтобы Word мог отобразить её офлайн
+async function toDataUrl(url: string): Promise<string> {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return url;
+  }
+}
+
+async function inlineImages(html: string): Promise<string> {
+  if (typeof DOMParser === "undefined") return html;
+  const doc = new DOMParser().parseFromString(`<div id="__root">${html}</div>`, "text/html");
+  const root = doc.getElementById("__root");
+  if (!root) return html;
+  const imgs = Array.from(root.querySelectorAll("img"));
+  await Promise.all(imgs.map(async img => {
+    const src = img.getAttribute("src") || "";
+    if (src.startsWith("http")) {
+      img.setAttribute("src", await toDataUrl(src));
+    }
+  }));
+  return root.innerHTML;
+}
+
+/** Формирует и скачивает документ предписания в формате Word (.doc) */
+export async function downloadPrescriptionWord(p: PrescriptionData, tmpl?: Template): Promise<void> {
+  const { t, pw, ph, bodyHtml } = buildDocParts(p, tmpl);
+  const bodyWithInlineImages = await inlineImages(bodyHtml);
+
+  const html = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta charset="UTF-8" />
+  <title>АКТ-ПРЕДПИСАНИЕ № ${p.number}</title>
+  <!--[if gte mso 9]>
+  <xml>
+    <w:WordDocument>
+      <w:View>Print</w:View>
+      <w:Zoom>100</w:Zoom>
+      <w:DoNotOptimizeForBrowser/>
+    </w:WordDocument>
+  </xml>
+  <![endif]-->
+  <style>
+    @page Section1 {
+      size: ${pw}mm ${ph}mm;
+      margin: ${t.marginTop}mm ${t.marginRight}mm ${t.marginBottom}mm ${t.marginLeft}mm;
+    }
+    div.Section1 { page: Section1; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: '${t.fontFamily || "Times New Roman"}', Times, serif; font-size: ${t.fontSize || 11}pt; color: #000; line-height: 1.5; }
+    p, li, td, th { white-space: pre-wrap; }
+    p { margin: 0 0 4px; min-height: 1.5em; }
+    h1 { font-size: 20pt; font-weight: bold; margin: 12px 0 6px; }
+    h2 { font-size: 16pt; font-weight: bold; margin: 10px 0 5px; }
+    h3 { font-size: 13pt; font-weight: bold; margin: 8px 0 4px; }
+    ul { padding-left: 20px; margin: 4px 0; }
+    ol { padding-left: 20px; margin: 4px 0; }
+    li { margin: 2px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 8px 0; table-layout: fixed; }
+    td, th { border: 1px solid #000; padding: 4px 6px; vertical-align: top; word-wrap: break-word; }
+    th { font-weight: bold; background: #f5f5f5; }
+    img { max-width: 100%; height: auto; }
+    hr { border: none; border-top: 1px solid #999; margin: 8px 0; }
+  </style>
+</head>
+<body>
+  <div class="Section1">${bodyWithInlineImages}</div>
+</body>
+</html>`;
+
+  const blob = new Blob(["\ufeff", html], { type: "application/msword;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Предписание №${p.number}.doc`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }

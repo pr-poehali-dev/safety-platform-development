@@ -2,7 +2,7 @@ import Icon from "@/components/ui/icon";
 import { AppUser, ROLE_LABELS, ROLE_COLORS } from "@/lib/auth";
 import UserMenu from "@/components/UserMenu";
 import { Template } from "@/lib/template";
-import { printPrescription } from "@/lib/printPrescription";
+import { printPrescription, downloadPrescriptionWord } from "@/lib/printPrescription";
 import {
   Prescription, Status, ALL_STATUSES, STATUS_STYLE,
   effectiveStatus, overallStatus,
@@ -365,6 +365,14 @@ export function PrescriptionList({
                             >
                               <Icon name="Printer" size={13} />
                               Печать
+                            </button>
+                            <button
+                              onClick={e => { e.stopPropagation(); downloadPrescriptionWord(p, activeTemplate); }}
+                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors whitespace-nowrap opacity-0 group-hover:opacity-100"
+                              title="Скачать в формате Word"
+                            >
+                              <Icon name="Download" size={13} />
+                              Скачать
                             </button>
                             <Icon name="ChevronRight" size={15} className="text-muted-foreground group-hover:text-foreground transition-colors" />
                           </div>

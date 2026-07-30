@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import Icon from "@/components/ui/icon";
 import { AppUser } from "@/lib/auth";
 import { Template } from "@/lib/template";
-import { printPrescription } from "@/lib/printPrescription";
+import { printPrescription, downloadPrescriptionWord } from "@/lib/printPrescription";
 import {
   Prescription, Comment, Attachment, Status,
   ALL_STATUSES, STATUS_STYLE, isOverdue, effectiveStatus, overallStatus,
@@ -69,8 +69,18 @@ export function PrescriptionDetail({
   const [activeTab, setActiveTab] = useState<"remarks" | "chat">("remarks");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploadingRemarkId, setUploadingRemarkId] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const handleDownloadWord = async () => {
+    setDownloading(true);
+    try {
+      await downloadPrescriptionWord(p, template);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const handleRemarkPhotos = async (remarkId: string, files: FileList | null) => {
     if (!files || !files.length) return;
@@ -189,6 +199,15 @@ export function PrescriptionDetail({
             >
               <Icon name="Printer" size={13} />
               Распечатать
+            </button>
+            <button
+              onClick={handleDownloadWord}
+              disabled={downloading}
+              className="flex items-center gap-1.5 text-xs border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
+              title="Скачать в формате Word"
+            >
+              {downloading ? <Icon name="Loader2" size={13} className="animate-spin" /> : <Icon name="Download" size={13} />}
+              Скачать
             </button>
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
               <Icon name="X" size={18} />
