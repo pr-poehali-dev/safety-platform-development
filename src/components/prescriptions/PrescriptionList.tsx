@@ -345,6 +345,7 @@ export function PrescriptionList({
                               </span>
                             </div>
                             {(() => { const ov = p.remarks.filter(r => effectiveStatus(r) === "Просрочено").length; return ov > 0 ? <span className="text-[10px] text-red-400 bg-red-400/10 border border-red-400/20 px-1.5 py-0.5 rounded font-medium w-fit">{ov} просрочено</span> : null; })()}
+                            {(() => { const fx = p.remarks.filter(r => effectiveStatus(r) === "Устранено").length; return fx > 0 ? <span className="text-[10px] text-green-400 bg-green-400/10 border border-green-400/20 px-1.5 py-0.5 rounded font-medium w-fit">{fx} устранено</span> : null; })()}
                           </div>
                         </td>
                         <td className="px-5 py-4">
