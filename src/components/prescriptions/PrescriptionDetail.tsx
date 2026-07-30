@@ -229,22 +229,25 @@ export function PrescriptionDetail({
           {/* Замечания */}
           {activeTab === "remarks" && (
             <div className="px-6 py-4 space-y-4">
-              {p.remarks.map((r, i) => (
+              {p.remarks.map((r, i) => {
+                const eStatus = effectiveStatus(r);
+                const photosEditable = canEdit && eStatus !== "В работе" && eStatus !== "Просрочено";
+                return (
                 <div key={r.id} className="border border-border rounded-xl p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <span className="text-xs font-semibold text-primary uppercase tracking-wider">Замечание #{i + 1}</span>
-                    <StatusBadge status={effectiveStatus(r)} />
+                    <StatusBadge status={eStatus} />
                   </div>
                   <p className="text-sm text-foreground leading-relaxed bg-secondary/40 rounded-lg p-3">{r.description}</p>
 
                   {/* Фото нарушения */}
                   <div>
-                    {((r.photos ?? []).length > 0 || canEdit) && (
+                    {((r.photos ?? []).length > 0 || photosEditable) && (
                       <div className="flex flex-wrap gap-2 items-center">
                         {(r.photos ?? []).map((url, pi) => (
                           <div key={pi} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-border flex-shrink-0">
                             <img src={url} alt={`Фото ${pi + 1}`} className="w-full h-full object-cover" />
-                            {canEdit && (
+                            {photosEditable && (
                               <button
                                 type="button"
                                 onClick={() => removeRemarkPhoto(r.id, pi)}
@@ -255,7 +258,7 @@ export function PrescriptionDetail({
                             )}
                           </div>
                         ))}
-                        {canEdit && (r.photos ?? []).length < MAX_PHOTOS && (
+                        {photosEditable && (r.photos ?? []).length < MAX_PHOTOS && (
                           <>
                             <button
                               type="button"
@@ -313,7 +316,7 @@ export function PrescriptionDetail({
                     </div>
                   )}
                 </div>
-              ))}
+              );})}
             </div>
           )}
 
