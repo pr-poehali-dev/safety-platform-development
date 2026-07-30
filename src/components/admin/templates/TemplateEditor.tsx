@@ -8,7 +8,7 @@ const DEFAULT_CONTENT = `<p style="text-align:center"><strong>АКТ-ПРЕДП�
 <p style="text-align:right">от {{date}}</p>
 <p><strong>Проверяемый объект:</strong> {{object}}</p>
 <p><strong>Работы проводит подрядная организация:</strong> {{contractor}}</p>
-<p>Проверка проведена <strong>{{inspector}}</strong> в присутствии представителя подрядной организации <strong>{{representative}}</strong></p>
+<p>Проверка проведена <strong>{{inspector}}</strong>{{presence}}</p>
 <p><strong>В ходе проверки выявлены следующие нарушения:</strong></p>
 <table>
   <thead>

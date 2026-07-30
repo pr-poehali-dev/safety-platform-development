@@ -158,6 +158,11 @@ function fillVars(html: string, p: PrescriptionData, companyName: string): strin
   // Сначала разворачиваем таблицу замечаний
   let result = expandRemarksTable(html, p);
 
+  // "в присутствии <ФИО>" — появляется только если указан представитель подрядчика
+  const presenceHtml = p.representative
+    ? ` в присутствии <strong>${esc(p.representative)}</strong>`
+    : "";
+
   // Затем подставляем остальные переменные
   result = result
     .replace(/\{\{number\}\}/g, esc(p.number))
@@ -166,6 +171,7 @@ function fillVars(html: string, p: PrescriptionData, companyName: string): strin
     .replace(/\{\{contractor\}\}/g, esc(p.contractor))
     .replace(/\{\{inspector\}\}/g, esc(p.inspector))
     .replace(/\{\{inspectorNominative\}\}/g, esc(p.inspectorNominative || ""))
+    .replace(/\{\{presence\}\}/g, presenceHtml)
     .replace(/\{\{representative\}\}/g, esc(p.representative || ""))
     .replace(/\{\{responsible\}\}/g, esc(p.responsible || ""))
     .replace(/\{\{replyEmail\}\}/g, esc(p.replyEmail || ""))
