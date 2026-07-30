@@ -358,22 +358,24 @@ export function PrescriptionList({
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2 justify-end">
-                            <button
-                              onClick={e => { e.stopPropagation(); printPrescription(p, activeTemplate); }}
-                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors whitespace-nowrap opacity-0 group-hover:opacity-100"
-                              title="Распечатать предписание"
-                            >
-                              <Icon name="Printer" size={13} />
-                              Печать
-                            </button>
-                            <button
-                              onClick={e => { e.stopPropagation(); downloadPrescriptionWord(p, activeTemplate); }}
-                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors whitespace-nowrap opacity-0 group-hover:opacity-100"
-                              title="Скачать в формате Word"
-                            >
-                              <Icon name="Download" size={13} />
-                              Скачать
-                            </button>
+                            <div className="flex flex-col gap-1.5 opacity-0 group-hover:opacity-100">
+                              <button
+                                onClick={e => { e.stopPropagation(); printPrescription(p, activeTemplate); }}
+                                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors whitespace-nowrap"
+                                title="Распечатать предписание"
+                              >
+                                <Icon name="Printer" size={13} />
+                                Печать
+                              </button>
+                              <button
+                                onClick={e => { e.stopPropagation(); downloadPrescriptionWord(p, activeTemplate); }}
+                                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors whitespace-nowrap"
+                                title="Скачать в формате Word"
+                              >
+                                <Icon name="Download" size={13} />
+                                Скачать
+                              </button>
+                            </div>
                             <Icon name="ChevronRight" size={15} className="text-muted-foreground group-hover:text-foreground transition-colors" />
                           </div>
                         </td>
