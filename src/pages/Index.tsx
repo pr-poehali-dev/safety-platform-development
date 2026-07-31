@@ -32,8 +32,10 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
   const [showAdd, setShowAdd] = useState(false);
   const [selected, setSelected] = useState<Prescription | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("Все");
+  const [filterMine, setFilterMine] = useState(false);
   const [search, setSearch] = useState("");
   const [inspectionsSuspended, setInspectionsSuspended] = useState(false);
+  const [inspectionsMine, setInspectionsMine] = useState(false);
   const [taskFilter, setTaskFilter] = useState<string | undefined>(undefined);
   const [taskOpenId, setTaskOpenId] = useState<number | undefined>(undefined);
   const [activeTemplate, setActiveTemplate] = useState<Template>({ ...DEFAULT_TEMPLATE, id: "default", name: "По умолчанию", isDefault: true });
@@ -224,6 +226,7 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
         onTabChange={(t) => setTab(t as Tab)}
         activeTab={tab}
         initialSuspended={inspectionsSuspended}
+        initialMine={inspectionsMine}
       />
     );
   }
@@ -261,12 +264,14 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
         <Dashboard
           user={user}
           taskAssignments={assignments}
-          onNavigateToPrescriptions={(status) => {
+          onNavigateToPrescriptions={(status, mine) => {
             if (status) setFilterStatus(status);
+            setFilterMine(mine ?? false);
             setTab("prescriptions");
           }}
-          onNavigateToInspections={(suspended) => {
+          onNavigateToInspections={(suspended, mine) => {
             setInspectionsSuspended(suspended ?? false);
+            setInspectionsMine(mine ?? false);
             setTab("inspections");
           }}
           onNavigateToTasks={(filter, taskId) => { setTaskFilter(filter); setTaskOpenId(taskId); setTab("tasks"); }}
@@ -284,11 +289,13 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
         loading={loading}
         search={search}
         filterStatus={filterStatus}
+        filterMine={filterMine}
         canEdit={canEdit}
         isContractor={isContractor}
         activeTemplate={activeTemplate}
         onSearchChange={setSearch}
         onFilterChange={setFilterStatus}
+        onFilterMineChange={setFilterMine}
         onSelect={setSelected}
         onAddClick={() => setShowAdd(true)}
         onInspectionsClick={canEdit ? () => setTab("inspections") : undefined}

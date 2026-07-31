@@ -102,11 +102,13 @@ interface PrescriptionListProps {
   loading: boolean;
   search: string;
   filterStatus: string;
+  filterMine: boolean;
   canEdit: boolean;
   isContractor: boolean;
   activeTemplate: Template;
   onSearchChange: (v: string) => void;
   onFilterChange: (v: string) => void;
+  onFilterMineChange: (v: boolean) => void;
   onSelect: (p: Prescription) => void;
   onAddClick: () => void;
   onInspectionsClick?: () => void;
@@ -117,9 +119,9 @@ interface PrescriptionListProps {
 }
 
 export function PrescriptionList({
-  user, onLogout, prescriptions, loading, search, filterStatus,
+  user, onLogout, prescriptions, loading, search, filterStatus, filterMine,
   canEdit, isContractor, activeTemplate,
-  onSearchChange, onFilterChange, onSelect, onAddClick, onInspectionsClick,
+  onSearchChange, onFilterChange, onFilterMineChange, onSelect, onAddClick, onInspectionsClick,
   onDashboardClick, onIncidentsClick, onTasksClick, activeTab = "prescriptions",
 }: PrescriptionListProps) {
 
@@ -141,6 +143,7 @@ export function PrescriptionList({
 
   const filtered = prescriptions.filter(p => {
     if (isContractor && user.contractor && p.contractor !== user.contractor) return false;
+    if (filterMine && p.createdBy !== user.login) return false;
     const status = overallStatus(p.remarks);
     const matchStatus = filterStatus === "Все" || status === filterStatus;
     const q = search.toLowerCase();
@@ -261,6 +264,15 @@ export function PrescriptionList({
                 {s}
               </button>
             ))}
+            {!isContractor && (
+              <button
+                onClick={() => onFilterMineChange(!filterMine)}
+                className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border font-medium transition-colors whitespace-nowrap ${filterMine ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 bg-card"}`}
+              >
+                <Icon name="User" size={12} />
+                Мои
+              </button>
+            )}
           </div>
         </div>
 

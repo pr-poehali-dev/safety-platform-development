@@ -27,8 +27,8 @@ interface DashboardStatCardsProps {
   inspTotal: number;
   inspRemarks: number;
   inspSuspended: number;
-  onNavigateToPrescriptions?: (status?: string) => void;
-  onNavigateToInspections?: (suspended?: boolean) => void;
+  onNavigateToPrescriptions?: (status?: string, mine?: boolean) => void;
+  onNavigateToInspections?: (suspended?: boolean, mine?: boolean) => void;
 }
 
 export default function DashboardStatCards({
@@ -41,19 +41,19 @@ export default function DashboardStatCards({
       <div>
         <h2 className="text-base font-semibold py-0 my-0">Предписания</h2>
         <div className="grid grid-cols-2 gap-3">
-          <StatCard label="Всего предписаний" value={presTotal} icon="ClipboardList" color="bg-indigo-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Все") : undefined} />
-          <StatCard label="В работе" value={presIssued} icon="Send" color="bg-primary" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("В работе") : undefined} />
-          <StatCard label="Устранено" value={presFixed} icon="CheckCircle" color="bg-green-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Устранено") : undefined} />
-          <StatCard label="Просрочено" value={presOverdue} icon="AlertCircle" color="bg-red-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Просрочено") : undefined} />
+          <StatCard label="Всего предписаний" value={presTotal} icon="ClipboardList" color="bg-indigo-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Все", true) : undefined} />
+          <StatCard label="В работе" value={presIssued} icon="Send" color="bg-primary" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("В работе", true) : undefined} />
+          <StatCard label="Устранено" value={presFixed} icon="CheckCircle" color="bg-green-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Устранено", true) : undefined} />
+          <StatCard label="Просрочено" value={presOverdue} icon="AlertCircle" color="bg-red-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Просрочено", true) : undefined} />
         </div>
       </div>
 
       <div>
         <h2 className="text-base font-semibold py-0 my-0">Проверки</h2>
         <div className="flex flex-col gap-3">
-          <StatCard label="Всего проверок" value={inspTotal} icon="TableProperties" color="bg-violet-500" onClick={onNavigateToInspections ? () => onNavigateToInspections(false) : undefined} />
-          <StatCard label="Всего замечаний" value={inspRemarks} icon="AlertTriangle" color="bg-amber-500" onClick={onNavigateToInspections ? () => onNavigateToInspections(false) : undefined} />
-          <StatCard label="Приостановлено работ" value={inspSuspended} icon="OctagonX" color="bg-red-600" onClick={onNavigateToInspections ? () => onNavigateToInspections(true) : undefined} />
+          <StatCard label="Всего проверок" value={inspTotal} icon="TableProperties" color="bg-violet-500" onClick={onNavigateToInspections ? () => onNavigateToInspections(false, true) : undefined} />
+          <StatCard label="Всего замечаний" value={inspRemarks} icon="AlertTriangle" color="bg-amber-500" onClick={onNavigateToInspections ? () => onNavigateToInspections(false, true) : undefined} />
+          <StatCard label="Приостановлено работ" value={inspSuspended} icon="OctagonX" color="bg-red-600" onClick={onNavigateToInspections ? () => onNavigateToInspections(true, true) : undefined} />
         </div>
       </div>
     </>

@@ -16,9 +16,10 @@ interface InspectionsProps {
   onTabChange?: (tab: Tab) => void;
   activeTab?: Tab;
   initialSuspended?: boolean;
+  initialMine?: boolean;
 }
 
-export default function Inspections({ user, onLogout, onBack, onTabChange, activeTab = "inspections", initialSuspended }: InspectionsProps) {
+export default function Inspections({ user, onLogout, onBack, onTabChange, activeTab = "inspections", initialSuspended, initialMine }: InspectionsProps) {
   const [rows, setRows] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<string[]>([]);
@@ -35,6 +36,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
   const [filterInspector, setFilterInspector] = useState<string[]>([]);
   const [filterViolationType, setFilterViolationType] = useState<string[]>([]);
   const [filterSuspended, setFilterSuspended] = useState(initialSuspended ?? false);
+  const [filterMine, setFilterMine] = useState(initialMine ?? false);
 
   const inspectorName = user.name || "";
 
@@ -94,7 +96,9 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
   const uniqueObjects = [...new Set(rows.map(r => r.object_name))].filter(Boolean);
   const uniqueInspectors = [...new Set(rows.map(r => r.inspector_name))].filter(Boolean);
   const uniqueViolationTypes = [...new Set(rows.map(r => r.violation_type))].filter(Boolean);
-  const displayedRows = filterSuspended ? rows.filter(r => r.works_suspended) : rows;
+  const displayedRows = rows
+    .filter(r => !filterSuspended || r.works_suspended)
+    .filter(r => !filterMine || r.created_by === user.id);
 
   return (
     <div className="min-h-screen bg-background" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
@@ -176,9 +180,16 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
             <Icon name="OctagonX" size={12} />
             Приостановлено
           </button>
-          {(dateFrom || dateTo || filterContractor.length > 0 || filterObject.length > 0 || filterInspector.length > 0 || filterViolationType.length > 0 || filterSuspended) && (
+          <button
+            onClick={() => setFilterMine(v => !v)}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${filterMine ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/30 text-muted-foreground hover:text-foreground"}`}
+          >
+            <Icon name="User" size={12} />
+            Мои
+          </button>
+          {(dateFrom || dateTo || filterContractor.length > 0 || filterObject.length > 0 || filterInspector.length > 0 || filterViolationType.length > 0 || filterSuspended || filterMine) && (
             <button
-              onClick={() => { setDateFrom(""); setDateTo(""); setFilterContractor([]); setFilterObject([]); setFilterInspector([]); setFilterViolationType([]); setFilterSuspended(false); }}
+              onClick={() => { setDateFrom(""); setDateTo(""); setFilterContractor([]); setFilterObject([]); setFilterInspector([]); setFilterViolationType([]); setFilterSuspended(false); setFilterMine(false); }}
               className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
             >
               <Icon name="X" size={11} />
