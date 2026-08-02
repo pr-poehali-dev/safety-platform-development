@@ -108,7 +108,7 @@ export default function Login({ users, onLogin }: LoginProps) {
 
         </div>
 
-        <p className="text-center text-[11px] text-muted-foreground mt-6">© 2024 Охрана Труда Онлайн</p>
+        <p className="text-center text-[11px] text-muted-foreground mt-6">© 2025 Охрана Труда Онлайн</p>
       </div>
     </div>
   );
