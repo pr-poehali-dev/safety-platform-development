@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "Get pyramid manual stats",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {"danger_actions": 0, "suspended_works": 0},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

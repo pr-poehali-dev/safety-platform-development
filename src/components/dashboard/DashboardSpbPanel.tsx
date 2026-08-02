@@ -13,6 +13,7 @@ interface PyramidData {
   no_consequences: number;
   totalViolations: number;
   suspendedWorks: number;
+  suspendedWorksWithAct?: number;
 }
 
 interface DashboardSpbPanelProps {
@@ -20,9 +21,21 @@ interface DashboardSpbPanelProps {
   spbStats: SpbStat[];
   spbTotal: number;
   pyramidData: PyramidData;
+  pyramidEditable?: boolean;
+  manualDangerActions?: number;
+  manualSuspendedWorks?: number;
+  onManualDangerActionsChange?: (v: number) => void;
+  onManualSuspendedWorksChange?: (v: number) => void;
+  onPyramidSave?: () => void;
+  pyramidSaving?: boolean;
 }
 
-export default function DashboardSpbPanel({ spbCategories, spbStats, spbTotal, pyramidData }: DashboardSpbPanelProps) {
+export default function DashboardSpbPanel({
+  spbCategories, spbStats, spbTotal, pyramidData,
+  pyramidEditable, manualDangerActions, manualSuspendedWorks,
+  onManualDangerActionsChange, onManualSuspendedWorksChange,
+  onPyramidSave, pyramidSaving,
+}: DashboardSpbPanelProps) {
   return (
     <div className="flex flex-col gap-4">
       {spbCategories.length > 0 && (
@@ -58,7 +71,17 @@ export default function DashboardSpbPanel({ spbCategories, spbStats, spbTotal, p
         </div>
       )}
 
-      <IncidentPyramid data={pyramidData} year={new Date().getFullYear()} />
+      <IncidentPyramid
+        data={pyramidData}
+        year={new Date().getFullYear()}
+        editable={pyramidEditable}
+        manualDangerActions={manualDangerActions}
+        manualSuspendedWorks={manualSuspendedWorks}
+        onManualDangerActionsChange={onManualDangerActionsChange}
+        onManualSuspendedWorksChange={onManualSuspendedWorksChange}
+        onSave={onPyramidSave}
+        saving={pyramidSaving}
+      />
     </div>
   );
 }

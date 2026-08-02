@@ -1,3 +1,5 @@
+import Icon from "@/components/ui/icon";
+
 interface PyramidData {
   fatal: number;
   severe_injury: number;
@@ -12,11 +14,35 @@ interface PyramidData {
 interface IncidentPyramidProps {
   data: PyramidData;
   year?: number;
+  editable?: boolean;
+  manualDangerActions?: number;
+  manualSuspendedWorks?: number;
+  onManualDangerActionsChange?: (v: number) => void;
+  onManualSuspendedWorksChange?: (v: number) => void;
+  onSave?: () => void;
+  saving?: boolean;
 }
 
-export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
+function clampFiveDigits(raw: string): number {
+  const n = parseInt(raw, 10);
+  if (isNaN(n) || n < 0) return 0;
+  return Math.min(n, 99999);
+}
+
+export default function IncidentPyramid({
+  data, year, editable,
+  manualDangerActions = 0, manualSuspendedWorks = 0,
+  onManualDangerActionsChange, onManualSuspendedWorksChange,
+  onSave, saving,
+}: IncidentPyramidProps) {
   const { fatal, severe_injury, light_injury, microtrauma, no_consequences, totalViolations, suspendedWorks, suspendedWorksWithAct } = data;
-  const suspendedWorksLabel = suspendedWorksWithAct ? `${suspendedWorks}(${suspendedWorksWithAct})` : String(suspendedWorks);
+
+  const totalDangerActions = totalViolations + (manualDangerActions || 0);
+  const totalSuspendedWorks = suspendedWorks + (manualSuspendedWorks || 0);
+  const suspendedWorksLabel = suspendedWorksWithAct
+    ? `${totalSuspendedWorks}(${suspendedWorksWithAct})`
+    : String(totalSuspendedWorks);
+  const suspendedWorksCalcLabel = suspendedWorksWithAct ? `${suspendedWorks}(${suspendedWorksWithAct})` : String(suspendedWorks);
 
   const W = 420;
   const H = 340;
@@ -83,8 +109,8 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
     },
     {
       label: "Опасные действия/\nопасные условия\n(нарушения)",
-      valLeft: totalViolations,
-      valRight: suspendedWorks,
+      valLeft: totalDangerActions,
+      valRight: totalSuspendedWorks,
       valRightDisplay: suspendedWorksLabel as string | number,
       labelRight: "Приостановки\nработ",
       fillLeft: "#8a9bb0",
@@ -180,14 +206,49 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
                   </text>
                 ) : i === layers.length - 1 ? (
                   // Base layer: values centered in each half (80/20 split)
-                  <>
-                    <text x={(ox + t1.left + cx1) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
-                      {layer.valLeft}
-                    </text>
-                    <text x={((cx0 + cx1) / 2 + (ox + t0.right + ox + t1.right) / 2) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
-                      {"valRightDisplay" in layer ? layer.valRightDisplay : layer.valRight}
-                    </text>
-                  </>
+                  editable ? (
+                    <>
+                      <foreignObject x={(ox + t1.left + cx1) / 2 - 60} y={midY - 11} width={120} height={22}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, fontFamily: "'IBM Plex Sans', sans-serif" }}>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={5}
+                            value={manualDangerActions || ""}
+                            onChange={e => onManualDangerActionsChange?.(clampFiveDigits(e.target.value))}
+                            placeholder="0"
+                            style={{ width: 46, fontSize: 12, fontWeight: 700, textAlign: "center", background: "rgba(0,0,0,0.35)", color: "white", border: "1px solid rgba(255,255,255,0.4)", borderRadius: 4, padding: "1px 2px" }}
+                          />
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "white" }}>+</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "white" }}>{totalViolations}</span>
+                        </div>
+                      </foreignObject>
+                      <foreignObject x={((cx0 + cx1) / 2 + (ox + t0.right + ox + t1.right) / 2) / 2 - 65} y={midY - 11} width={130} height={22}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, fontFamily: "'IBM Plex Sans', sans-serif" }}>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={5}
+                            value={manualSuspendedWorks || ""}
+                            onChange={e => onManualSuspendedWorksChange?.(clampFiveDigits(e.target.value))}
+                            placeholder="0"
+                            style={{ width: 46, fontSize: 12, fontWeight: 700, textAlign: "center", background: "rgba(0,0,0,0.35)", color: "white", border: "1px solid rgba(255,255,255,0.4)", borderRadius: 4, padding: "1px 2px" }}
+                          />
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "white" }}>+</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "white" }}>{suspendedWorksCalcLabel}</span>
+                        </div>
+                      </foreignObject>
+                    </>
+                  ) : (
+                    <>
+                      <text x={(ox + t1.left + cx1) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
+                        {layer.valLeft}
+                      </text>
+                      <text x={((cx0 + cx1) / 2 + (ox + t0.right + ox + t1.right) / 2) / 2} y={midY} textAnchor="middle" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="white">
+                        {"valRightDisplay" in layer ? layer.valRightDisplay : layer.valRight}
+                      </text>
+                    </>
+                  )
                 ) : (
                   // Split layer (microtrauma): values centered in each half (80/20 split)
                   <>
@@ -227,6 +288,19 @@ export default function IncidentPyramid({ data, year }: IncidentPyramidProps) {
           <text x={ox + apexX + (xAtY(baseY).right - apexX) / 2} y={baseY + 16} textAnchor="middle" fontSize="12" fontWeight="700" fill="#38bdf8"></text>
         </svg>
       </div>
+
+      {editable && (
+        <div className="flex justify-end mt-1">
+          <button
+            onClick={onSave}
+            disabled={saving}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 font-medium"
+          >
+            <Icon name={saving ? "Loader" : "Save"} size={13} className={saving ? "animate-spin" : ""} />
+            {saving ? "Сохранение..." : "Сохранить"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

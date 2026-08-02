@@ -17,6 +17,7 @@ const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee
 const INSPECTIONS_API = "https://functions.poehali.dev/b2222d00-a1b0-43fd-966d-3f39732867c3";
 const INCIDENTS_API = "https://functions.poehali.dev/4aedfdd0-d096-43ad-b4e7-b7b2aec3f753";
 const CATEGORIES_API = "https://functions.poehali.dev/ea358d23-fa1e-4907-88c0-87cd78732293";
+const PYRAMID_STATS_API = "https://functions.poehali.dev/7cb54511-8788-48e9-b719-37233cb062e5";
 
 interface SpbCategory {
   id: number;
@@ -64,6 +65,9 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [contractorOpen, setContractorOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [manualDangerActions, setManualDangerActions] = useState(0);
+  const [manualSuspendedWorks, setManualSuspendedWorks] = useState(0);
+  const [pyramidSaving, setPyramidSaving] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -71,16 +75,39 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
       fetch(INSPECTIONS_API).then(r => r.json()).catch(() => []),
       fetch(INCIDENTS_API).then(r => r.json()).catch(() => []),
       fetch(CATEGORIES_API).then(r => r.json()).catch(() => []),
-    ]).then(([pres, insp, inc, cats]) => {
+      fetch(PYRAMID_STATS_API).then(r => r.json()).catch(() => null),
+    ]).then(([pres, insp, inc, cats, pyramidStats]) => {
       setPrescriptions(Array.isArray(pres) ? pres : []);
       setInspections(Array.isArray(insp) ? insp : []);
       setIncidents(Array.isArray(inc) ? inc : []);
       setSpbCategories(Array.isArray(cats) ? cats.filter((c: SpbCategory) => c.is_spb) : []);
+      if (pyramidStats && typeof pyramidStats === "object") {
+        setManualDangerActions(Number(pyramidStats.danger_actions) || 0);
+        setManualSuspendedWorks(Number(pyramidStats.suspended_works) || 0);
+      }
       setLoading(false);
     });
   }, []);
 
   const isContractor = user.role === "contractor";
+  const isAdmin = user.role === "admin";
+
+  const savePyramidStats = async () => {
+    setPyramidSaving(true);
+    try {
+      await fetch(PYRAMID_STATS_API, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          danger_actions: manualDangerActions,
+          suspended_works: manualSuspendedWorks,
+          updated_by: user.login,
+        }),
+      });
+    } finally {
+      setPyramidSaving(false);
+    }
+  };
   const isSpecialist = user.role === "specialist";
 
   const from = dateFrom ? new Date(dateFrom) : null;
@@ -337,6 +364,13 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
           spbStats={spbStats}
           spbTotal={spbTotal}
           pyramidData={pyramidData}
+          pyramidEditable={isAdmin}
+          manualDangerActions={manualDangerActions}
+          manualSuspendedWorks={manualSuspendedWorks}
+          onManualDangerActionsChange={setManualDangerActions}
+          onManualSuspendedWorksChange={setManualSuspendedWorks}
+          onPyramidSave={savePyramidStats}
+          pyramidSaving={pyramidSaving}
         />
       </div>
 

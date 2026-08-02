@@ -63,7 +63,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
     return (
       <div className="relative">
         <Index
-          user={{ ...currentUser, role: "manager" }}
+          user={currentUser}
           onLogout={onLogout}
         />
         <button
