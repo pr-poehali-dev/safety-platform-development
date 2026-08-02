@@ -163,12 +163,19 @@ function fillVars(html: string, p: PrescriptionData, companyName: string): strin
     ? ` в присутствии <strong>${esc(p.representative)}</strong>`
     : "";
 
+  // "по договору № <...>" — появляется только если номер договора выбран
+  const contractNumberBlockHtml = p.contractNumber
+    ? ` по договору № <strong>${esc(p.contractNumber)}</strong>`
+    : "";
+
   // Затем подставляем остальные переменные
   result = result
     .replace(/\{\{number\}\}/g, esc(p.number))
     .replace(/\{\{date\}\}/g, esc(p.date))
     .replace(/\{\{object\}\}/g, esc(p.object))
     .replace(/\{\{contractor\}\}/g, esc(p.contractor))
+    .replace(/\{\{contractNumberBlock\}\}/g, contractNumberBlockHtml)
+    .replace(/\{\{contractNumber\}\}/g, esc(p.contractNumber || ""))
     .replace(/\{\{inspector\}\}/g, esc(p.inspector))
     .replace(/\{\{inspectorNominative\}\}/g, esc(p.inspectorNominative || ""))
     .replace(/\{\{presence\}\}/g, presenceHtml)

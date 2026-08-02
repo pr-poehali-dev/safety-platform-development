@@ -239,6 +239,8 @@ export function WordEditorToolbar({
                   ["{{date}}", "Дата"],
                   ["{{object}}", "Объект проверки"],
                   ["{{contractor}}", "Подрядчик"],
+                  ["{{contractNumber}}", "Номер договора (только номер)"],
+                  ["{{contractNumberBlock}}", "\"по договору № ...\" (если указан)"],
                   ["{{inspector}}", "Инспектор (твор. падеж)"],
                   ["{{inspectorNominative}}", "Инспектор (имен. падеж)"],
                   ["{{presence}}", "\"в присутствии ФИО\" (если указан)"],
