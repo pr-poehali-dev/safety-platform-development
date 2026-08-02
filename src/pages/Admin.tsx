@@ -7,6 +7,7 @@ import { PrescriptionsTab } from "@/components/admin/PrescriptionsTab";
 import { TemplatesTab } from "@/components/admin/TemplatesTab";
 import { DataTab } from "@/components/admin/DataTab";
 import { InspectionsTab } from "@/components/admin/InspectionsTab";
+import Index from "@/pages/Index";
 
 const TEMPLATES_API = "https://functions.poehali.dev/41ec60df-3f38-4561-ba9d-ca17ebd71553";
 
@@ -18,7 +19,7 @@ interface AdminProps {
 }
 
 export default function Admin({ currentUser, users, onUsersChange, onLogout }: AdminProps) {
-  const [tab, setTab] = useState<"users" | "prescriptions" | "inspections" | "templates" | "data">("users");
+  const [tab, setTab] = useState<"overview" | "users" | "prescriptions" | "inspections" | "templates" | "data">("users");
 
   const [templates, setTemplates] = useState<Template[]>([]);
   const [tLoading, setTLoading] = useState(false);
@@ -58,6 +59,24 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
     setEditTemplate(t);
   };
 
+  if (tab === "overview") {
+    return (
+      <div className="relative">
+        <Index
+          user={{ ...currentUser, role: "manager" }}
+          onLogout={onLogout}
+        />
+        <button
+          onClick={() => setTab("users")}
+          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 bg-card border border-border shadow-lg text-sm px-4 py-2.5 rounded-full text-foreground hover:border-primary/50 transition-colors"
+        >
+          <Icon name="ArrowLeft" size={14} />
+          В панель администратора
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
 
@@ -86,6 +105,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
       <div className="border-b border-border bg-background">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex gap-1 pt-2">
           {([
+            { key: "overview", label: "Управление Главной", icon: "LayoutDashboard" },
             { key: "users", label: "Управление пользователями", icon: "Users" },
             { key: "prescriptions", label: "Управление предписаниями", icon: "ClipboardList" },
             { key: "inspections", label: "Управление проверками", icon: "TableProperties" },
