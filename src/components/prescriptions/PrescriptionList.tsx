@@ -4,18 +4,11 @@ import UserMenu from "@/components/UserMenu";
 import { Template } from "@/lib/template";
 import { printPrescription, downloadPrescriptionWord } from "@/lib/printPrescription";
 import {
-  Prescription, Status, ALL_STATUSES, STATUS_STYLE,
+  Prescription, Status, ALL_STATUSES,
   effectiveStatus, overallStatus,
 } from "@/lib/prescriptionTypes";
+import { StatusDropdown } from "@/components/prescriptions/StatusDropdown";
 import { useState, useRef, useEffect } from "react";
-
-function StatusBadge({ status }: { status: Status }) {
-  return (
-    <span className={`inline-flex items-center border text-[11px] font-medium px-2 py-0.5 rounded whitespace-nowrap ${STATUS_STYLE[status]}`}>
-      {status}
-    </span>
-  );
-}
 
 function ColumnFilter({ label, options, value, onChange }: {
   label: string;
@@ -115,6 +108,7 @@ interface PrescriptionListProps {
   onDashboardClick?: () => void;
   onIncidentsClick?: () => void;
   onTasksClick?: () => void;
+  onStatusChange?: (p: Prescription, status: Status) => void;
   activeTab?: string;
 }
 
@@ -122,7 +116,7 @@ export function PrescriptionList({
   user, onLogout, prescriptions, loading, search, filterStatus, filterMine,
   canEdit, isContractor, activeTemplate,
   onSearchChange, onFilterChange, onFilterMineChange, onSelect, onAddClick, onInspectionsClick,
-  onDashboardClick, onIncidentsClick, onTasksClick, activeTab = "prescriptions",
+  onDashboardClick, onIncidentsClick, onTasksClick, onStatusChange, activeTab = "prescriptions",
 }: PrescriptionListProps) {
 
   const [colFilters, setColFilters] = useState({
@@ -366,7 +360,11 @@ export function PrescriptionList({
                           </span>
                         </td>
                         <td className="px-5 py-4">
-                          <StatusBadge status={status} />
+                          <StatusDropdown
+                            status={status}
+                            editable={user.role === "manager" || p.createdBy === user.login}
+                            onChange={s => onStatusChange?.(p, s)}
+                          />
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2 justify-end">

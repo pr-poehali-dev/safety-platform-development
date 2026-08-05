@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { AppUser } from "@/lib/auth";
 import { Template, DEFAULT_TEMPLATE } from "@/lib/template";
 import UserMenu from "@/components/UserMenu";
-import { Prescription } from "@/lib/prescriptionTypes";
+import { Prescription, Status } from "@/lib/prescriptionTypes";
 import { AddForm } from "@/components/prescriptions/PrescriptionForm";
 import { PrescriptionDetail } from "@/components/prescriptions/PrescriptionDetail";
 import { PrescriptionList } from "@/components/prescriptions/PrescriptionList";
@@ -105,6 +105,11 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
     await fetch(API, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
     setPrescriptions(prev => prev.map(p => p.id === updated.id ? updated : p));
     setSelected(updated);
+  };
+
+  const changePrescriptionStatus = (p: Prescription, status: Status) => {
+    const updated = { ...p, remarks: p.remarks.map(r => ({ ...r, status })) };
+    updatePrescription(updated);
   };
 
   const NAV_TABS: { id: Tab; label: string; icon: string }[] = [
@@ -302,6 +307,7 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
         onDashboardClick={() => setTab("dashboard")}
         onIncidentsClick={() => setTab("incidents")}
         onTasksClick={() => setTab("tasks")}
+        onStatusChange={changePrescriptionStatus}
         activeTab={tab}
       />
 

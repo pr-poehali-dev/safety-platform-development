@@ -5,8 +5,9 @@ import { Template } from "@/lib/template";
 import { printPrescription, downloadPrescriptionWord } from "@/lib/printPrescription";
 import {
   Prescription, Comment, Attachment, Status,
-  ALL_STATUSES, STATUS_STYLE, isOverdue, effectiveStatus, overallStatus,
+  isOverdue, effectiveStatus, overallStatus,
 } from "@/lib/prescriptionTypes";
+import { StatusDropdown } from "@/components/prescriptions/StatusDropdown";
 
 const UPLOAD_URL = "https://functions.poehali.dev/b1d2899a-a609-43c1-81e8-34e4c4922136";
 const MAX_PHOTOS = 3;
@@ -32,14 +33,6 @@ function resizeImage(file: File): Promise<string> {
     };
     reader.readAsDataURL(file);
   });
-}
-
-function StatusBadge({ status }: { status: Status }) {
-  return (
-    <span className={`inline-flex items-center border text-[11px] font-medium px-2 py-0.5 rounded whitespace-nowrap ${STATUS_STYLE[status]}`}>
-      {status}
-    </span>
-  );
 }
 
 function InfoRow({ icon, label, value, highlight }: { icon: string; label: string; value: string; highlight?: boolean }) {
@@ -174,6 +167,15 @@ export function PrescriptionDetail({
     onUpdate(updated);
   };
 
+  const setAllRemarksStatus = (status: Status) => {
+    const remarks = p.remarks.map(r => ({ ...r, status }));
+    const updated = { ...p, remarks };
+    setP(updated);
+    onUpdate(updated);
+  };
+
+  const canChangeStatus = user.role === "manager" || p.createdBy === user.login;
+
   const status = overallStatus(p.remarks);
   const isMine = (c: Comment) => c.role === myRole;
 
@@ -187,7 +189,7 @@ export function PrescriptionDetail({
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <span className="text-base font-semibold" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{p.number}</span>
-              <StatusBadge status={status} />
+              <StatusDropdown status={status} editable={canChangeStatus} onChange={setAllRemarksStatus} />
             </div>
             <p className="text-xs text-muted-foreground mt-1">Выдано {p.date} · {p.object}</p>
           </div>
@@ -255,7 +257,7 @@ export function PrescriptionDetail({
                 <div key={r.id} className="border border-border rounded-xl p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <span className="text-xs font-semibold text-primary uppercase tracking-wider">Замечание #{i + 1}</span>
-                    <StatusBadge status={eStatus} />
+                    <StatusDropdown status={eStatus} editable={canChangeStatus} onChange={s => setRemarkStatus(r.id, s)} align="right" />
                   </div>
                   <p className="text-sm text-foreground leading-relaxed bg-secondary/40 rounded-lg p-3">{r.description}</p>
 
@@ -318,22 +320,6 @@ export function PrescriptionDetail({
                       {r.deadline}{isOverdue(r) && <span className="text-[10px] ml-2 font-normal">— просрочено</span>}
                     </p>
                   </div>
-                  {canEdit && (
-                    <div>
-                      <p className="text-[11px] text-muted-foreground mb-2">Изменить статус замечания:</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {ALL_STATUSES.map(s => (
-                          <button
-                            key={s}
-                            onClick={() => setRemarkStatus(r.id, s)}
-                            className={`text-[11px] px-2.5 py-1 rounded-md border font-medium transition-colors ${effectiveStatus(r) === s ? STATUS_STYLE[s] : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"}`}
-                          >
-                            {s}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               );})}
             </div>
