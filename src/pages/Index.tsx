@@ -30,6 +30,7 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingPrescription, setEditingPrescription] = useState<Prescription | null>(null);
   const [selected, setSelected] = useState<Prescription | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("Все");
   const [filterMine, setFilterMine] = useState(false);
@@ -108,6 +109,10 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
   };
 
   const changePrescriptionStatus = (p: Prescription, status: Status) => {
+    if (status === "Черновик") {
+      setEditingPrescription(p);
+      return;
+    }
     const updated = { ...p, remarks: p.remarks.map(r => ({ ...r, status })) };
     updatePrescription(updated);
   };
@@ -315,7 +320,16 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
         <AddForm onClose={() => setShowAdd(false)} onSave={addPrescription} user={user} />
       )}
 
-      {selected && (
+      {editingPrescription && (
+        <AddForm
+          onClose={() => setEditingPrescription(null)}
+          onSave={async p => { await updatePrescription(p); setEditingPrescription(null); }}
+          user={user}
+          editPrescription={editingPrescription}
+        />
+      )}
+
+      {selected && !editingPrescription && (
         <PrescriptionDetail
           prescription={selected}
           onClose={() => setSelected(null)}
@@ -326,6 +340,7 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
             (user.role === "specialist" && selected.createdBy === user.login)
           }
           template={activeTemplate}
+          onEditRequest={p => { setEditingPrescription(p); setSelected(null); }}
         />
       )}
     </>

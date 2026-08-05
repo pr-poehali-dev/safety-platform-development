@@ -48,7 +48,7 @@ function InfoRow({ icon, label, value, highlight }: { icon: string; label: strin
 }
 
 export function PrescriptionDetail({
-  prescription, onClose, onUpdate, user, canEdit, template,
+  prescription, onClose, onUpdate, user, canEdit, template, onEditRequest,
 }: {
   prescription: Prescription;
   onClose: () => void;
@@ -56,6 +56,7 @@ export function PrescriptionDetail({
   user: AppUser;
   canEdit: boolean;
   template: Template;
+  onEditRequest?: (p: Prescription) => void;
 }) {
   const [p, setP] = useState(prescription);
   const [newComment, setNewComment] = useState("");
@@ -161,6 +162,10 @@ export function PrescriptionDetail({
   };
 
   const setRemarkStatus = (remarkId: string, status: Status) => {
+    if (status === "Черновик") {
+      onEditRequest?.(p);
+      return;
+    }
     const remarks = p.remarks.map(r => r.id === remarkId ? { ...r, status } : r);
     const updated = { ...p, remarks };
     setP(updated);
@@ -168,6 +173,10 @@ export function PrescriptionDetail({
   };
 
   const setAllRemarksStatus = (status: Status) => {
+    if (status === "Черновик") {
+      onEditRequest?.(p);
+      return;
+    }
     const remarks = p.remarks.map(r => ({ ...r, status }));
     const updated = { ...p, remarks };
     setP(updated);

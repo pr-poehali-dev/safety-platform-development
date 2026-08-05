@@ -15,13 +15,13 @@ const CATEGORIES_URL = "https://functions.poehali.dev/ea358d23-fa1e-4907-88c0-87
 const OBJECTS_URL = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
 const CONTRACTORS_URL = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
 
-// --- Форма добавления ---
-export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave: (p: Prescription) => Promise<void>; user: AppUser }) {
+// --- Форма добавления / редактирования ---
+export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: () => void; onSave: (p: Prescription) => Promise<void>; user: AppUser; editPrescription?: Prescription | null }) {
   const isMale = user.name ? detectGenderFromName(user.name) : true;
   const inspectorPosition = user.position ? declinePosition(user.position, isMale) : "";
   const inspectorName = user.name ? toInstrumental(user.name) : "";
-  const inspectorLabel = [inspectorPosition, inspectorName].filter(Boolean).join(" ");
-  const inspectorNominativeLabel = [user.position || "", user.name || ""].filter(Boolean).join(" ");
+  const inspectorLabel = editPrescription ? editPrescription.inspector : [inspectorPosition, inspectorName].filter(Boolean).join(" ");
+  const inspectorNominativeLabel = editPrescription ? (editPrescription.inspectorNominative ?? "") : [user.position || "", user.name || ""].filter(Boolean).join(" ");
 
   const [categories, setCategories] = useState<string[]>([]);
   const [objectsList, setObjectsList] = useState<{ id: number; name: string; places: { id: number; name: string }[] }[]>([]);
@@ -38,7 +38,16 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
       .then(data => setContractorsList(Array.isArray(data) ? data : []));
   }, []);
 
-  const [form, setForm] = useState<FormState>({
+  const [form, setForm] = useState<FormState>(() => editPrescription ? {
+    object: editPrescription.object,
+    contractor: editPrescription.contractor,
+    contractNumber: editPrescription.contractNumber || "",
+    representative: editPrescription.representative || "",
+    representativeEnabled: !!editPrescription.representative,
+    replyEmail: editPrescription.replyEmail,
+    reportDeadline: editPrescription.reportDeadline,
+    remarks: editPrescription.remarks.map(r => ({ ...r })),
+  } : {
     object: "", contractor: "", contractNumber: "", representative: "", representativeEnabled: false, replyEmail: "", reportDeadline: "", remarks: [newRemark()],
   });
 
@@ -78,21 +87,21 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
     if (!isValid) return;
     const now = new Date();
     await onSave({
-      id: Date.now().toString(),
-      number: "",
-      date: now.toLocaleDateString("ru-RU"),
+      id: editPrescription?.id ?? Date.now().toString(),
+      number: editPrescription?.number ?? "",
+      date: editPrescription?.date ?? now.toLocaleDateString("ru-RU"),
       object: form.object,
       contractor: form.contractor,
       contractNumber: form.contractNumber || undefined,
       inspector: inspectorLabel,
       inspectorNominative: inspectorNominativeLabel,
       representative: form.representative,
-      responsible: "",
+      responsible: editPrescription?.responsible ?? "",
       replyEmail: form.replyEmail,
       reportDeadline: form.reportDeadline,
       remarks: form.remarks,
-      comments: [],
-      createdBy: user.login,
+      comments: editPrescription?.comments ?? [],
+      createdBy: editPrescription?.createdBy ?? user.login,
     });
     onClose();
   };
@@ -102,7 +111,7 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-card border border-border rounded-xl w-full max-w-[1344px] shadow-2xl animate-fade-in flex flex-col max-h-[92vh]">
         <div className="flex items-center justify-between px-12 py-8 border-b border-border flex-shrink-0">
-          <h2 className="text-xl font-semibold">Новое предписание</h2>
+          <h2 className="text-xl font-semibold">{editPrescription ? "Редактирование предписания" : "Новое предписание"}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <Icon name="X" size={22} />
           </button>
@@ -160,7 +169,7 @@ export function AddForm({ onClose, onSave, user }: { onClose: () => void; onSave
             disabled={!isValid}
             className="text-base px-10 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            Создать предписание
+            {editPrescription ? "Сохранить изменения" : "Создать предписание"}
           </button>
         </div>
       </div>
