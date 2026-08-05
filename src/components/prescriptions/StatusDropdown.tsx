@@ -20,6 +20,7 @@ interface StatusDropdownProps {
 
 export function StatusDropdown({ status, editable, onChange, align = "left" }: StatusDropdownProps) {
   const [open, setOpen] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<Status | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,6 +40,15 @@ export function StatusDropdown({ status, editable, onChange, align = "left" }: S
     );
   }
 
+  const selectStatus = (s: Status) => {
+    setOpen(false);
+    if (s === "Устранено") {
+      setPendingStatus(s);
+    } else {
+      onChange(s);
+    }
+  };
+
   return (
     <div ref={ref} className="relative inline-block" onClick={e => e.stopPropagation()}>
       <button
@@ -55,13 +65,46 @@ export function StatusDropdown({ status, editable, onChange, align = "left" }: S
             <button
               key={s}
               type="button"
-              onClick={() => { onChange(s); setOpen(false); }}
+              onClick={() => selectStatus(s)}
               className={`w-full text-left px-3 py-1.5 text-xs transition-colors hover:bg-secondary/50 flex items-center gap-2 ${s === status ? "text-foreground font-medium" : "text-muted-foreground"}`}
             >
               <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${DOT_COLOR[s]}`} />
               {s}
             </button>
           ))}
+        </div>
+      )}
+
+      {pendingStatus && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={e => e.stopPropagation()}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPendingStatus(null)} />
+          <div className="relative bg-card border border-border rounded-xl w-full max-w-sm shadow-2xl p-6 animate-fade-in">
+            <div className="flex items-start gap-3 mb-5">
+              <div className="w-9 h-9 rounded-lg bg-green-400/10 border border-green-400/20 flex items-center justify-center flex-shrink-0">
+                <Icon name="CheckCircle2" size={16} className="text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Отметить как устранено?</p>
+                <p className="text-xs text-muted-foreground mt-1">Статус будет изменён на «Устранено». Это действие можно отменить вручную позже.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setPendingStatus(null)}
+                className="flex-1 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={() => { onChange(pendingStatus); setPendingStatus(null); }}
+                className="flex-1 text-sm px-4 py-2 rounded-lg bg-green-500 text-white font-medium hover:bg-green-600 transition-colors"
+              >
+                Подтвердить
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
