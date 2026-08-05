@@ -12,6 +12,7 @@ interface Props {
   onDeleteConfirm: (id: number) => void;
   onDeleteCancel: () => void;
   onAddFirst: () => void;
+  canManage?: boolean;
 }
 
 const formatDate = (iso: string) => {
@@ -51,7 +52,7 @@ function PhotoLightbox({ photos, startIndex, onClose }: { photos: string[]; star
 }
 
 export default function InspectionsTable({
-  rows, loading, deleteConfirm, onDeleteRequest, onDeleteConfirm, onDeleteCancel, onAddFirst,
+  rows, loading, deleteConfirm, onDeleteRequest, onDeleteConfirm, onDeleteCancel, onAddFirst, canManage = true,
 }: Props) {
   const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null);
 
@@ -69,7 +70,9 @@ export default function InspectionsTable({
       <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
         <Icon name="TableProperties" size={32} className="opacity-30" />
         <p className="text-sm">Записей пока нет</p>
-        <button onClick={onAddFirst} className="text-sm text-primary hover:underline">Добавить первую запись</button>
+        {canManage && (
+          <button onClick={onAddFirst} className="text-sm text-primary hover:underline">Добавить первую запись</button>
+        )}
       </div>
     );
   }
@@ -159,19 +162,21 @@ export default function InspectionsTable({
                   )}
                 </td>
                 <td className="px-4 py-3 align-top">
-                  {deleteConfirm === row.id ? (
-                    <div className="flex items-center gap-1 whitespace-nowrap">
-                      <button onClick={() => onDeleteConfirm(row.id)} className="text-[10px] px-2 py-1 rounded bg-red-500 text-white hover:bg-red-600 transition-colors">Удалить</button>
-                      <button onClick={onDeleteCancel} className="text-[10px] px-2 py-1 rounded border border-border text-muted-foreground hover:text-foreground transition-colors">Нет</button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => onDeleteRequest(row.id)}
-                      className="p-1.5 rounded text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-colors opacity-0 group-hover:opacity-100"
-                      title="Удалить"
-                    >
-                      <Icon name="Trash2" size={13} />
-                    </button>
+                  {canManage && (
+                    deleteConfirm === row.id ? (
+                      <div className="flex items-center gap-1 whitespace-nowrap">
+                        <button onClick={() => onDeleteConfirm(row.id)} className="text-[10px] px-2 py-1 rounded bg-red-500 text-white hover:bg-red-600 transition-colors">Удалить</button>
+                        <button onClick={onDeleteCancel} className="text-[10px] px-2 py-1 rounded border border-border text-muted-foreground hover:text-foreground transition-colors">Нет</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => onDeleteRequest(row.id)}
+                        className="p-1.5 rounded text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Удалить"
+                      >
+                        <Icon name="Trash2" size={13} />
+                      </button>
+                    )
                   )}
                 </td>
               </tr>

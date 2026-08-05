@@ -120,7 +120,7 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
   const NAV_TABS: { id: Tab; label: string; icon: string }[] = [
     { id: "dashboard", label: "Главная", icon: "LayoutDashboard" },
     { id: "prescriptions", label: "Предписания", icon: "ClipboardList" },
-    ...(canEdit ? [{ id: "inspections" as Tab, label: "Проверки", icon: "TableProperties" }] : []),
+    { id: "inspections", label: "Проверки", icon: "TableProperties" },
     { id: "incidents", label: "Происшествия", icon: "TriangleAlert" },
     { id: "tasks", label: "Задачи", icon: "ListChecks" },
   ];
@@ -308,7 +308,7 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
         onFilterMineChange={setFilterMine}
         onSelect={setSelected}
         onAddClick={() => setShowAdd(true)}
-        onInspectionsClick={canEdit ? () => setTab("inspections") : undefined}
+        onInspectionsClick={() => setTab("inspections")}
         onDashboardClick={() => setTab("dashboard")}
         onIncidentsClick={() => setTab("incidents")}
         onTasksClick={() => setTab("tasks")}

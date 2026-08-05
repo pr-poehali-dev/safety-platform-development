@@ -39,6 +39,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
   const [filterMine, setFilterMine] = useState(initialMine ?? false);
 
   const inspectorName = user.name || "";
+  const isContractor = user.role === "contractor";
 
   const load = useCallback(() => {
     setLoading(true);
@@ -97,6 +98,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
   const uniqueInspectors = [...new Set(rows.map(r => r.inspector_name))].filter(Boolean);
   const uniqueViolationTypes = [...new Set(rows.map(r => r.violation_type))].filter(Boolean);
   const displayedRows = rows
+    .filter(r => !isContractor || r.contractor === user.contractor)
     .filter(r => !filterSuspended || r.works_suspended)
     .filter(r => !filterMine || r.created_by === user.id);
 
@@ -146,15 +148,19 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold">Журнал проверок</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Записи всех специалистов ОТ</p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {isContractor ? <>Организация: <span className="text-foreground">{user.contractor}</span></> : "Записи всех специалистов ОТ"}
+            </p>
           </div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-primary text-primary-foreground text-sm px-4 py-2.5 rounded-lg hover:bg-primary/90 transition-colors font-medium"
-          >
-            <Icon name="Plus" size={15} />
-            Добавить запись
-          </button>
+          {!isContractor && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 bg-primary text-primary-foreground text-sm px-4 py-2.5 rounded-lg hover:bg-primary/90 transition-colors font-medium"
+            >
+              <Icon name="Plus" size={15} />
+              Добавить запись
+            </button>
+          )}
         </div>
 
         {/* Фильтры */}
@@ -180,13 +186,15 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
             <Icon name="OctagonX" size={12} />
             Приостановлено
           </button>
-          <button
-            onClick={() => setFilterMine(v => !v)}
-            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${filterMine ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/30 text-muted-foreground hover:text-foreground"}`}
-          >
-            <Icon name="User" size={12} />
-            Мои
-          </button>
+          {!isContractor && (
+            <button
+              onClick={() => setFilterMine(v => !v)}
+              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${filterMine ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/30 text-muted-foreground hover:text-foreground"}`}
+            >
+              <Icon name="User" size={12} />
+              Мои
+            </button>
+          )}
           {(dateFrom || dateTo || filterContractor.length > 0 || filterObject.length > 0 || filterInspector.length > 0 || filterViolationType.length > 0 || filterSuspended || filterMine) && (
             <button
               onClick={() => { setDateFrom(""); setDateTo(""); setFilterContractor([]); setFilterObject([]); setFilterInspector([]); setFilterViolationType([]); setFilterSuspended(false); setFilterMine(false); }}
@@ -208,6 +216,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
           onDeleteConfirm={handleDelete}
           onDeleteCancel={() => setDeleteConfirm(null)}
           onAddFirst={() => setShowForm(true)}
+          canManage={!isContractor}
         />
       </main>
 
