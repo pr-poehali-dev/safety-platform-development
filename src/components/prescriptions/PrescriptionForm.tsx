@@ -83,10 +83,11 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
       r.deadline
     );
 
-  const handleSave = async () => {
-    if (!isValid) return;
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+
+  const buildPrescription = (asDraft: boolean): Prescription => {
     const now = new Date();
-    await onSave({
+    return {
       id: editPrescription?.id ?? Date.now().toString(),
       number: editPrescription?.number ?? "",
       date: editPrescription?.date ?? now.toLocaleDateString("ru-RU"),
@@ -99,20 +100,30 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
       responsible: editPrescription?.responsible ?? "",
       replyEmail: form.replyEmail,
       reportDeadline: form.reportDeadline,
-      remarks: form.remarks,
+      remarks: asDraft ? form.remarks.map(r => ({ ...r, status: "Черновик" })) : form.remarks,
       comments: editPrescription?.comments ?? [],
       createdBy: editPrescription?.createdBy ?? user.login,
-    });
+    };
+  };
+
+  const handleSave = async () => {
+    if (!isValid) return;
+    await onSave(buildPrescription(false));
+    onClose();
+  };
+
+  const handleSaveDraft = async () => {
+    await onSave(buildPrescription(true));
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div className="relative bg-card border border-border rounded-xl w-full max-w-[1344px] shadow-2xl animate-fade-in flex flex-col max-h-[92vh]">
         <div className="flex items-center justify-between px-12 py-8 border-b border-border flex-shrink-0">
           <h2 className="text-xl font-semibold">{editPrescription ? "Редактирование предписания" : "Новое предписание"}</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+          <button onClick={() => setShowCloseConfirm(true)} className="text-muted-foreground hover:text-foreground transition-colors">
             <Icon name="X" size={22} />
           </button>
         </div>
@@ -161,7 +172,7 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
           </div>
         </div>
         <div className="flex items-center justify-end gap-4 px-12 py-6 border-t border-border flex-shrink-0">
-          <button onClick={onClose} className="text-base px-8 py-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">
+          <button onClick={() => setShowCloseConfirm(true)} className="text-base px-8 py-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">
             Отмена
           </button>
           <button
@@ -173,6 +184,39 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
           </button>
         </div>
       </div>
+
+      {showCloseConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={e => e.stopPropagation()}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCloseConfirm(false)} />
+          <div className="relative bg-card border border-border rounded-xl w-full max-w-sm shadow-2xl p-6 animate-fade-in">
+            <div className="flex items-start gap-3 mb-5">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                <Icon name="Save" size={16} className="text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Сохранить изменения?</p>
+                <p className="text-xs text-muted-foreground mt-1">Предписание будет сохранено как черновик. Вы сможете вернуться к нему позже.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Нет
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                className="flex-1 text-sm px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+              >
+                Да
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
