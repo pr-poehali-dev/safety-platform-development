@@ -8,6 +8,38 @@ const MAX_PHOTOS = 3;
 const MAX_PHOTO_SIZE = 1.5 * 1024 * 1024;
 const MAX_PHOTO_WIDTH = 600;
 
+function PhotoLightbox({ photos, startIndex, onClose }: { photos: string[]; startIndex: number; onClose: () => void }) {
+  const [index, setIndex] = useState(startIndex);
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <button onClick={onClose} className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors">
+        <Icon name="X" size={26} />
+      </button>
+      {photos.length > 1 && (
+        <button
+          onClick={() => setIndex(i => (i - 1 + photos.length) % photos.length)}
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white transition-colors"
+        >
+          <Icon name="ChevronLeft" size={32} />
+        </button>
+      )}
+      <img src={photos[index]} alt={`Фото ${index + 1}`} className="relative max-w-[90vw] max-h-[85vh] rounded-lg object-contain" />
+      {photos.length > 1 && (
+        <button
+          onClick={() => setIndex(i => (i + 1) % photos.length)}
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white transition-colors"
+        >
+          <Icon name="ChevronRight" size={32} />
+        </button>
+      )}
+      {photos.length > 1 && (
+        <span className="absolute bottom-6 text-white/70 text-xs">{index + 1} / {photos.length}</span>
+      )}
+    </div>
+  );
+}
+
 function resizeImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -38,6 +70,7 @@ export function RemarkRow({
   const set = (key: keyof Remark, val: string) => onChange({ ...remark, [key]: val });
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const photos = remark.photos ?? [];
@@ -133,14 +166,31 @@ export function RemarkRow({
         <div className="flex items-center gap-3">
           {photos.map((url, i) => (
             <div key={i} className="relative group w-28 h-28 rounded-lg overflow-hidden border border-border flex-shrink-0">
-              <img src={url} alt={`Фото ${i + 1}`} className="w-full h-full object-cover" />
               <button
                 type="button"
-                onClick={() => removePhoto(i)}
-                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                onClick={() => setLightboxIndex(i)}
+                className="block w-full h-full"
               >
-                <Icon name="X" size={18} className="text-white" />
+                <img src={url} alt={`Фото ${i + 1}`} className="w-full h-full object-cover" />
               </button>
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 pointer-events-none">
+                <button
+                  type="button"
+                  onClick={() => setLightboxIndex(i)}
+                  className="pointer-events-auto p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                  title="Просмотреть"
+                >
+                  <Icon name="Eye" size={16} className="text-white" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removePhoto(i)}
+                  className="pointer-events-auto p-1.5 rounded-full bg-white/10 hover:bg-red-500/60 transition-colors"
+                  title="Удалить"
+                >
+                  <Icon name="Trash2" size={16} className="text-white" />
+                </button>
+              </div>
             </div>
           ))}
           {photos.length < MAX_PHOTOS && (
@@ -175,6 +225,10 @@ export function RemarkRow({
           onChange={e => handleFiles(e.target.files)}
         />
       </div>
+
+      {lightboxIndex !== null && (
+        <PhotoLightbox photos={photos} startIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
+      )}
 
       <Field label="Ссылка на нормативный документ *">
         <TextareaBase value={remark.normRef} onChange={e => set("normRef", e.target.value)} placeholder="Например: ППР РФ п. 24" rows={4} />
