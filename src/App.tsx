@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/theme-provider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
@@ -72,30 +73,32 @@ const App = () => {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route
-              path="/login"
-              element={user ? <Navigate to="/" replace /> : <Login users={users} onLogin={handleLogin} />}
-            />
-            <Route
-              path="/"
-              element={
-                !user ? <Navigate to="/login" replace /> :
-                user.role === "admin"
-                  ? <Admin currentUser={user} users={users} onUsersChange={handleUsersChange} onLogout={handleLogout} />
-                  : <Index user={user} onLogout={handleLogout} onUserUpdate={u => { saveSession(u); setUser(u); }} />
-              }
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ThemeProvider attribute="class" defaultTheme="dark" storageKey="ot_theme">
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route
+                path="/login"
+                element={user ? <Navigate to="/" replace /> : <Login users={users} onLogin={handleLogin} />}
+              />
+              <Route
+                path="/"
+                element={
+                  !user ? <Navigate to="/login" replace /> :
+                  user.role === "admin"
+                    ? <Admin currentUser={user} users={users} onUsersChange={handleUsersChange} onLogout={handleLogout} />
+                    : <Index user={user} onLogout={handleLogout} onUserUpdate={u => { saveSession(u); setUser(u); }} />
+                }
+              />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 };
 

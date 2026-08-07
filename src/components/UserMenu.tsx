@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
+import { useTheme } from "next-themes";
 import { AppUser, ROLE_LABELS, ROLE_COLORS } from "@/lib/auth";
 import Icon from "@/components/ui/icon";
+import { Switch } from "@/components/ui/switch";
 import ChangePasswordModal from "@/components/ChangePasswordModal";
 
 interface Props {
@@ -13,6 +15,10 @@ export default function UserMenu({ user, onLogout, onUserUpdate }: Props) {
   const [open, setOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isLight = mounted && theme === "light";
 
   useEffect(() => {
     if (!open) return;
@@ -54,6 +60,18 @@ export default function UserMenu({ user, onLogout, onUserUpdate }: Props) {
                   </span>
                 </div>
               </div>
+            </div>
+
+            {/* Тема */}
+            <div className="px-3 py-3 border-b border-border flex items-center justify-between">
+              <span className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                <Icon name={isLight ? "Sun" : "Moon"} size={14} />
+                {isLight ? "Светлая тема" : "Тёмная тема"}
+              </span>
+              <Switch
+                checked={isLight}
+                onCheckedChange={checked => setTheme(checked ? "light" : "dark")}
+              />
             </div>
 
             {/* Действия */}
