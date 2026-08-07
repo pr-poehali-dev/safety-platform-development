@@ -91,6 +91,8 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
 
   const isContractor = user.role === "contractor";
   const isAdmin = user.role === "admin";
+  const isSpecialist = user.role === "specialist";
+  const [filterMine, setFilterMine] = useState(isSpecialist);
 
   const savePyramidStats = async () => {
     setPyramidSaving(true);
@@ -108,7 +110,6 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
       setPyramidSaving(false);
     }
   };
-  const isSpecialist = user.role === "specialist";
 
   const from = dateFrom ? new Date(dateFrom) : null;
   const to = dateTo ? new Date(dateTo + "T23:59:59") : null;
@@ -130,7 +131,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
   const filteredPrescriptions = useMemo(() => {
     return prescriptions.filter(p => {
       if (isContractor && p.contractor !== user.contractor) return false;
-      if (isSpecialist && p.createdBy !== user.login) return false;
+      if (isSpecialist && filterMine && p.createdBy !== user.login) return false;
       if (from || to) {
         const d = parseDate(p.date);
         if (!d) return false;
@@ -144,12 +145,12 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
       }
       return true;
     });
-  }, [prescriptions, user, dateFrom, dateTo, selectedContractors, selectedCategories]);
+  }, [prescriptions, user, dateFrom, dateTo, selectedContractors, selectedCategories, isSpecialist, filterMine]);
 
   const filteredInspections = useMemo(() => {
     return inspections.filter(i => {
       if (isContractor && i.contractor !== user.contractor) return false;
-      if (isSpecialist && i.created_by !== user.id) return false;
+      if (isSpecialist && filterMine && i.created_by !== user.id) return false;
       if (from || to) {
         const d = parseDate(i.inspection_date);
         if (!d) return false;
@@ -160,7 +161,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
       if (selectedCategories.length > 0 && !selectedCategories.includes(i.violation_type || "")) return false;
       return true;
     });
-  }, [inspections, user, dateFrom, dateTo, selectedContractors, selectedCategories]);
+  }, [inspections, user, dateFrom, dateTo, selectedContractors, selectedCategories, isSpecialist, filterMine]);
 
   const presTotal = filteredPrescriptions.length;
   const presIssued = filteredPrescriptions.filter(p => overallStatus(p.remarks) === "В работе").length;
@@ -332,6 +333,9 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
         categoryOpen={categoryOpen}
         setCategoryOpen={setCategoryOpen}
         isContractor={isContractor}
+        isSpecialist={isSpecialist}
+        filterMine={filterMine}
+        onFilterMineChange={setFilterMine}
         filteredPresCount={filteredPrescriptions.length}
         filteredInspCount={filteredInspections.length}
         hasFilter={hasFilter}

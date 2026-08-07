@@ -17,6 +17,9 @@ interface DashboardFiltersProps {
   categoryOpen: boolean;
   setCategoryOpen: (v: boolean | ((prev: boolean) => boolean)) => void;
   isContractor: boolean;
+  isSpecialist?: boolean;
+  filterMine?: boolean;
+  onFilterMineChange?: (v: boolean) => void;
   filteredPresCount: number;
   filteredInspCount: number;
   hasFilter: boolean;
@@ -30,7 +33,8 @@ export default function DashboardFilters({
   allContractorOptions, allCategoryOptions,
   contractorOpen, setContractorOpen,
   categoryOpen, setCategoryOpen,
-  isContractor, filteredPresCount, filteredInspCount, hasFilter,
+  isContractor, isSpecialist, filterMine, onFilterMineChange,
+  filteredPresCount, filteredInspCount, hasFilter,
   toggleItem,
 }: DashboardFiltersProps) {
   return (
@@ -46,6 +50,16 @@ export default function DashboardFilters({
             onReset={() => { onFromChange(""); onToChange(""); }}
           />
         </div>
+
+        {isSpecialist && (
+          <button
+            onClick={() => onFilterMineChange?.(!filterMine)}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${filterMine ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/30 text-muted-foreground hover:text-foreground"}`}
+          >
+            <Icon name="User" size={12} />
+            Мои
+          </button>
+        )}
 
         {!isContractor && allContractorOptions.length > 0 && (
           <div className="relative">
