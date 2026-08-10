@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "specialist" | "manager" | "contractor";
+export type UserRole = "admin" | "specialist" | "manager" | "contractor" | "project_team";
 
 export interface AppUser {
   id: string;
@@ -8,6 +8,7 @@ export interface AppUser {
   position?: string;
   role: UserRole;
   contractor?: string;
+  objectIds?: number[];
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -15,6 +16,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   specialist: "Специалист ОТ",
   manager: "Руководитель",
   contractor: "Подрядчик",
+  project_team: "Проектная команда",
 };
 
 export const ROLE_COLORS: Record<UserRole, string> = {
@@ -22,6 +24,7 @@ export const ROLE_COLORS: Record<UserRole, string> = {
   specialist: "text-primary bg-primary/10 border-primary/20",
   manager: "text-orange-400 bg-orange-400/10 border-orange-400/20",
   contractor: "text-green-400 bg-green-400/10 border-green-400/20",
+  project_team: "text-blue-400 bg-blue-400/10 border-blue-400/20",
 };
 
 const USERS_URL = "https://functions.poehali.dev/9f213d27-a6a3-4ce0-b6b1-0d26003c43eb";

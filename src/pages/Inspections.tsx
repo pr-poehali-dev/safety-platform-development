@@ -40,6 +40,8 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
 
   const inspectorName = user.name || "";
   const isContractor = user.role === "contractor";
+  const isProjectTeam = user.role === "project_team";
+  const [myObjectNames, setMyObjectNames] = useState<string[]>([]);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -69,7 +71,14 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
       .then(data => setCategories(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
     fetch(OBJECTS_API)
       .then(r => r.json())
-      .then(data => setObjects(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
+      .then(data => {
+        const list = Array.isArray(data) ? data : [];
+        setObjects(list.map((d: { name: string }) => d.name));
+        if (isProjectTeam) {
+          const ids = new Set(user.objectIds ?? []);
+          setMyObjectNames(list.filter((o: { id: number }) => ids.has(o.id)).map((o: { name: string }) => o.name));
+        }
+      });
     fetch(CONTRACTORS_API)
       .then(r => r.json())
       .then(data => setContractors(Array.isArray(data) ? data : []));
@@ -99,6 +108,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
   const uniqueViolationTypes = [...new Set(rows.map(r => r.violation_type))].filter(Boolean);
   const displayedRows = rows
     .filter(r => !isContractor || r.contractor === user.contractor)
+    .filter(r => !isProjectTeam || myObjectNames.includes(r.object_name))
     .filter(r => !filterSuspended || r.works_suspended)
     .filter(r => !filterMine || r.created_by === user.id);
 
@@ -149,10 +159,14 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
           <div>
             <h1 className="text-xl font-semibold">Журнал проверок</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {isContractor ? <>Организация: <span className="text-foreground">{user.contractor}</span></> : "Записи всех специалистов ОТ"}
+              {isContractor
+                ? <>Организация: <span className="text-foreground">{user.contractor}</span></>
+                : isProjectTeam
+                ? <>Показаны проверки по вашим объектам ({myObjectNames.length})</>
+                : "Записи всех специалистов ОТ"}
             </p>
           </div>
-          {!isContractor && (
+          {!isContractor && !isProjectTeam && (
             <button
               onClick={() => setShowForm(true)}
               className="flex items-center gap-2 bg-primary text-primary-foreground text-sm px-4 py-2.5 rounded-lg hover:bg-primary/90 transition-colors font-medium"
@@ -186,7 +200,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
             <Icon name="OctagonX" size={12} />
             Приостановлено
           </button>
-          {!isContractor && (
+          {!isContractor && !isProjectTeam && (
             <button
               onClick={() => setFilterMine(v => !v)}
               className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${filterMine ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/30 text-muted-foreground hover:text-foreground"}`}
@@ -216,7 +230,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
           onDeleteConfirm={handleDelete}
           onDeleteCancel={() => setDeleteConfirm(null)}
           onAddFirst={() => setShowForm(true)}
-          canManage={!isContractor}
+          canManage={!isContractor && !isProjectTeam}
         />
       </main>
 

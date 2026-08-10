@@ -27,6 +27,20 @@ def row_to_user(row):
     }
 
 
+def get_user_object_ids(cur, user_id):
+    cur.execute(f"SELECT object_id FROM {SCHEMA}.user_objects WHERE user_id=%s", (user_id,))
+    return [r[0] for r in cur.fetchall()]
+
+
+def set_user_objects(cur, user_id, object_ids):
+    cur.execute(f"DELETE FROM {SCHEMA}.user_objects WHERE user_id=%s", (user_id,))
+    for oid in object_ids or []:
+        cur.execute(
+            f"INSERT INTO {SCHEMA}.user_objects (user_id, object_id) VALUES (%s,%s) ON CONFLICT DO NOTHING",
+            (user_id, oid),
+        )
+
+
 def handler(event: dict, context) -> dict:
     """Управление пользователями системы ОТ"""
     if event.get("httpMethod") == "OPTIONS":
@@ -45,7 +59,16 @@ def handler(event: dict, context) -> dict:
             cur.execute(
                 f"SELECT id, login, password, name, position, role, contractor FROM {SCHEMA}.users ORDER BY created_at"
             )
-            users = [row_to_user(r) for r in cur.fetchall()]
+            rows = cur.fetchall()
+            cur.execute(f"SELECT user_id, object_id FROM {SCHEMA}.user_objects")
+            objects_map: dict = {}
+            for uid, oid in cur.fetchall():
+                objects_map.setdefault(uid, []).append(oid)
+            users = []
+            for r in rows:
+                u = row_to_user(r)
+                u["objectIds"] = objects_map.get(r[0], [])
+                users.append(u)
             return {"statusCode": 200, "headers": {**CORS, "Content-Type": "application/json"}, "body": json.dumps(users, ensure_ascii=False)}
 
         if method == "POST":
@@ -54,6 +77,8 @@ def handler(event: dict, context) -> dict:
                 f"INSERT INTO {SCHEMA}.users (id, login, password, name, position, role, contractor) VALUES (%s,%s,%s,%s,%s,%s,%s)",
                 (u["id"], u["login"], u["password"], u["name"], u.get("position"), u["role"], u.get("contractor")),
             )
+            if u.get("role") == "project_team":
+                set_user_objects(cur, u["id"], u.get("objectIds", []))
             conn.commit()
             return {"statusCode": 200, "headers": CORS, "body": json.dumps({"ok": True})}
 
@@ -63,6 +88,10 @@ def handler(event: dict, context) -> dict:
                 f"UPDATE {SCHEMA}.users SET login=%s, password=%s, name=%s, position=%s, role=%s, contractor=%s WHERE id=%s",
                 (u["login"], u["password"], u["name"], u.get("position"), u["role"], u.get("contractor"), u["id"]),
             )
+            if u.get("role") == "project_team":
+                set_user_objects(cur, u["id"], u.get("objectIds", []))
+            else:
+                set_user_objects(cur, u["id"], [])
             conn.commit()
             return {"statusCode": 200, "headers": CORS, "body": json.dumps({"ok": True})}
 

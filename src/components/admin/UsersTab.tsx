@@ -1,12 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import { AppUser, UserRole, ROLE_LABELS, ROLE_COLORS, apiCreateUser, apiUpdateUser, apiDeleteUser } from "@/lib/auth";
 
-const ROLE_ICONS: Record<UserRole, string> = { admin: "Crown", specialist: "ShieldCheck", manager: "Briefcase", contractor: "HardHat" };
-const ALL_ROLES: UserRole[] = ["admin", "specialist", "manager", "contractor"];
+const OBJECTS_API = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
 
-interface UserFormData { login: string; password: string; name: string; position: string; role: UserRole; contractor: string; }
-function emptyForm(): UserFormData { return { login: "", password: "", name: "", position: "", role: "specialist", contractor: "" }; }
+const ROLE_ICONS: Record<UserRole, string> = { admin: "Crown", specialist: "ShieldCheck", manager: "Briefcase", contractor: "HardHat", project_team: "Users" };
+const ALL_ROLES: UserRole[] = ["admin", "specialist", "manager", "contractor", "project_team"];
+
+interface ObjectItem { id: number; name: string; }
+
+interface UserFormData { login: string; password: string; name: string; position: string; role: UserRole; contractor: string; objectIds: number[]; }
+function emptyForm(): UserFormData { return { login: "", password: "", name: "", position: "", role: "specialist", contractor: "", objectIds: [] }; }
 
 function FormField({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return <div className="space-y-1.5"><label className="text-xs font-medium text-muted-foreground">{label}</label>{children}</div>;
@@ -31,6 +35,15 @@ export function UsersTab({ currentUser, users, onUsersChange }: UsersTabProps) {
   const [loginManual, setLoginManual] = useState(false);
   const [passwordManual, setPasswordManual] = useState(false);
   const [roleFilter, setRoleFilter] = useState<UserRole | null>(null);
+  const [objects, setObjects] = useState<ObjectItem[]>([]);
+  const [objectsOpen, setObjectsOpen] = useState(false);
+
+  useEffect(() => {
+    fetch(OBJECTS_API)
+      .then(r => r.json())
+      .then(data => setObjects(Array.isArray(data) ? data.map((o: ObjectItem) => ({ id: o.id, name: o.name })) : []))
+      .catch(() => {});
+  }, []);
 
   const filteredUsers = roleFilter ? users.filter(u => u.role === roleFilter) : users;
   const toggleFilter = (role: UserRole) => setRoleFilter(prev => prev === role ? null : role);
@@ -61,11 +74,19 @@ export function UsersTab({ currentUser, users, onUsersChange }: UsersTabProps) {
     password: passwordManual ? prev.password : generatePassword(v),
   }));
 
-  const openCreate = () => { setForm(emptyForm()); setEditUser(null); setError(""); setLoginManual(false); setPasswordManual(false); setShowForm(true); };
-  const openEdit = (u: AppUser) => { setForm({ login: u.login, password: u.password, name: u.name, position: u.position ?? "", role: u.role, contractor: u.contractor ?? "" }); setEditUser(u); setError(""); setShowForm(true); };
+  const openCreate = () => { setForm(emptyForm()); setEditUser(null); setError(""); setLoginManual(false); setPasswordManual(false); setObjectsOpen(false); setShowForm(true); };
+  const openEdit = (u: AppUser) => { setForm({ login: u.login, password: u.password, name: u.name, position: u.position ?? "", role: u.role, contractor: u.contractor ?? "", objectIds: u.objectIds ?? [] }); setEditUser(u); setError(""); setObjectsOpen(false); setShowForm(true); };
+
+  const toggleObjectId = (id: number) => {
+    setForm(prev => ({
+      ...prev,
+      objectIds: prev.objectIds.includes(id) ? prev.objectIds.filter(x => x !== id) : [...prev.objectIds, id],
+    }));
+  };
 
   const handleSave = async () => {
     if (!form.login.trim() || !form.password.trim() || !form.name.trim()) { setError("Заполните все обязательные поля"); return; }
+    if (form.role === "project_team" && form.objectIds.length === 0) { setError("Выберите хотя бы один объект"); return; }
     const duplicate = users.find(u => u.login === form.login.trim() && u.id !== editUser?.id);
     if (duplicate) { setError("Пользователь с таким логином уже существует"); return; }
     if (editUser) {
@@ -99,7 +120,7 @@ export function UsersTab({ currentUser, users, onUsersChange }: UsersTabProps) {
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {ALL_ROLES.map(role => {
           const active = roleFilter === role;
           return (
@@ -211,6 +232,55 @@ export function UsersTab({ currentUser, users, onUsersChange }: UsersTabProps) {
               {form.role === "contractor" && (
                 <FormField label="Организация">
                   <FormInput value={form.contractor} onChange={v => set("contractor", v)} placeholder="ООО «Название»" />
+                </FormField>
+              )}
+              {form.role === "project_team" && (
+                <FormField label={`Объекты *${form.objectIds.length > 0 ? ` (выбрано: ${form.objectIds.length})` : ""}`}>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setObjectsOpen(v => !v)}
+                      className="w-full flex items-center justify-between bg-secondary/40 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    >
+                      <span className={form.objectIds.length === 0 ? "text-muted-foreground" : ""}>
+                        {form.objectIds.length === 0 ? "Выберите объекты..." : `Выбрано объектов: ${form.objectIds.length}`}
+                      </span>
+                      <Icon name={objectsOpen ? "ChevronUp" : "ChevronDown"} size={14} className="text-muted-foreground flex-shrink-0" />
+                    </button>
+                    {objectsOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-card border border-border rounded-lg shadow-xl max-h-56 overflow-y-auto">
+                        {objects.length === 0 ? (
+                          <div className="px-3 py-3 text-xs text-muted-foreground">Список объектов пуст</div>
+                        ) : objects.map(o => (
+                          <label key={o.id} className="flex items-start gap-2.5 px-3 py-2 hover:bg-secondary/30 cursor-pointer border-b border-border last:border-0">
+                            <input
+                              type="checkbox"
+                              checked={form.objectIds.includes(o.id)}
+                              onChange={() => toggleObjectId(o.id)}
+                              className="accent-primary w-3.5 h-3.5 mt-0.5 flex-shrink-0"
+                            />
+                            <span className="text-xs text-foreground leading-snug">{o.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {form.objectIds.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {form.objectIds.map(id => {
+                        const obj = objects.find(o => o.id === id);
+                        if (!obj) return null;
+                        return (
+                          <span key={id} className="inline-flex items-center gap-1 text-[10px] bg-blue-400/10 text-blue-400 border border-blue-400/20 rounded px-1.5 py-0.5 max-w-[220px]">
+                            <span className="truncate">{obj.name}</span>
+                            <button type="button" onClick={() => toggleObjectId(id)} className="flex-shrink-0 hover:text-red-400">
+                              <Icon name="X" size={10} />
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </FormField>
               )}
               {error && (

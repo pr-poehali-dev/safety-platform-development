@@ -377,8 +377,8 @@ export default function TasksBlock({ user, availableUsers, assignments, loading,
         </div>
       )}
 
-      {/* Список для подрядчика */}
-      {user.role === "contractor" && (
+      {/* Список для подрядчика и проектной команды */}
+      {(user.role === "contractor" || user.role === "project_team") && (
         <div className="space-y-2">
           {loading ? (
             <div className="py-12 text-center text-sm text-muted-foreground">Загрузка...</div>

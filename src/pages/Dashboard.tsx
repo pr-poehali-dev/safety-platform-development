@@ -18,6 +18,7 @@ const INSPECTIONS_API = "https://functions.poehali.dev/b2222d00-a1b0-43fd-966d-3
 const INCIDENTS_API = "https://functions.poehali.dev/4aedfdd0-d096-43ad-b4e7-b7b2aec3f753";
 const CATEGORIES_API = "https://functions.poehali.dev/ea358d23-fa1e-4907-88c0-87cd78732293";
 const PYRAMID_STATS_API = "https://functions.poehali.dev/7cb54511-8788-48e9-b719-37233cb062e5";
+const OBJECTS_API = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
 
 interface SpbCategory {
   id: number;
@@ -69,6 +70,8 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
   const [manualSuspendedWorks, setManualSuspendedWorks] = useState(0);
   const [pyramidSaving, setPyramidSaving] = useState(false);
 
+  const [myObjectNames, setMyObjectNames] = useState<string[]>([]);
+
   useEffect(() => {
     Promise.all([
       fetch(PRESCRIPTIONS_API).then(r => r.json()).catch(() => []),
@@ -76,7 +79,8 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
       fetch(INCIDENTS_API).then(r => r.json()).catch(() => []),
       fetch(CATEGORIES_API).then(r => r.json()).catch(() => []),
       fetch(PYRAMID_STATS_API).then(r => r.json()).catch(() => null),
-    ]).then(([pres, insp, inc, cats, pyramidStats]) => {
+      fetch(OBJECTS_API).then(r => r.json()).catch(() => []),
+    ]).then(([pres, insp, inc, cats, pyramidStats, objs]) => {
       setPrescriptions(Array.isArray(pres) ? pres : []);
       setInspections(Array.isArray(insp) ? insp : []);
       setIncidents(Array.isArray(inc) ? inc : []);
@@ -85,6 +89,10 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
         setManualDangerActions(Number(pyramidStats.danger_actions) || 0);
         setManualSuspendedWorks(Number(pyramidStats.suspended_works) || 0);
       }
+      if (Array.isArray(objs) && user.role === "project_team") {
+        const ids = new Set(user.objectIds ?? []);
+        setMyObjectNames(objs.filter((o: { id: number; name: string }) => ids.has(o.id)).map((o: { id: number; name: string }) => o.name));
+      }
       setLoading(false);
     });
   }, []);
@@ -92,6 +100,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
   const isContractor = user.role === "contractor";
   const isAdmin = user.role === "admin";
   const isSpecialist = user.role === "specialist";
+  const isProjectTeam = user.role === "project_team";
   const [filterMine, setFilterMine] = useState(isSpecialist);
 
   const savePyramidStats = async () => {
@@ -131,6 +140,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
   const filteredPrescriptions = useMemo(() => {
     return prescriptions.filter(p => {
       if (isContractor && p.contractor !== user.contractor) return false;
+      if (isProjectTeam && !myObjectNames.includes(p.object)) return false;
       if (isSpecialist && filterMine && p.createdBy !== user.login) return false;
       if (from || to) {
         const d = parseDate(p.date);
@@ -145,11 +155,12 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
       }
       return true;
     });
-  }, [prescriptions, user, dateFrom, dateTo, selectedContractors, selectedCategories, isSpecialist, filterMine]);
+  }, [prescriptions, user, dateFrom, dateTo, selectedContractors, selectedCategories, isSpecialist, filterMine, isProjectTeam, myObjectNames]);
 
   const filteredInspections = useMemo(() => {
     return inspections.filter(i => {
       if (isContractor && i.contractor !== user.contractor) return false;
+      if (isProjectTeam && !myObjectNames.includes(i.object_name)) return false;
       if (isSpecialist && filterMine && i.created_by !== user.id) return false;
       if (from || to) {
         const d = parseDate(i.inspection_date);
@@ -161,7 +172,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
       if (selectedCategories.length > 0 && !selectedCategories.includes(i.violation_type || "")) return false;
       return true;
     });
-  }, [inspections, user, dateFrom, dateTo, selectedContractors, selectedCategories, isSpecialist, filterMine]);
+  }, [inspections, user, dateFrom, dateTo, selectedContractors, selectedCategories, isSpecialist, filterMine, isProjectTeam, myObjectNames]);
 
   const presTotal = filteredPrescriptions.length;
   const presIssued = filteredPrescriptions.filter(p => overallStatus(p.remarks) === "В работе").length;

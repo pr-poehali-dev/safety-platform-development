@@ -10,6 +10,8 @@ import {
 import { StatusDropdown } from "@/components/prescriptions/StatusDropdown";
 import { useState, useRef, useEffect } from "react";
 
+const OBJECTS_API = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
+
 function ColumnFilter({ label, options, value, onChange }: {
   label: string;
   options: string[];
@@ -126,6 +128,15 @@ export function PrescriptionList({
     status: "Все",
     deadline: "Все",
   });
+  const [objects, setObjects] = useState<{ id: number; name: string }[]>([]);
+
+  useEffect(() => {
+    if (user.role !== "project_team") return;
+    fetch(OBJECTS_API)
+      .then(r => r.json())
+      .then(data => setObjects(Array.isArray(data) ? data.map((o: { id: number; name: string }) => ({ id: o.id, name: o.name })) : []))
+      .catch(() => {});
+  }, [user.role]);
 
   const setColFilter = (key: keyof typeof colFilters) => (v: string) =>
     setColFilters(prev => ({ ...prev, [key]: v }));
@@ -135,8 +146,12 @@ export function PrescriptionList({
   const uniqueInspectors = [...new Set(prescriptions.map(p => p.inspector).filter(Boolean))].sort();
   const uniqueDeadlines = [...new Set(prescriptions.flatMap(p => p.remarks.map(r => r.deadline)).filter(Boolean))].sort();
 
+  const isProjectTeam = user.role === "project_team";
+  const myObjectNames = new Set(objects.filter(o => (user.objectIds ?? []).includes(o.id)).map(o => o.name));
+
   const filtered = prescriptions.filter(p => {
     if (isContractor && user.contractor && p.contractor !== user.contractor) return false;
+    if (isProjectTeam && !myObjectNames.has(p.object)) return false;
     if (filterMine && p.createdBy !== user.login) return false;
     const status = overallStatus(p.remarks);
     const matchStatus = filterStatus === "Все" || status === filterStatus;
@@ -222,6 +237,8 @@ export function PrescriptionList({
             <p className="text-sm text-muted-foreground mt-0.5">
               {isContractor
                 ? <>Организация: <span className="text-foreground">{user.contractor}</span> · Показаны только ваши предписания</>
+                : isProjectTeam
+                ? <>Показаны предписания по вашим объектам ({myObjectNames.size})</>
                 : <>Всего: {prescriptions.length} · Активных: {prescriptions.filter(p => overallStatus(p.remarks) === "В работе").length} · Просрочено: {prescriptions.filter(p => overallStatus(p.remarks) === "Просрочено").length}</>
               }
             </p>
@@ -258,7 +275,7 @@ export function PrescriptionList({
                 {s}
               </button>
             ))}
-            {!isContractor && (
+            {!isContractor && !isProjectTeam && (
               <button
                 onClick={() => onFilterMineChange(!filterMine)}
                 className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border font-medium transition-colors whitespace-nowrap ${filterMine ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 bg-card"}`}
