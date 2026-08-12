@@ -16,7 +16,7 @@ const STATUS_STYLE: Record<Status, string> = {
 };
 
 function isOverdue(r: Remark) {
-  if (r.status === "Устранено" || !r.deadline) return false;
+  if (r.status === "Устранено" || !r.deadline || r.deadline === "Незамедлительно") return false;
   const [d, m, y] = r.deadline.split(".").map(Number);
   const today = new Date(); today.setHours(0,0,0,0);
   return today > new Date(y, m - 1, d);

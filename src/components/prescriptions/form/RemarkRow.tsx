@@ -204,7 +204,7 @@ export function RemarkRow({
       </Field>
       <div className="grid grid-cols-2 gap-6">
         <Field label="Срок устранения *">
-          <DatePicker value={remark.deadline} onChange={v => set("deadline", v)} placeholder="Выбрать дату" />
+          <DatePicker value={remark.deadline} onChange={v => set("deadline", v)} placeholder="Выбрать дату" allowImmediate />
         </Field>
         <Field label="Статус">
           <SelectBase value={remark.status} onChange={e => set("status", e.target.value as Status)}>

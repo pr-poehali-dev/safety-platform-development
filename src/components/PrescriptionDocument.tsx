@@ -1,6 +1,6 @@
 import React from "react";
 import { Template } from "@/lib/template";
-import { toInstrumental, declinePosition, detectGenderFromName } from "@/lib/prescriptionTypes";
+import { toInstrumental, declinePosition, detectGenderFromName, DEADLINE_IMMEDIATE } from "@/lib/prescriptionTypes";
 
 interface Remark {
   id: string;
@@ -66,7 +66,7 @@ function getCellValue(key: string, r: Remark, idx: number): React.ReactNode {
     );
   }
   if (key === "normRef") return r.normRef || "—";
-  if (key === "deadline") return r.deadline || "—";
+  if (key === "deadline") return r.deadline === DEADLINE_IMMEDIATE ? "незамедлительно" : (r.deadline || "—");
   if (key === "status") return r.status || "—";
   return "—";
 }

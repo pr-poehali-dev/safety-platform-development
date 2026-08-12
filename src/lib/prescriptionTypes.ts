@@ -94,6 +94,8 @@ export const VIOLATION_CATEGORIES = [
   "Прочее",
 ] as const;
 
+export const DEADLINE_IMMEDIATE = "Незамедлительно";
+
 export interface Remark {
   id: string;
   place: string;
@@ -152,7 +154,7 @@ export const ALL_STATUSES: Status[] = ["Черновик", "В работе", "�
 
 export function isOverdue(remark: Remark): boolean {
   if (remark.status === "Устранено") return false;
-  if (!remark.deadline) return false;
+  if (!remark.deadline || remark.deadline === DEADLINE_IMMEDIATE) return false;
   const [d, m, y] = remark.deadline.split(".").map(Number);
   const deadline = new Date(y, m - 1, d);
   const today = new Date();

@@ -2,6 +2,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Template, DEFAULT_TEMPLATE } from "@/lib/template";
 import PrescriptionDocument, { PrescriptionData } from "@/components/PrescriptionDocument";
+import { DEADLINE_IMMEDIATE } from "@/lib/prescriptionTypes";
 
 // Экранирование HTML-спецсимволов
 function esc(s: string): string {
@@ -23,7 +24,7 @@ function getCellHtml(key: string, r: RemarkRow, idx: number, colStyle: string): 
     case "place":       return `<td style="${colStyle}">${esc(r.place || "—")}</td>`;
     case "description": return `<td style="${colStyle}">${esc(r.description || "—")}${photos}</td>`;
     case "normRef":     return `<td style="${center}">${esc(r.normRef || "—")}</td>`;
-    case "deadline":    return `<td style="${center}">${esc(r.deadline || "—")}</td>`;
+    case "deadline":    return `<td style="${center}">${esc(r.deadline === DEADLINE_IMMEDIATE ? "незамедлительно" : (r.deadline || "—"))}</td>`;
     case "status":      return `<td style="${center}">${esc(r.status || "—")}</td>`;
     default:            return `<td style="${colStyle}">—</td>`;
   }
