@@ -36,7 +36,7 @@ export function RemarkRow({
 }: {
   remark: Remark; index: number; onChange: (r: Remark) => void; onRemove: () => void; canRemove: boolean; categories: string[]; places: string[];
 }) {
-  const set = (key: keyof Remark, val: string) => onChange({ ...remark, [key]: val });
+  const set = (key: keyof Remark, val: string | boolean) => onChange({ ...remark, [key]: val });
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
