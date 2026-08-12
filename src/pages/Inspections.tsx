@@ -238,7 +238,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
       </main>
 
       {selected && (
-        <InspectionDetail inspection={selected} onClose={() => setSelected(null)} />
+        <InspectionDetail inspection={selected} onClose={() => setSelected(null)} user={user} />
       )}
 
       {showForm && (
