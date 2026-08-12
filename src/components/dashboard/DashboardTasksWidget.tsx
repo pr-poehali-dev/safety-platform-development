@@ -48,15 +48,13 @@ const BADGES = [
 export default function DashboardTasksWidget({ taskAssignments, onNavigateToTasks }: DashboardTasksWidgetProps) {
   if (taskAssignments.length === 0) return null;
 
-  const overdue = taskAssignments.filter(a => a.status === "overdue").length;
-  const pending = taskAssignments.filter(a => ["extension_pending", "pending_report"].includes(a.status)).length;
-
   const badges = BADGES.map(b => ({
     ...b,
     count: taskAssignments.filter(a => b.statuses.includes(a.status)).length,
   }));
 
-  const needsAttention = overdue > 0 || pending > 0 || taskAssignments.some(a => a.status === "revision");
+  const activeList = taskAssignments.filter(a => ["overdue", "extension_pending", "pending_report", "revision", "active"].includes(a.status));
+  const needsAttention = activeList.length > 0;
 
   return (
     <div>
@@ -93,9 +91,12 @@ export default function DashboardTasksWidget({ taskAssignments, onNavigateToTask
 
         {needsAttention && (
           <div className="border-t border-border pt-3 space-y-1.5">
-            <p className="text-xs font-medium text-muted-foreground mb-2">Требуют действий</p>
-            {taskAssignments
-              .filter(a => ["overdue", "extension_pending", "pending_report", "revision"].includes(a.status))
+            <p className="text-xs font-medium text-muted-foreground mb-2">Задачи</p>
+            {[...activeList]
+              .sort((a, b) => {
+                const priority: Record<string, number> = { overdue: 0, extension_pending: 1, pending_report: 1, revision: 2, active: 3 };
+                return (priority[a.status] ?? 9) - (priority[b.status] ?? 9);
+              })
               .slice(0, 3)
               .map(a => (
                 <div key={a.id} onClick={() => onNavigateToTasks?.(undefined, a.id)} className="flex items-center gap-2 cursor-pointer hover:bg-muted/40 rounded-lg px-2 py-1.5 transition-colors -mx-2">
