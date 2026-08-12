@@ -13,6 +13,7 @@ interface Props {
   onDeleteCancel: () => void;
   onAddFirst: () => void;
   canManage?: boolean;
+  onRowClick?: (row: Inspection) => void;
 }
 
 const formatDate = (iso: string) => {
@@ -52,7 +53,7 @@ function PhotoLightbox({ photos, startIndex, onClose }: { photos: string[]; star
 }
 
 export default function InspectionsTable({
-  rows, loading, deleteConfirm, onDeleteRequest, onDeleteConfirm, onDeleteCancel, onAddFirst, canManage = true,
+  rows, loading, deleteConfirm, onDeleteRequest, onDeleteConfirm, onDeleteCancel, onAddFirst, canManage = true, onRowClick,
 }: Props) {
   const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null);
 
@@ -110,7 +111,11 @@ export default function InspectionsTable({
           </thead>
           <tbody>
             {rows.map((row, idx) => (
-              <tr key={row.id} className={`border-b border-border last:border-0 hover:bg-secondary/20 transition-colors ${idx % 2 === 0 ? "" : "bg-secondary/10"}`}>
+              <tr
+                key={row.id}
+                onClick={() => onRowClick?.(row)}
+                className={`group border-b border-border last:border-0 hover:bg-secondary/20 transition-colors ${onRowClick ? "cursor-pointer" : ""} ${idx % 2 === 0 ? "" : "bg-secondary/10"}`}
+              >
                 <td className="px-4 py-3 text-sm whitespace-nowrap align-top">{formatDate(row.inspection_date)}</td>
                 <td className="px-3 py-3 text-sm align-top"><span className="line-clamp-3" title={row.contractor}>{row.contractor}</span></td>
                 <td className="px-3 py-3 text-sm align-top"><span className="line-clamp-3" title={row.violation_type}>{row.violation_type}</span></td>
@@ -141,7 +146,7 @@ export default function InspectionsTable({
                         <button
                           key={pi}
                           type="button"
-                          onClick={() => setLightbox({ photos: row.photos ?? [], index: pi })}
+                          onClick={e => { e.stopPropagation(); setLightbox({ photos: row.photos ?? [], index: pi }); }}
                           className="w-9 h-9 rounded overflow-hidden border border-border hover:border-primary/50 transition-colors flex-shrink-0"
                         >
                           <img src={url} alt={`Фото ${pi + 1}`} className="w-full h-full object-cover" />
@@ -150,7 +155,7 @@ export default function InspectionsTable({
                       {(row.photos ?? []).length > 3 && (
                         <button
                           type="button"
-                          onClick={() => setLightbox({ photos: row.photos ?? [], index: 3 })}
+                          onClick={e => { e.stopPropagation(); setLightbox({ photos: row.photos ?? [], index: 3 }); }}
                           className="text-[10px] text-muted-foreground hover:text-primary transition-colors"
                         >
                           +{(row.photos ?? []).length - 3}
@@ -161,7 +166,7 @@ export default function InspectionsTable({
                     <span className="text-muted-foreground/30 text-center block">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3 align-top">
+                <td className="px-4 py-3 align-top" onClick={e => e.stopPropagation()}>
                   {canManage && (
                     deleteConfirm === row.id ? (
                       <div className="flex items-center gap-1 whitespace-nowrap">

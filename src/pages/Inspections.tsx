@@ -6,6 +6,7 @@ import { API, CATEGORIES_API, OBJECTS_API, CONTRACTORS_API, Inspection, Inspecti
 import InspectionForm from "@/components/inspections/InspectionForm";
 import FilterDropdown from "@/components/inspections/FilterDropdown";
 import InspectionsTable from "@/components/inspections/InspectionsTable";
+import InspectionDetail from "@/components/inspections/InspectionDetail";
 
 type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks";
 
@@ -28,6 +29,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [selected, setSelected] = useState<Inspection | null>(null);
 
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -231,8 +233,13 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
           onDeleteCancel={() => setDeleteConfirm(null)}
           onAddFirst={() => setShowForm(true)}
           canManage={!isContractor && !isProjectTeam}
+          onRowClick={setSelected}
         />
       </main>
+
+      {selected && (
+        <InspectionDetail inspection={selected} onClose={() => setSelected(null)} />
+      )}
 
       {showForm && (
         <InspectionForm
