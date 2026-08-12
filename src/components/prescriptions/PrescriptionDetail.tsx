@@ -151,6 +151,7 @@ export function PrescriptionDetail({
     const c: Comment = {
       id: Date.now(),
       author: user.name,
+      authorLogin: user.login,
       role: myRole,
       text: newComment.trim(),
       time: new Date().toLocaleString("ru-RU"),

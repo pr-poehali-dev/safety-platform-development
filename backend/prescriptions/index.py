@@ -291,15 +291,53 @@ def handler(event: dict, context) -> dict:
         if method == "PUT":
             p = body
             pid = p["id"]
+
+            cur.execute(f"SELECT created_by, comments FROM {SCHEMA}.prescriptions WHERE id=%s", (pid,))
+            existing_row = cur.fetchone()
+            old_comments = []
+            creator_login = None
+            if existing_row:
+                creator_login = existing_row[0]
+                old_comments = existing_row[1] if existing_row[1] else []
+                if isinstance(old_comments, str):
+                    old_comments = json.loads(old_comments)
+
+            new_comments = p.get("comments", [])
+
             cur.execute(
                 f"UPDATE {SCHEMA}.prescriptions SET number=%s, date=%s, object=%s, contractor=%s, inspector=%s, "
                 f"representative=%s, responsible=%s, reply_email=%s, report_deadline=%s, comments=%s, contract_number=%s, inspector_nominative=%s WHERE id=%s",
                 (p["number"], p["date"], p["object"], p["contractor"],
                  p.get("inspector", ""), p.get("representative", ""), p.get("responsible", ""),
                  p.get("replyEmail", ""), p.get("reportDeadline", ""),
-                 json.dumps(p.get("comments", []), ensure_ascii=False),
+                 json.dumps(new_comments, ensure_ascii=False),
                  p.get("contractNumber") or None, p.get("inspectorNominative", ""), pid)
             )
+
+            # Новый комментарий добавлен — уведомляем участников обсуждения
+            if len(new_comments) > len(old_comments):
+                new_comment = new_comments[-1]
+                author_login = new_comment.get("authorLogin")
+                author_name = new_comment.get("author") or ""
+                participant_logins = {c.get("authorLogin") for c in old_comments if c.get("authorLogin")}
+                if creator_login:
+                    participant_logins.add(creator_login)
+                participant_logins.discard(author_login)
+                participant_logins.discard(None)
+
+                msg_preview = (new_comment.get("text") or "")[:70]
+                notify_values = [
+                    (login, pid, "new_comment", f"Новый комментарий от {author_name} к предписанию {p.get('number', '')}: {msg_preview}")
+                    for login in participant_logins
+                ]
+                if notify_values:
+                    cur.executemany(
+                        f"""INSERT INTO {SCHEMA}.prescription_notifications
+                            (user_login, prescription_id, event_type, message)
+                            VALUES (%s, %s, %s, %s)""",
+                        notify_values
+                    )
+
             cur.execute(f"DELETE FROM {SCHEMA}.remarks WHERE prescription_id = %s", (pid,))
             remarks = p.get("remarks", [])
             if remarks:

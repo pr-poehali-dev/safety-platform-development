@@ -12,6 +12,7 @@ import Dashboard from "@/pages/Dashboard";
 import TasksBlock from "@/components/tasks/TasksBlock";
 import { useTasks } from "@/hooks/useTasks";
 import { useInspectionNotifications } from "@/hooks/useInspectionNotifications";
+import { usePrescriptionNotifications } from "@/hooks/usePrescriptionNotifications";
 import Icon from "@/components/ui/icon";
 
 interface IndexProps {
@@ -41,6 +42,7 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
   const [taskFilter, setTaskFilter] = useState<string | undefined>(undefined);
   const [taskOpenId, setTaskOpenId] = useState<number | undefined>(undefined);
   const [inspectionOpenId, setInspectionOpenId] = useState<number | undefined>(undefined);
+  const [prescriptionOpenId, setPrescriptionOpenId] = useState<string | undefined>(undefined);
   const [activeTemplate, setActiveTemplate] = useState<Template>({ ...DEFAULT_TEMPLATE, id: "default", name: "По умолчанию", isDefault: true });
   const [availableUsers, setAvailableUsers] = useState<{ login: string; name: string; role: string }[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -48,14 +50,16 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
 
   const { assignments, notifications: taskNotifications, unreadCount: taskUnreadCount, markAllRead: markTaskNotificationsRead, createTask, updateTask, deleteTask, action, sendComment, fetchComments, load: reloadTasks } = useTasks(user);
   const { notifications: inspectionNotifications, unreadCount: inspectionUnreadCount, markAllRead: markInspectionNotificationsRead, load: reloadInspectionNotifications } = useInspectionNotifications(user);
+  const { notifications: prescriptionNotifications, unreadCount: prescriptionUnreadCount, markAllRead: markPrescriptionNotificationsRead, load: reloadPrescriptionNotifications } = usePrescriptionNotifications(user);
 
-  type MergedNotification = { id: string; kind: "task" | "inspection"; refId: number | null; message: string; is_read: boolean; created_at: string };
+  type MergedNotification = { id: string; kind: "task" | "inspection" | "prescription"; refId: number | string | null; message: string; is_read: boolean; created_at: string };
   const notifications: MergedNotification[] = [
     ...taskNotifications.map(n => ({ id: `t${n.id}`, kind: "task" as const, refId: n.assignment_id, message: n.message, is_read: n.is_read, created_at: n.created_at })),
     ...inspectionNotifications.map(n => ({ id: `i${n.id}`, kind: "inspection" as const, refId: n.inspection_id, message: n.message, is_read: n.is_read, created_at: n.created_at })),
+    ...prescriptionNotifications.map(n => ({ id: `p${n.id}`, kind: "prescription" as const, refId: n.prescription_id, message: n.message, is_read: n.is_read, created_at: n.created_at })),
   ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  const unreadCount = taskUnreadCount + inspectionUnreadCount;
-  const markAllRead = () => { markTaskNotificationsRead(); markInspectionNotificationsRead(); };
+  const unreadCount = taskUnreadCount + inspectionUnreadCount + prescriptionUnreadCount;
+  const markAllRead = () => { markTaskNotificationsRead(); markInspectionNotificationsRead(); markPrescriptionNotificationsRead(); };
 
   useEffect(() => {
     fetch(API)
@@ -64,6 +68,13 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
       .catch(() => setPrescriptions([]))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (prescriptionOpenId && prescriptions.length > 0) {
+      const found = prescriptions.find(p => p.id === prescriptionOpenId);
+      if (found) setSelected(found);
+    }
+  }, [prescriptionOpenId, prescriptions]);
 
   useEffect(() => {
     fetch(TEMPLATES_API)
@@ -91,11 +102,12 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
       if (document.visibilityState === "visible") {
         reloadTasks();
         reloadInspectionNotifications();
+        reloadPrescriptionNotifications();
       }
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [reloadTasks, reloadInspectionNotifications]);
+  }, [reloadTasks, reloadInspectionNotifications, reloadPrescriptionNotifications]);
 
   // Закрытие панели уведомлений при клике вне
   useEffect(() => {
@@ -177,8 +189,9 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
                   key={n.id}
                   onClick={() => {
                     if (!n.refId) return;
-                    if (n.kind === "task") { setTaskFilter(undefined); setTaskOpenId(n.refId); setTab("tasks"); }
-                    else { setInspectionOpenId(n.refId); setTab("inspections"); }
+                    if (n.kind === "task") { setTaskFilter(undefined); setTaskOpenId(n.refId as number); setTab("tasks"); }
+                    else if (n.kind === "inspection") { setInspectionOpenId(n.refId as number); setTab("inspections"); }
+                    else { setPrescriptionOpenId(n.refId as string); setTab("prescriptions"); }
                     setShowNotifications(false);
                   }}
                   className={`px-4 py-3 border-b border-border last:border-0 text-xs transition-colors ${!n.is_read ? "bg-primary/5" : ""} ${n.refId ? "cursor-pointer hover:bg-muted/40" : ""}`}

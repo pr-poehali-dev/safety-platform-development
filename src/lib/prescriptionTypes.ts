@@ -136,10 +136,22 @@ export interface Attachment {
 export interface Comment {
   id: number;
   author: string;
+  authorLogin?: string;
   role: string;
   text: string;
   time: string;
   attachments?: Attachment[];
+}
+
+export const PRESCRIPTION_NOTIFICATIONS_API = "https://functions.poehali.dev/8e15e4fd-7d73-49e8-b017-27cee863998c";
+
+export interface PrescriptionNotification {
+  id: number;
+  prescription_id: string | null;
+  event_type: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
 }
 
 // --- Вспомогательные ---
