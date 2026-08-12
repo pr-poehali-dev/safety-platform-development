@@ -11,6 +11,7 @@ import Incidents from "@/pages/Incidents";
 import Dashboard from "@/pages/Dashboard";
 import TasksBlock from "@/components/tasks/TasksBlock";
 import { useTasks } from "@/hooks/useTasks";
+import { useInspectionNotifications } from "@/hooks/useInspectionNotifications";
 import Icon from "@/components/ui/icon";
 
 interface IndexProps {
@@ -39,12 +40,22 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
   const [inspectionsMine, setInspectionsMine] = useState(false);
   const [taskFilter, setTaskFilter] = useState<string | undefined>(undefined);
   const [taskOpenId, setTaskOpenId] = useState<number | undefined>(undefined);
+  const [inspectionOpenId, setInspectionOpenId] = useState<number | undefined>(undefined);
   const [activeTemplate, setActiveTemplate] = useState<Template>({ ...DEFAULT_TEMPLATE, id: "default", name: "По умолчанию", isDefault: true });
   const [availableUsers, setAvailableUsers] = useState<{ login: string; name: string; role: string }[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const { assignments, notifications, unreadCount, markAllRead, createTask, updateTask, deleteTask, action, sendComment, fetchComments, load: reloadTasks } = useTasks(user);
+  const { assignments, notifications: taskNotifications, unreadCount: taskUnreadCount, markAllRead: markTaskNotificationsRead, createTask, updateTask, deleteTask, action, sendComment, fetchComments, load: reloadTasks } = useTasks(user);
+  const { notifications: inspectionNotifications, unreadCount: inspectionUnreadCount, markAllRead: markInspectionNotificationsRead, load: reloadInspectionNotifications } = useInspectionNotifications(user);
+
+  type MergedNotification = { id: string; kind: "task" | "inspection"; refId: number | null; message: string; is_read: boolean; created_at: string };
+  const notifications: MergedNotification[] = [
+    ...taskNotifications.map(n => ({ id: `t${n.id}`, kind: "task" as const, refId: n.assignment_id, message: n.message, is_read: n.is_read, created_at: n.created_at })),
+    ...inspectionNotifications.map(n => ({ id: `i${n.id}`, kind: "inspection" as const, refId: n.inspection_id, message: n.message, is_read: n.is_read, created_at: n.created_at })),
+  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const unreadCount = taskUnreadCount + inspectionUnreadCount;
+  const markAllRead = () => { markTaskNotificationsRead(); markInspectionNotificationsRead(); };
 
   useEffect(() => {
     fetch(API)
@@ -74,12 +85,17 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
       .catch(() => {});
   }, [user.login]);
 
-  // Обновляем задачи при возврате в браузерную вкладку
+  // Обновляем задачи и уведомления при возврате в браузерную вкладку
   useEffect(() => {
-    const onVisible = () => { if (document.visibilityState === "visible") reloadTasks(); };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        reloadTasks();
+        reloadInspectionNotifications();
+      }
+    };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [reloadTasks]);
+  }, [reloadTasks, reloadInspectionNotifications]);
 
   // Закрытие панели уведомлений при клике вне
   useEffect(() => {
@@ -159,8 +175,13 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
               notifications.slice(0, 20).map(n => (
                 <div
                   key={n.id}
-                  onClick={() => { if (n.assignment_id) { setTab("tasks"); setShowNotifications(false); } }}
-                  className={`px-4 py-3 border-b border-border last:border-0 text-xs transition-colors ${!n.is_read ? "bg-primary/5" : ""} ${n.assignment_id ? "cursor-pointer hover:bg-muted/40" : ""}`}
+                  onClick={() => {
+                    if (!n.refId) return;
+                    if (n.kind === "task") { setTaskFilter(undefined); setTaskOpenId(n.refId); setTab("tasks"); }
+                    else { setInspectionOpenId(n.refId); setTab("inspections"); }
+                    setShowNotifications(false);
+                  }}
+                  className={`px-4 py-3 border-b border-border last:border-0 text-xs transition-colors ${!n.is_read ? "bg-primary/5" : ""} ${n.refId ? "cursor-pointer hover:bg-muted/40" : ""}`}
                 >
                   <div className="flex items-start gap-2">
                     {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1 flex-shrink-0" />}
@@ -237,6 +258,7 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
         activeTab={tab}
         initialSuspended={inspectionsSuspended}
         initialMine={inspectionsMine}
+        initialOpenId={inspectionOpenId}
       />
     );
   }

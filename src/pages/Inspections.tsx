@@ -18,9 +18,10 @@ interface InspectionsProps {
   activeTab?: Tab;
   initialSuspended?: boolean;
   initialMine?: boolean;
+  initialOpenId?: number;
 }
 
-export default function Inspections({ user, onLogout, onBack, onTabChange, activeTab = "inspections", initialSuspended, initialMine }: InspectionsProps) {
+export default function Inspections({ user, onLogout, onBack, onTabChange, activeTab = "inspections", initialSuspended, initialMine, initialOpenId }: InspectionsProps) {
   const [rows, setRows] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<string[]>([]);
@@ -30,6 +31,13 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [selected, setSelected] = useState<Inspection | null>(null);
+
+  useEffect(() => {
+    if (initialOpenId && rows.length > 0) {
+      const found = rows.find(r => r.id === initialOpenId);
+      if (found) setSelected(found);
+    }
+  }, [initialOpenId, rows]);
 
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");

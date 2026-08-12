@@ -56,6 +56,8 @@ def handler(event: dict, context) -> dict:
         body = json.loads(event.get("body") or "{}")
         inspection_id = body.get("inspection_id")
         message = (body.get("message") or "").strip()
+        author_login = body.get("author_login")
+        author_name = body.get("author_name") or ""
 
         if not inspection_id or not message:
             return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": "inspection_id and message required"})}
@@ -66,10 +68,44 @@ def handler(event: dict, context) -> dict:
             f"""INSERT INTO {SCHEMA}.inspection_comments
                 (inspection_id, author_login, author_name, author_role, message)
                 VALUES (%s, %s, %s, %s, %s) RETURNING id, created_at""",
-            (inspection_id, body.get("author_login"), body.get("author_name"),
+            (inspection_id, author_login, author_name,
              body.get("author_role"), message)
         )
         row = cur.fetchone()
+
+        # Собираем участников обсуждения: автор записи + все, кто уже комментировал
+        cur.execute(
+            f"""SELECT u.login
+                FROM {SCHEMA}.inspections i
+                JOIN {SCHEMA}.users u ON u.id = i.created_by
+                WHERE i.id = %s""",
+            (inspection_id,)
+        )
+        creator_row = cur.fetchone()
+
+        cur.execute(
+            f"""SELECT DISTINCT author_login FROM {SCHEMA}.inspection_comments
+                WHERE inspection_id = %s AND author_login IS NOT NULL""",
+            (inspection_id,)
+        )
+        participant_logins = {r[0] for r in cur.fetchall()}
+        if creator_row and creator_row[0]:
+            participant_logins.add(creator_row[0])
+        participant_logins.discard(author_login)
+
+        msg_preview = message[:70]
+        notify_values = [
+            (login, inspection_id, "new_comment", f"Новый комментарий от {author_name} к проверке: {msg_preview}")
+            for login in participant_logins
+        ]
+        if notify_values:
+            cur.executemany(
+                f"""INSERT INTO {SCHEMA}.inspection_notifications
+                    (user_login, inspection_id, event_type, message)
+                    VALUES (%s, %s, %s, %s)""",
+                notify_values
+            )
+
         conn.commit()
         conn.close()
         return {"statusCode": 200, "headers": CORS, "body": json.dumps({"id": row[0], "created_at": row[1].isoformat()}, ensure_ascii=False)}

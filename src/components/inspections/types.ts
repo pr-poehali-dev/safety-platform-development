@@ -3,6 +3,7 @@ export const CATEGORIES_API = "https://functions.poehali.dev/ea358d23-fa1e-4907-
 export const OBJECTS_API = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
 export const CONTRACTORS_API = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
 export const COMMENTS_API = "https://functions.poehali.dev/772be4aa-f9f1-496f-a37b-ff16563013dd";
+export const NOTIFICATIONS_API = "https://functions.poehali.dev/fe0b7b4d-85c5-42f6-848c-d84a1dbcce8b";
 
 export interface InspectionComment {
   id: number;
@@ -11,6 +12,15 @@ export interface InspectionComment {
   author_name: string;
   author_role: string;
   message: string;
+  created_at: string;
+}
+
+export interface InspectionNotification {
+  id: number;
+  inspection_id: number | null;
+  event_type: string;
+  message: string;
+  is_read: boolean;
   created_at: string;
 }
 
