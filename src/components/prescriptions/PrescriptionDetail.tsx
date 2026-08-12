@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import Icon from "@/components/ui/icon";
+import { PhotoLightbox } from "@/components/ui/PhotoLightbox";
 import { AppUser } from "@/lib/auth";
 import { Template } from "@/lib/template";
 import { printPrescription, downloadPrescriptionWord } from "@/lib/printPrescription";
@@ -64,6 +65,7 @@ export function PrescriptionDetail({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploadingRemarkId, setUploadingRemarkId] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -276,7 +278,13 @@ export function PrescriptionDetail({
                       <div className="flex flex-wrap gap-2 items-center">
                         {(r.photos ?? []).map((url, pi) => (
                           <div key={pi} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-border flex-shrink-0">
-                            <img src={url} alt={`Фото ${pi + 1}`} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => setLightbox({ photos: r.photos ?? [], index: pi })}
+                              className="block w-full h-full"
+                            >
+                              <img src={url} alt={`Фото ${pi + 1}`} className="w-full h-full object-cover" />
+                            </button>
                             {photosEditable && (
                               <button
                                 type="button"
@@ -423,6 +431,10 @@ export function PrescriptionDetail({
           )}
         </div>
       </div>
+
+      {lightbox && (
+        <PhotoLightbox photos={lightbox.photos} startIndex={lightbox.index} onClose={() => setLightbox(null)} />
+      )}
     </div>
   );
 }
