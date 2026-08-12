@@ -40,8 +40,8 @@ const App = () => {
       .finally(() => setUsersLoading(false));
   }, []);
 
-  const handleLogin = (u: AppUser) => {
-    saveSession(u);
+  const handleLogin = (u: AppUser, remember: boolean) => {
+    saveSession(u, remember);
     setUser(u);
   };
 

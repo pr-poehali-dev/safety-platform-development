@@ -1,16 +1,18 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
+import { Switch } from "@/components/ui/switch";
 import { AppUser } from "@/lib/auth";
 
 interface LoginProps {
   users: AppUser[];
-  onLogin: (user: AppUser) => void;
+  onLogin: (user: AppUser, remember: boolean) => void;
 }
 
 export default function Login({ users, onLogin }: LoginProps) {
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -21,7 +23,7 @@ export default function Login({ users, onLogin }: LoginProps) {
     setTimeout(() => {
       const user = users.find(u => u.login === login.trim() && u.password === password);
       if (user) {
-        onLogin(user);
+        onLogin(user, rememberMe);
       } else {
         setError("Неверный логин или пароль");
       }
@@ -87,6 +89,13 @@ export default function Login({ users, onLogin }: LoginProps) {
                   <Icon name={showPassword ? "EyeOff" : "Eye"} size={14} />
                 </button>
               </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <label htmlFor="remember-me" className="text-xs text-muted-foreground font-medium cursor-pointer select-none">
+                Запомнить меня на сегодня
+              </label>
+              <Switch id="remember-me" checked={rememberMe} onCheckedChange={setRememberMe} />
             </div>
 
             {error && (

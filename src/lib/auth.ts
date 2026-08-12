@@ -61,22 +61,37 @@ export async function apiDeleteUser(id: string): Promise<void> {
 
 // Сессия хранится в localStorage — это нормально, она привязана к конкретному браузеру
 const SESSION_KEY = "ot_session_v2";
-const SESSION_TTL = 60 * 60 * 1000; // 1 час
+const SESSION_TTL_DEFAULT = 60 * 60 * 1000; // 1 час
+const SESSION_TTL_REMEMBER = 24 * 60 * 60 * 1000; // 24 часа при "Запомнить меня на сегодня"
 
-interface Session { user: AppUser; loginAt: number; }
+interface Session { user: AppUser; loginAt: number; remember: boolean; }
 
 export function loadSession(): AppUser | null {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     const s: Session = JSON.parse(raw);
-    if (Date.now() - s.loginAt > SESSION_TTL) { localStorage.removeItem(SESSION_KEY); return null; }
+    const ttl = s.remember ? SESSION_TTL_REMEMBER : SESSION_TTL_DEFAULT;
+    if (Date.now() - s.loginAt > ttl) { localStorage.removeItem(SESSION_KEY); return null; }
     return s.user;
   } catch (_) { return null; }
 }
 
-export function saveSession(user: AppUser): void {
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ user, loginAt: Date.now() }));
+// remember: true — сессия живёт 24 часа. Если не передан — сохраняются параметры текущей сессии (используется при фоновом обновлении данных пользователя)
+export function saveSession(user: AppUser, remember?: boolean): void {
+  let loginAt = Date.now();
+  let rememberFlag = remember ?? false;
+  if (remember === undefined) {
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (raw) {
+        const s: Session = JSON.parse(raw);
+        loginAt = s.loginAt;
+        rememberFlag = s.remember;
+      }
+    } catch (_) { /* используем значения по умолчанию */ }
+  }
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ user, loginAt, remember: rememberFlag }));
 }
 
 export function clearSession(): void {
