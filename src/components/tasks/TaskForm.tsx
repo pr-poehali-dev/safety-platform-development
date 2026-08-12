@@ -28,6 +28,7 @@ export default function TaskForm({ user, onClose, onSave, editing, onUpdate, ava
 
   const allowedRoles = ALLOWED_ROLES[user.role] ?? [];
   const filteredUsers = availableUsers.filter(u => allowedRoles.includes(u.role));
+  const selectableUsers = [{ login: user.login, name: user.name, role: user.role }, ...filteredUsers];
 
   const addAssignee = () => {
     setAssignees(prev => [...prev, { login: "", name: "", role: "", due_date: "" }]);
@@ -38,7 +39,7 @@ export default function TaskForm({ user, onClose, onSave, editing, onUpdate, ava
   };
 
   const updateAssignee = (idx: number, login: string) => {
-    const found = filteredUsers.find(u => u.login === login);
+    const found = selectableUsers.find(u => u.login === login);
     setAssignees(prev => prev.map((a, i) => i === idx ? { ...a, login, name: found?.name ?? "", role: found?.role ?? "" } : a));
   };
 
@@ -121,6 +122,7 @@ export default function TaskForm({ user, onClose, onSave, editing, onUpdate, ava
                     disabled={!!editing}
                   >
                     <option value="">Выбрать пользователя...</option>
+                    <option value={user.login}>Я ({user.name})</option>
                     {filteredUsers.map(u => (
                       <option key={u.login} value={u.login}>{u.name}</option>
                     ))}
