@@ -17,6 +17,7 @@ const App = () => {
   const [user, setUser] = useState<AppUser | null>(() => loadSession());
   const [users, setUsers] = useState<AppUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
 
   useEffect(() => {
     fetchUsers()
@@ -43,6 +44,7 @@ const App = () => {
   const handleLogin = (u: AppUser, remember: boolean) => {
     saveSession(u, remember);
     setUser(u);
+    setJustLoggedIn(true);
   };
 
   const handleLogout = () => {
@@ -90,7 +92,13 @@ const App = () => {
                   !user ? <Navigate to="/login" replace /> :
                   user.role === "admin"
                     ? <Admin currentUser={user} users={users} onUsersChange={handleUsersChange} onLogout={handleLogout} />
-                    : <Index user={user} onLogout={handleLogout} onUserUpdate={u => { saveSession(u); setUser(u); }} />
+                    : <Index
+                        user={user}
+                        onLogout={handleLogout}
+                        onUserUpdate={u => { saveSession(u); setUser(u); }}
+                        showTasksPopup={justLoggedIn}
+                        onTasksPopupShown={() => setJustLoggedIn(false)}
+                      />
                 }
               />
               <Route path="*" element={<NotFound />} />

@@ -10,6 +10,7 @@ import Inspections from "@/pages/Inspections";
 import Incidents from "@/pages/Incidents";
 import Dashboard from "@/pages/Dashboard";
 import TasksBlock from "@/components/tasks/TasksBlock";
+import TasksLoginPopup from "@/components/tasks/TasksLoginPopup";
 import { useTasks } from "@/hooks/useTasks";
 import { useInspectionNotifications } from "@/hooks/useInspectionNotifications";
 import { usePrescriptionNotifications } from "@/hooks/usePrescriptionNotifications";
@@ -19,6 +20,8 @@ interface IndexProps {
   user: AppUser;
   onLogout: () => void;
   onUserUpdate?: (u: AppUser) => void;
+  showTasksPopup?: boolean;
+  onTasksPopupShown?: () => void;
 }
 
 const API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
@@ -27,7 +30,7 @@ const USERS_URL = "https://functions.poehali.dev/9f213d27-a6a3-4ce0-b6b1-0d26003
 
 type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks";
 
-export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
+export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, onTasksPopupShown }: IndexProps) {
   const [tab, setTab] = useState<Tab>("dashboard");
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,9 +49,10 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
   const [activeTemplate, setActiveTemplate] = useState<Template>({ ...DEFAULT_TEMPLATE, id: "default", name: "По умолчанию", isDefault: true });
   const [availableUsers, setAvailableUsers] = useState<{ login: string; name: string; role: string }[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [tasksPopupOpen, setTasksPopupOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const { assignments, notifications: taskNotifications, unreadCount: taskUnreadCount, markAllRead: markTaskNotificationsRead, createTask, updateTask, deleteTask, action, sendComment, fetchComments, load: reloadTasks } = useTasks(user);
+  const { assignments, notifications: taskNotifications, unreadCount: taskUnreadCount, markAllRead: markTaskNotificationsRead, createTask, updateTask, deleteTask, action, sendComment, fetchComments, load: reloadTasks, loading: tasksLoading } = useTasks(user);
   const { notifications: inspectionNotifications, unreadCount: inspectionUnreadCount, markAllRead: markInspectionNotificationsRead, load: reloadInspectionNotifications } = useInspectionNotifications(user);
   const { notifications: prescriptionNotifications, unreadCount: prescriptionUnreadCount, markAllRead: markPrescriptionNotificationsRead, load: reloadPrescriptionNotifications } = usePrescriptionNotifications(user);
 
@@ -75,6 +79,14 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
       if (found) setSelected(found);
     }
   }, [prescriptionOpenId, prescriptions]);
+
+  // Показываем попап с задачами при каждом входе в систему
+  useEffect(() => {
+    if (showTasksPopup && !tasksLoading) {
+      setTasksPopupOpen(true);
+      onTasksPopupShown?.();
+    }
+  }, [showTasksPopup, tasksLoading]);
 
   useEffect(() => {
     fetch(TEMPLATES_API)
@@ -321,6 +333,20 @@ export default function Index({ user, onLogout, onUserUpdate }: IndexProps) {
           }}
           onNavigateToTasks={(filter, taskId) => { setTaskFilter(filter); setTaskOpenId(taskId); setTab("tasks"); }}
         />
+
+        {tasksPopupOpen && (
+          <TasksLoginPopup
+            user={user}
+            taskAssignments={assignments}
+            onClose={() => setTasksPopupOpen(false)}
+            onTaskClick={taskId => {
+              setTasksPopupOpen(false);
+              setTaskFilter(undefined);
+              setTaskOpenId(taskId);
+              setTab("tasks");
+            }}
+          />
+        )}
       </div>
     );
   }
