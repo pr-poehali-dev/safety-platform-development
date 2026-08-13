@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
-import { AppUser, UserRole, ROLE_LABELS, ROLE_COLORS, apiCreateUser, apiUpdateUser, apiDeleteUser } from "@/lib/auth";
+import { AppUser, UserRole, ROLE_LABELS, ROLE_COLORS, apiCreateUser, apiUpdateUser, apiDeleteUser, apiInvalidateSessions } from "@/lib/auth";
 
 const OBJECTS_API = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
 
@@ -31,6 +31,8 @@ export function UsersTab({ currentUser, users, onUsersChange }: UsersTabProps) {
   const [form, setForm] = useState<UserFormData>(emptyForm());
   const [showPassword, setShowPassword] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [logoutAllConfirm, setLogoutAllConfirm] = useState<string | null>(null);
+  const [loggingOutAll, setLoggingOutAll] = useState(false);
   const [error, setError] = useState("");
   const [loginManual, setLoginManual] = useState(false);
   const [passwordManual, setPasswordManual] = useState(false);
@@ -107,6 +109,17 @@ export function UsersTab({ currentUser, users, onUsersChange }: UsersTabProps) {
     setDeleteConfirm(null);
   };
 
+  const handleLogoutAll = async (id: string) => {
+    setLoggingOutAll(true);
+    try {
+      const sessionsInvalidatedAt = await apiInvalidateSessions(id);
+      onUsersChange(users.map(u => u.id === id ? { ...u, sessionsInvalidatedAt } : u));
+    } finally {
+      setLoggingOutAll(false);
+      setLogoutAllConfirm(null);
+    }
+  };
+
   return (
     <>
       <div className="flex items-center justify-between">
@@ -174,6 +187,9 @@ export function UsersTab({ currentUser, users, onUsersChange }: UsersTabProps) {
                 <td className="px-5 py-3.5 hidden md:table-cell text-sm text-muted-foreground">{u.contractor || <span className="text-muted-foreground/40">—</span>}</td>
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-2 justify-end">
+                    <button onClick={() => setLogoutAllConfirm(u.id)} title="Выйти со всех устройств" className="text-xs text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded hover:bg-secondary">
+                      <Icon name="MonitorX" size={13} />
+                    </button>
                     <button onClick={() => openEdit(u)} className="text-xs text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded hover:bg-secondary">
                       <Icon name="Pencil" size={13} />
                     </button>
@@ -315,6 +331,31 @@ export function UsersTab({ currentUser, users, onUsersChange }: UsersTabProps) {
             <div className="flex gap-3">
               <button onClick={() => setDeleteConfirm(null)} className="flex-1 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">Отмена</button>
               <button onClick={() => handleDeleteUser(deleteConfirm)} className="flex-1 text-sm px-4 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600 transition-colors">Удалить</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Выйти со всех устройств */}
+      {logoutAllConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setLogoutAllConfirm(null)} />
+          <div className="relative bg-card border border-border rounded-xl w-full max-w-sm shadow-2xl p-6 animate-fade-in">
+            <div className="flex items-start gap-3 mb-5">
+              <div className="w-9 h-9 rounded-lg bg-red-400/10 border border-red-400/20 flex items-center justify-center flex-shrink-0">
+                <Icon name="MonitorX" size={16} className="text-red-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Завершить все сессии?</p>
+                <p className="text-xs text-muted-foreground mt-1">{users.find(u => u.id === logoutAllConfirm)?.name} будет разлогинен на всех устройствах и потребуется войти заново.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setLogoutAllConfirm(null)} disabled={loggingOutAll} className="flex-1 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50">Отмена</button>
+              <button onClick={() => handleLogoutAll(logoutAllConfirm)} disabled={loggingOutAll} className="flex-1 flex items-center justify-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600 transition-colors disabled:opacity-50">
+                {loggingOutAll ? <Icon name="Loader2" size={14} className="animate-spin" /> : <Icon name="MonitorX" size={14} />}
+                Выйти везде
+              </button>
             </div>
           </div>
         </div>
