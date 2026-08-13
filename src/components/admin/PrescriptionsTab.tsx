@@ -15,6 +15,8 @@ const STATUS_STYLE: Record<Status, string> = {
   "Просрочено": "text-red-400 bg-red-400/10 border-red-400/20",
 };
 
+const ALL_STATUSES: Status[] = ["Черновик", "В работе", "Устранено", "Просрочено"];
+
 function isOverdue(r: Remark) {
   if (r.status === "Устранено" || !r.deadline || r.deadline === "Незамедлительно") return false;
   const [d, m, y] = r.deadline.split(".").map(Number);
@@ -155,9 +157,19 @@ export function PrescriptionsTab() {
 
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportStatuses, setExportStatuses] = useState<Status[]>(ALL_STATUSES);
+
+  const toggleExportStatus = (s: Status) => {
+    setExportStatuses(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+  };
 
   const handleExport = async () => {
-    const payload = filteredPrescriptions.map(p => ({
+    setShowExportDialog(false);
+
+    const prescriptionsToExport = filteredPrescriptions.filter(p => exportStatuses.includes(overallStatus(p.remarks)));
+
+    const payload = prescriptionsToExport.map(p => ({
       number: p.number,
       date: p.date,
       object: p.object,
@@ -235,7 +247,7 @@ export function PrescriptionsTab() {
             />
           </div>
           <button
-            onClick={handleExport}
+            onClick={() => setShowExportDialog(true)}
             disabled={filteredPrescriptions.length === 0 || exporting}
             className="relative flex items-center gap-2 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 disabled:cursor-not-allowed transition-colors whitespace-nowrap overflow-hidden"
           >
@@ -351,6 +363,46 @@ export function PrescriptionsTab() {
           onClose={() => setEditPrescription(null)}
           onSave={handleSavePrescription}
         />
+      )}
+
+      {/* Выбор статусов для экспорта */}
+      {showExportDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowExportDialog(false)} />
+          <div className="relative bg-card border border-border rounded-xl w-full max-w-sm shadow-2xl p-6 animate-fade-in">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold">Экспорт в Excel</h2>
+              <button onClick={() => setShowExportDialog(false)} className="text-muted-foreground hover:text-foreground transition-colors"><Icon name="X" size={18} /></button>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">Выберите, какие статусы предписаний включить в файл</p>
+            <div className="space-y-2 mb-5">
+              {ALL_STATUSES.map(s => {
+                const count = filteredPrescriptions.filter(p => overallStatus(p.remarks) === s).length;
+                const checked = exportStatuses.includes(s);
+                return (
+                  <label key={s} className={`flex items-center justify-between gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${checked ? "border-primary/40 bg-primary/5" : "border-border hover:bg-secondary/40"}`}>
+                    <div className="flex items-center gap-2.5">
+                      <input type="checkbox" checked={checked} onChange={() => toggleExportStatus(s)} className="accent-primary w-4 h-4" />
+                      <StatusBadge status={s} />
+                    </div>
+                    <span className="text-xs text-muted-foreground">{count}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowExportDialog(false)} className="flex-1 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">Отмена</button>
+              <button
+                onClick={handleExport}
+                disabled={exportStatuses.length === 0}
+                className="flex-1 flex items-center justify-center gap-2 text-sm px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Icon name="Download" size={14} />
+                Экспортировать
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
