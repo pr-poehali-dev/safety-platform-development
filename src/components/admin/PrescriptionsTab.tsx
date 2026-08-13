@@ -1,11 +1,11 @@
 import { useState } from "react";
-import * as XLSX from "xlsx";
 import Icon from "@/components/ui/icon";
 
 const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
+const EXPORT_API = "https://functions.poehali.dev/9f42e2d1-919f-4261-b985-93a720521cd8";
 
 type Status = "Черновик" | "В работе" | "Устранено" | "Просрочено";
-interface Remark { id: string; place: string; description: string; normRef: string; deadline: string; status: Status; }
+interface Remark { id: string; place: string; description: string; normRef: string; deadline: string; status: Status; photos?: string[]; }
 interface Prescription { id: string; number: string; date: string; object: string; contractor: string; inspector: string; inspectorNominative?: string; representative: string; responsible: string; replyEmail: string; reportDeadline: string; remarks: Remark[]; comments: unknown[]; }
 
 const STATUS_STYLE: Record<Status, string> = {
@@ -153,53 +153,46 @@ export function PrescriptionsTab() {
     setEditPrescription(null);
   };
 
-  const handleExport = () => {
-    const rows: Record<string, string | number>[] = [];
-    filteredPrescriptions.forEach(p => {
-      const status = overallStatus(p.remarks);
-      if (p.remarks.length === 0) {
-        rows.push({
-          "Номер": p.number,
-          "Дата": p.date,
-          "Объект": p.object,
-          "Подрядчик": p.contractor,
-          "Инспектор": p.inspector,
-          "В присутствии": p.representative,
-          "Ответственный": p.responsible,
-          "Статус предписания": status,
-          "Замечание №": "",
-          "Место нарушения": "",
-          "Описание нарушения": "",
-          "НПА/ЛНА": "",
-          "Срок устранения": "",
-          "Статус замечания": "",
-        });
-      } else {
-        p.remarks.forEach((r, idx) => {
-          rows.push({
-            "Номер": idx === 0 ? p.number : "",
-            "Дата": idx === 0 ? p.date : "",
-            "Объект": idx === 0 ? p.object : "",
-            "Подрядчик": idx === 0 ? p.contractor : "",
-            "Инспектор": idx === 0 ? p.inspector : "",
-            "В присутствии": idx === 0 ? p.representative : "",
-            "Ответственный": idx === 0 ? p.responsible : "",
-            "Статус предписания": idx === 0 ? status : "",
-            "Замечание №": idx + 1,
-            "Место нарушения": r.place,
-            "Описание нарушения": r.description,
-            "НПА/ЛНА": r.normRef,
-            "Срок устранения": r.deadline,
-            "Статус замечания": effectiveStatus(r),
-          });
-        });
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const payload = filteredPrescriptions.map(p => ({
+        number: p.number,
+        date: p.date,
+        object: p.object,
+        contractor: p.contractor,
+        inspector: p.inspector,
+        representative: p.representative,
+        responsible: p.responsible,
+        status: overallStatus(p.remarks),
+        remarks: p.remarks.map(r => ({
+          place: r.place,
+          description: r.description,
+          normRef: r.normRef,
+          deadline: r.deadline,
+          status: effectiveStatus(r),
+          photos: r.photos ?? [],
+        })),
+      }));
+      const res = await fetch(EXPORT_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prescriptions: payload }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        const a = document.createElement("a");
+        a.href = data.url;
+        a.download = `Предписания_${new Date().toLocaleDateString("ru-RU").replace(/\./g, "-")}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
       }
-    });
-    const ws = XLSX.utils.json_to_sheet(rows);
-    ws["!cols"] = [8, 12, 22, 22, 20, 20, 20, 16, 10, 20, 35, 20, 14, 14].map(w => ({ wch: w }));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Предписания");
-    XLSX.writeFile(wb, `Предписания_${new Date().toLocaleDateString("ru-RU").replace(/\./g, "-")}.xlsx`);
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -223,11 +216,11 @@ export function PrescriptionsTab() {
           </div>
           <button
             onClick={handleExport}
-            disabled={filteredPrescriptions.length === 0}
+            disabled={filteredPrescriptions.length === 0 || exporting}
             className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
           >
-            <Icon name="Download" size={14} />
-            Экспорт в Excel
+            {exporting ? <Icon name="Loader2" size={14} className="animate-spin" /> : <Icon name="Download" size={14} />}
+            {exporting ? "Формирование..." : "Экспорт в Excel"}
           </button>
         </div>
       </div>

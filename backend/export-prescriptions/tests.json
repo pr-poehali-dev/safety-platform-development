@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "POST export empty list returns url",
+      "method": "POST",
+      "path": "/",
+      "body": { "prescriptions": [] },
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    }
+  ]
+}
