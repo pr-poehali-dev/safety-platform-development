@@ -1,0 +1,1 @@
+UPDATE t_p5901577_safety_platform_deve.prescriptions SET import_log = '[]'::jsonb WHERE id = '1786527306944';

@@ -36,6 +36,7 @@ def row_to_prescription(row, remarks):
         "contractNumber": row[11] if len(row) > 11 else None,
         "createdBy": row[12] if len(row) > 12 else "",
         "inspectorNominative": row[13] if len(row) > 13 else "",
+        "importLog": row[14] if len(row) > 14 and row[14] else [],
     }
 
 
@@ -241,7 +242,7 @@ def handler(event: dict, context) -> dict:
         # --- ПРЕДПИСАНИЯ ---
         if method == "GET":
             cur.execute(
-                f"SELECT id, number, date, object, contractor, inspector, representative, responsible, reply_email, report_deadline, comments, contract_number, created_by, inspector_nominative "
+                f"SELECT id, number, date, object, contractor, inspector, representative, responsible, reply_email, report_deadline, comments, contract_number, created_by, inspector_nominative, import_log "
                 f"FROM {SCHEMA}.prescriptions ORDER BY created_at DESC"
             )
             rows = cur.fetchall()

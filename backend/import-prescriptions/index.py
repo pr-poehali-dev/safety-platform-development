@@ -4,6 +4,7 @@ import io
 import time
 import uuid
 import base64
+import datetime
 import boto3
 import psycopg2
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -239,6 +240,7 @@ def handler(event: dict, context) -> dict:
     if action == "confirm":
         file_key = body.get("fileKey")
         created_by = body.get("createdBy", "")
+        created_by_name = body.get("createdByName", "")
         # "update" — предписания с совпадающим номером обновляют существующую запись;
         # "create" (по умолчанию) — все предписания импортируются как новые записи
         duplicate_mode = body.get("duplicateMode", "create")
@@ -297,11 +299,16 @@ def handler(event: dict, context) -> dict:
             for p in prescriptions:
                 pid = p["_pid"]
                 if p["_is_update"]:
+                    log_entry = json.dumps([{
+                        "date": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                        "adminLogin": created_by,
+                        "adminName": created_by_name,
+                    }], ensure_ascii=False)
                     cur.execute(
                         f"UPDATE {SCHEMA}.prescriptions SET date=%s, object=%s, contractor=%s, inspector=%s, "
-                        f"representative=%s, responsible=%s WHERE id=%s",
+                        f"representative=%s, responsible=%s, import_log = import_log || %s::jsonb WHERE id=%s",
                         (p["date"], p["object"], p["contractor"], p["inspector"],
-                         p["representative"], p["responsible"], pid)
+                         p["representative"], p["responsible"], log_entry, pid)
                     )
                     cur.execute(f"DELETE FROM {SCHEMA}.remarks WHERE prescription_id = %s", (pid,))
                     updated_count += 1

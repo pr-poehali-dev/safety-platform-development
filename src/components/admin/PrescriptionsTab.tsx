@@ -8,7 +8,8 @@ const IMPORT_API = "https://functions.poehali.dev/0cfc6b7f-a3e8-4102-8f59-2aa351
 
 type Status = "Черновик" | "В работе" | "Устранено" | "Просрочено";
 interface Remark { id: string; place: string; description: string; normRef: string; deadline: string; status: Status; photos?: string[]; }
-interface Prescription { id: string; number: string; date: string; object: string; contractor: string; inspector: string; inspectorNominative?: string; representative: string; responsible: string; replyEmail: string; reportDeadline: string; remarks: Remark[]; comments: unknown[]; }
+interface ImportLogEntry { date: string; adminLogin: string; adminName: string; }
+interface Prescription { id: string; number: string; date: string; object: string; contractor: string; inspector: string; inspectorNominative?: string; representative: string; responsible: string; replyEmail: string; reportDeadline: string; remarks: Remark[]; comments: unknown[]; importLog?: ImportLogEntry[]; }
 
 const STATUS_STYLE: Record<Status, string> = {
   "Черновик":   "text-muted-foreground bg-muted border-border",
@@ -49,6 +50,13 @@ function parsePrescriptionDate(str: string): Date | null {
   const [d, m, y] = str.split(".").map(Number);
   if (!d || !m || !y) return null;
   return new Date(y, m - 1, d);
+}
+
+// Форматирует ISO-дату записи журнала импорта в читаемый вид
+function fmtImportDate(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 // --- Модалка редактирования предписания ---
@@ -323,6 +331,7 @@ export function PrescriptionsTab({ currentUser }: { currentUser?: AppUser }) {
           action: "confirm",
           fileKey: importPreview.fileKey,
           createdBy: currentUser?.login ?? "",
+          createdByName: currentUser?.name ?? "",
           duplicateMode: importPreview.duplicateNumbers.length > 0 ? duplicateMode : "create",
         }),
       });
@@ -439,6 +448,15 @@ export function PrescriptionsTab({ currentUser }: { currentUser?: AppUser }) {
                       <td className="px-5 py-3.5">
                         <p className="text-sm font-medium text-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{p.number}</p>
                         <p className="text-[11px] text-muted-foreground">{p.date}</p>
+                        {p.importLog && p.importLog.length > 0 && (
+                          <span
+                            title={p.importLog.map(e => `${fmtImportDate(e.date)} — ${e.adminName || e.adminLogin}`).join("\n")}
+                            className="inline-flex items-center gap-1 text-[10px] text-primary bg-primary/10 border border-primary/20 rounded px-1.5 py-0.5 mt-1"
+                          >
+                            <Icon name="FileInput" size={10} />
+                            Обновлено импортом {fmtImportDate(p.importLog[p.importLog.length - 1].date)}
+                          </span>
+                        )}
                       </td>
                       <td className="px-5 py-3.5">
                         <p className="text-sm text-foreground">{p.object}</p>
