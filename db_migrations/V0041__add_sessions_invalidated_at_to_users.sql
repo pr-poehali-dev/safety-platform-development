@@ -1,0 +1,1 @@
+ALTER TABLE t_p5901577_safety_platform_deve.users ADD COLUMN IF NOT EXISTS sessions_invalidated_at TIMESTAMPTZ NULL;

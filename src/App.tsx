@@ -9,7 +9,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
-import { AppUser, fetchUsers, loadSession, saveSession, clearSession } from "@/lib/auth";
+import { AppUser, fetchUsers, loadSession, saveSession, clearSession, isSessionInvalidated } from "@/lib/auth";
 
 const queryClient = new QueryClient();
 
@@ -27,19 +27,40 @@ const App = () => {
         const session = loadSession();
         if (session) {
           const fresh = fetched.find(u => u.id === session.id);
-          if (fresh) {
-            saveSession(fresh);
-            setUser(fresh);
-          } else {
+          if (!fresh) {
             // Пользователь удалён — разлогиниваем
             clearSession();
             setUser(null);
+          } else if (isSessionInvalidated(fresh)) {
+            // Сессия сброшена через "Выйти со всех устройств"
+            clearSession();
+            setUser(null);
+          } else {
+            saveSession(fresh);
+            setUser(fresh);
           }
         }
       })
       .catch(() => setUsers([]))
       .finally(() => setUsersLoading(false));
   }, []);
+
+  // Периодически проверяем, не сбросил ли пользователь сессии со всех устройств (в т.ч. с этого же)
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(() => {
+      fetchUsers()
+        .then(fetched => {
+          const fresh = fetched.find(u => u.id === user.id);
+          if (fresh && isSessionInvalidated(fresh)) {
+            clearSession();
+            setUser(null);
+          }
+        })
+        .catch(() => {});
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const handleLogin = (u: AppUser, remember: boolean) => {
     saveSession(u, remember);

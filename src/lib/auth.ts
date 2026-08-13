@@ -9,6 +9,7 @@ export interface AppUser {
   role: UserRole;
   contractor?: string;
   objectIds?: number[];
+  sessionsInvalidatedAt?: string | null;
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -59,6 +60,17 @@ export async function apiDeleteUser(id: string): Promise<void> {
   });
 }
 
+// Сбрасывает все активные сессии пользователя на всех устройствах (кроме текущей вкладки — она сама обновит sessionsInvalidatedAt после вызова)
+export async function apiInvalidateSessions(id: string): Promise<string> {
+  const res = await fetch(USERS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "invalidate_sessions", id }),
+  });
+  const data = await res.json();
+  return data.sessionsInvalidatedAt as string;
+}
+
 // Сессия хранится в localStorage — это нормально, она привязана к конкретному браузеру
 const SESSION_KEY = "ot_session_v2";
 const SESSION_TTL_DEFAULT = 60 * 60 * 1000; // 1 час
@@ -96,4 +108,21 @@ export function saveSession(user: AppUser, remember?: boolean): void {
 
 export function clearSession(): void {
   localStorage.removeItem(SESSION_KEY);
+}
+
+// Момент входа в текущую сессию — используется, чтобы понять, была ли сессия сброшена через "Выйти со всех устройств" (сброс происходит, если он выполнен позже входа)
+export function getSessionLoginAt(): number | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const s: Session = JSON.parse(raw);
+    return s.loginAt;
+  } catch (_) { return null; }
+}
+
+export function isSessionInvalidated(user: AppUser): boolean {
+  if (!user.sessionsInvalidatedAt) return false;
+  const loginAt = getSessionLoginAt();
+  if (loginAt === null) return false;
+  return new Date(user.sessionsInvalidatedAt).getTime() > loginAt;
 }

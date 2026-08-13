@@ -24,6 +24,7 @@ def row_to_user(row):
         "position": row[4],
         "role": row[5],
         "contractor": row[6],
+        "sessionsInvalidatedAt": row[7].isoformat() if row[7] else None,
     }
 
 
@@ -57,7 +58,7 @@ def handler(event: dict, context) -> dict:
     try:
         if method == "GET":
             cur.execute(
-                f"SELECT id, login, password, name, position, role, contractor FROM {SCHEMA}.users ORDER BY created_at"
+                f"SELECT id, login, password, name, position, role, contractor, sessions_invalidated_at FROM {SCHEMA}.users ORDER BY created_at"
             )
             rows = cur.fetchall()
             cur.execute(f"SELECT user_id, object_id FROM {SCHEMA}.user_objects")
@@ -70,6 +71,18 @@ def handler(event: dict, context) -> dict:
                 u["objectIds"] = objects_map.get(r[0], [])
                 users.append(u)
             return {"statusCode": 200, "headers": {**CORS, "Content-Type": "application/json"}, "body": json.dumps(users, ensure_ascii=False)}
+
+        if method == "POST" and body.get("action") == "invalidate_sessions":
+            user_id = body.get("id")
+            cur.execute(
+                f"UPDATE {SCHEMA}.users SET sessions_invalidated_at = NOW() WHERE id=%s RETURNING sessions_invalidated_at",
+                (user_id,),
+            )
+            row = cur.fetchone()
+            conn.commit()
+            if not row:
+                return {"statusCode": 404, "headers": CORS, "body": json.dumps({"error": "user not found"})}
+            return {"statusCode": 200, "headers": CORS, "body": json.dumps({"ok": True, "sessionsInvalidatedAt": row[0].isoformat()})}
 
         if method == "POST":
             u = body
