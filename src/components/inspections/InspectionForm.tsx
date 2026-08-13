@@ -53,6 +53,7 @@ export default function InspectionForm({
     setForm(prev => ({ ...prev, [key]: val }));
 
   const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const photos = form.photos ?? [];
 
@@ -243,7 +244,14 @@ export default function InspectionForm({
                   type="button"
                   onClick={() => fileRef.current?.click()}
                   disabled={uploading}
-                  className="w-24 h-24 rounded-lg border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary flex-shrink-0"
+                  onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={e => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    handleFiles(e.dataTransfer.files);
+                  }}
+                  className={`w-24 h-24 rounded-lg border border-dashed transition-colors flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary flex-shrink-0 ${dragOver ? "border-primary bg-primary/10" : "border-border hover:border-primary/50 hover:bg-primary/5"}`}
                 >
                   {uploading
                     ? <Icon name="Loader2" size={20} className="animate-spin" />
