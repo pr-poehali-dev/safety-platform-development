@@ -348,12 +348,18 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
           <TasksLoginPopup
             user={user}
             taskAssignments={assignments}
+            prescriptions={prescriptions}
             onClose={() => setTasksPopupOpen(false)}
             onTaskClick={taskId => {
               setTasksPopupOpen(false);
               setTaskFilter(undefined);
               setTaskOpenId(taskId);
               setTab("tasks");
+            }}
+            onPrescriptionClick={prescriptionId => {
+              setTasksPopupOpen(false);
+              setPrescriptionOpenId(prescriptionId);
+              setTab("prescriptions");
             }}
           />
         )}
