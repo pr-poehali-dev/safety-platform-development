@@ -192,6 +192,22 @@ def handler(event: dict, context) -> dict:
         if not prescriptions:
             return err("В файле не найдено ни одного предписания. Проверьте, что структура файла соответствует формату экспорта.")
 
+        # Проверяем номера предписаний из файла на совпадение с уже существующими в системе
+        file_numbers = {p["number"] for p in prescriptions if p["number"]}
+        duplicate_numbers = set()
+        if file_numbers:
+            conn = get_conn()
+            cur = conn.cursor()
+            try:
+                cur.execute(
+                    f"SELECT DISTINCT number FROM {SCHEMA}.prescriptions WHERE number = ANY(%s)",
+                    (list(file_numbers),)
+                )
+                duplicate_numbers = {r[0] for r in cur.fetchall()}
+            finally:
+                cur.close()
+                conn.close()
+
         # Сохраняем оригинальный файл во временное хранилище S3, чтобы не гонять его повторно при подтверждении
         file_key = f"imports/prescriptions-{uuid.uuid4()}.xlsx"
         s3.put_object(
@@ -206,6 +222,7 @@ def handler(event: dict, context) -> dict:
             {
                 "number": p["number"], "date": p["date"], "object": p["object"],
                 "contractor": p["contractor"], "remarksCount": len(p["remarks"]),
+                "isDuplicate": p["number"] in duplicate_numbers,
             }
             for p in prescriptions
         ]
@@ -215,6 +232,7 @@ def handler(event: dict, context) -> dict:
             "prescriptionsCount": len(prescriptions),
             "remarksCount": remarks_count,
             "photosCount": photos_count,
+            "duplicateNumbers": sorted(duplicate_numbers),
             "preview": preview,
         })
 

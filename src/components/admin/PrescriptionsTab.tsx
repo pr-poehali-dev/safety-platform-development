@@ -271,7 +271,8 @@ export function PrescriptionsTab({ currentUser }: { currentUser?: AppUser }) {
     prescriptionsCount: number;
     remarksCount: number;
     photosCount: number;
-    preview: { number: string; date: string; object: string; contractor: string; remarksCount: number }[];
+    duplicateNumbers: string[];
+    preview: { number: string; date: string; object: string; contractor: string; remarksCount: number; isDuplicate: boolean }[];
   } | null>(null);
   const [importConfirming, setImportConfirming] = useState(false);
 
@@ -589,12 +590,23 @@ export function PrescriptionsTab({ currentUser }: { currentUser?: AppUser }) {
               </div>
             </div>
 
+            {importPreview.duplicateNumbers.length > 0 && (
+              <div className="flex items-start gap-2 text-xs text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 rounded-lg px-3 py-2 mb-3">
+                <Icon name="AlertTriangle" size={14} className="flex-shrink-0 mt-0.5" />
+                <span>
+                  Номера уже есть в системе: <span className="font-medium">{importPreview.duplicateNumbers.join(", ")}</span>.
+                  При импорте по ним будут созданы дублирующие записи.
+                </span>
+              </div>
+            )}
+
             <div className="max-h-56 overflow-y-auto space-y-1.5 mb-5 -mx-1 px-1">
               {importPreview.preview.map((p, i) => (
-                <div key={i} className="flex items-center justify-between gap-2 text-xs bg-secondary/30 rounded-lg px-2.5 py-1.5">
-                  <div className="min-w-0">
+                <div key={i} className={`flex items-center justify-between gap-2 text-xs rounded-lg px-2.5 py-1.5 ${p.isDuplicate ? "bg-yellow-400/10 border border-yellow-400/20" : "bg-secondary/30"}`}>
+                  <div className="min-w-0 flex items-center gap-1.5">
+                    {p.isDuplicate && <Icon name="AlertTriangle" size={12} className="text-yellow-400 flex-shrink-0" />}
                     <span className="font-medium text-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{p.number || "—"}</span>
-                    <span className="text-muted-foreground ml-2 truncate">{p.object}</span>
+                    <span className="text-muted-foreground truncate">{p.object}</span>
                   </div>
                   <span className="text-muted-foreground flex-shrink-0">{p.remarksCount} зам.</span>
                 </div>
