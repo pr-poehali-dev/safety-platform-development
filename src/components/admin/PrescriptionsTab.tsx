@@ -41,6 +41,14 @@ function StatusBadge({ status }: { status: Status }) {
   return <span className={`inline-flex items-center text-[11px] px-2 py-0.5 rounded border font-medium ${STATUS_STYLE[status]}`}>{status}</span>;
 }
 
+// Парсит дату предписания "дд.мм.гггг" в Date
+function parsePrescriptionDate(str: string): Date | null {
+  if (!str) return null;
+  const [d, m, y] = str.split(".").map(Number);
+  if (!d || !m || !y) return null;
+  return new Date(y, m - 1, d);
+}
+
 // --- Модалка редактирования предписания ---
 function PrescriptionEditModal({ prescription: initial, onClose, onSave }: {
   prescription: Prescription;
@@ -159,15 +167,40 @@ export function PrescriptionsTab() {
   const [exportProgress, setExportProgress] = useState(0);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportStatuses, setExportStatuses] = useState<Status[]>(ALL_STATUSES);
+  const [exportDateFrom, setExportDateFrom] = useState("");
+  const [exportDateTo, setExportDateTo] = useState("");
 
   const toggleExportStatus = (s: Status) => {
     setExportStatuses(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
   };
 
+  const exportDateFromObj = exportDateFrom ? new Date(exportDateFrom) : null;
+  const exportDateToObj = exportDateTo ? new Date(exportDateTo + "T23:59:59") : null;
+
+  const exportPreviewCount = filteredPrescriptions.filter(p => {
+    if (!exportStatuses.includes(overallStatus(p.remarks))) return false;
+    if (exportDateFromObj || exportDateToObj) {
+      const d = parsePrescriptionDate(p.date);
+      if (!d) return false;
+      if (exportDateFromObj && d < exportDateFromObj) return false;
+      if (exportDateToObj && d > exportDateToObj) return false;
+    }
+    return true;
+  }).length;
+
   const handleExport = async () => {
     setShowExportDialog(false);
 
-    const prescriptionsToExport = filteredPrescriptions.filter(p => exportStatuses.includes(overallStatus(p.remarks)));
+    const prescriptionsToExport = filteredPrescriptions.filter(p => {
+      if (!exportStatuses.includes(overallStatus(p.remarks))) return false;
+      if (exportDateFromObj || exportDateToObj) {
+        const d = parsePrescriptionDate(p.date);
+        if (!d) return false;
+        if (exportDateFromObj && d < exportDateFromObj) return false;
+        if (exportDateToObj && d > exportDateToObj) return false;
+      }
+      return true;
+    });
 
     const payload = prescriptionsToExport.map(p => ({
       number: p.number,
@@ -390,11 +423,43 @@ export function PrescriptionsTab() {
                 );
               })}
             </div>
+
+            <p className="text-xs text-muted-foreground mb-2">Период составления предписаний</p>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">С</label>
+                <input
+                  type="date"
+                  value={exportDateFrom}
+                  onChange={e => setExportDateFrom(e.target.value)}
+                  className="w-full bg-secondary/40 border border-border rounded-lg px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">По</label>
+                <input
+                  type="date"
+                  value={exportDateTo}
+                  onChange={e => setExportDateTo(e.target.value)}
+                  className="w-full bg-secondary/40 border border-border rounded-lg px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                />
+              </div>
+            </div>
+            {(exportDateFrom || exportDateTo) && (
+              <button onClick={() => { setExportDateFrom(""); setExportDateTo(""); }} className="text-[11px] text-primary hover:opacity-80 transition-opacity mb-3">
+                Сбросить период
+              </button>
+            )}
+
+            <p className="text-xs text-muted-foreground mb-5">
+              В файл попадёт предписаний: <span className="text-foreground font-medium">{exportPreviewCount}</span>
+            </p>
+
             <div className="flex gap-3">
               <button onClick={() => setShowExportDialog(false)} className="flex-1 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">Отмена</button>
               <button
                 onClick={handleExport}
-                disabled={exportStatuses.length === 0}
+                disabled={exportStatuses.length === 0 || exportPreviewCount === 0}
                 className="flex-1 flex items-center justify-center gap-2 text-sm px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Icon name="Download" size={14} />
