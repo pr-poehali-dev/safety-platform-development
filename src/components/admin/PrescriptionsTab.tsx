@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Icon from "@/components/ui/icon";
+import { AppUser } from "@/lib/auth";
 
 const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
 const EXPORT_API = "https://functions.poehali.dev/9f42e2d1-919f-4261-b985-93a720521cd8";
+const IMPORT_API = "https://functions.poehali.dev/0cfc6b7f-a3e8-4102-8f59-2aa3510cf806";
 
 type Status = "Черновик" | "В работе" | "Устранено" | "Просрочено";
 interface Remark { id: string; place: string; description: string; normRef: string; deadline: string; status: Status; photos?: string[]; }
@@ -128,7 +130,7 @@ function PrescriptionEditModal({ prescription: initial, onClose, onSave }: {
 }
 
 // --- Вкладка предписаний ---
-export function PrescriptionsTab() {
+export function PrescriptionsTab({ currentUser }: { currentUser?: AppUser }) {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [pLoading, setPLoading] = useState(false);
   const [pSearch, setPSearch] = useState("");
@@ -260,6 +262,81 @@ export function PrescriptionsTab() {
     }
   };
 
+  // --- Импорт предписаний из Excel ---
+  const importFileRef = useRef<HTMLInputElement>(null);
+  const [importAnalyzing, setImportAnalyzing] = useState(false);
+  const [importError, setImportError] = useState("");
+  const [importPreview, setImportPreview] = useState<{
+    fileKey: string;
+    prescriptionsCount: number;
+    remarksCount: number;
+    photosCount: number;
+    preview: { number: string; date: string; object: string; contractor: string; remarksCount: number }[];
+  } | null>(null);
+  const [importConfirming, setImportConfirming] = useState(false);
+
+  const readFileAsDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleImportFile = async (files: FileList | null) => {
+    const file = files?.[0];
+    if (!file) return;
+    setImportError("");
+    setImportAnalyzing(true);
+    try {
+      const fileDataUrl = await readFileAsDataUrl(file);
+      const res = await fetch(IMPORT_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "preview", fileDataUrl }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setImportError(data.error);
+      } else {
+        setImportPreview(data);
+      }
+    } catch {
+      setImportError("Не удалось прочитать файл. Убедитесь, что это корректный файл Excel.");
+    } finally {
+      setImportAnalyzing(false);
+      if (importFileRef.current) importFileRef.current.value = "";
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!importPreview) return;
+    setImportConfirming(true);
+    try {
+      await fetch(IMPORT_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "confirm", fileKey: importPreview.fileKey, createdBy: currentUser?.login ?? "" }),
+      });
+      setImportPreview(null);
+      setPLoading(true);
+      fetch(PRESCRIPTIONS_API).then(r => r.json()).then(data => setPrescriptions(data)).finally(() => setPLoading(false));
+    } finally {
+      setImportConfirming(false);
+    }
+  };
+
+  const handleCancelImport = async () => {
+    if (importPreview) {
+      fetch(IMPORT_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel", fileKey: importPreview.fileKey }),
+      }).catch(() => {});
+    }
+    setImportPreview(null);
+  };
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -280,6 +357,21 @@ export function PrescriptionsTab() {
             />
           </div>
           <button
+            onClick={() => importFileRef.current?.click()}
+            disabled={importAnalyzing}
+            className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+          >
+            {importAnalyzing ? <Icon name="Loader2" size={14} className="animate-spin" /> : <Icon name="Upload" size={14} />}
+            {importAnalyzing ? "Анализ файла..." : "Импорт из Excel"}
+          </button>
+          <input
+            ref={importFileRef}
+            type="file"
+            accept=".xlsx"
+            className="hidden"
+            onChange={e => handleImportFile(e.target.files)}
+          />
+          <button
             onClick={() => setShowExportDialog(true)}
             disabled={filteredPrescriptions.length === 0 || exporting}
             className="relative flex items-center gap-2 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 disabled:cursor-not-allowed transition-colors whitespace-nowrap overflow-hidden"
@@ -297,6 +389,14 @@ export function PrescriptionsTab() {
           </button>
         </div>
       </div>
+
+      {importError && (
+        <div className="flex items-center gap-2 text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
+          <Icon name="AlertCircle" size={14} className="flex-shrink-0" />
+          {importError}
+          <button onClick={() => setImportError("")} className="ml-auto text-red-400/70 hover:text-red-400"><Icon name="X" size={13} /></button>
+        </div>
+      )}
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         {pLoading ? (
@@ -464,6 +564,60 @@ export function PrescriptionsTab() {
               >
                 <Icon name="Download" size={14} />
                 Экспортировать
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Подтверждение импорта */}
+      {importPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleCancelImport} />
+          <div className="relative bg-card border border-border rounded-xl w-full max-w-sm shadow-2xl p-6 animate-fade-in">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                <Icon name="FileSpreadsheet" size={16} className="text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  Импортировано {importPreview.prescriptionsCount} предписаний, в которых содержится {importPreview.remarksCount} замечаний
+                </p>
+                {importPreview.photosCount > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">Фотографий: {importPreview.photosCount}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="max-h-56 overflow-y-auto space-y-1.5 mb-5 -mx-1 px-1">
+              {importPreview.preview.map((p, i) => (
+                <div key={i} className="flex items-center justify-between gap-2 text-xs bg-secondary/30 rounded-lg px-2.5 py-1.5">
+                  <div className="min-w-0">
+                    <span className="font-medium text-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{p.number || "—"}</span>
+                    <span className="text-muted-foreground ml-2 truncate">{p.object}</span>
+                  </div>
+                  <span className="text-muted-foreground flex-shrink-0">{p.remarksCount} зам.</span>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-sm text-foreground mb-4">Хотите импортировать в систему?</p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelImport}
+                disabled={importConfirming}
+                className="flex-1 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+              >
+                Нет
+              </button>
+              <button
+                onClick={handleConfirmImport}
+                disabled={importConfirming}
+                className="flex-1 flex items-center justify-center gap-2 text-sm px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                {importConfirming ? <Icon name="Loader2" size={14} className="animate-spin" /> : <Icon name="Check" size={14} />}
+                {importConfirming ? "Импорт..." : "Да"}
               </button>
             </div>
           </div>

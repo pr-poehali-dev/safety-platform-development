@@ -129,7 +129,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
           <UsersTab currentUser={currentUser} users={users} onUsersChange={onUsersChange} />
         )}
         {tab === "prescriptions" && (
-          <PrescriptionsTab />
+          <PrescriptionsTab currentUser={currentUser} />
         )}
         {tab === "templates" && (
           <TemplatesTab
