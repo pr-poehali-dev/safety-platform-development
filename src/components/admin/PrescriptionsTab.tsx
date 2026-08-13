@@ -154,34 +154,53 @@ export function PrescriptionsTab() {
   };
 
   const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
 
   const handleExport = async () => {
+    const payload = filteredPrescriptions.map(p => ({
+      number: p.number,
+      date: p.date,
+      object: p.object,
+      contractor: p.contractor,
+      inspector: p.inspector,
+      representative: p.representative,
+      responsible: p.responsible,
+      status: overallStatus(p.remarks),
+      remarks: p.remarks.map(r => ({
+        place: r.place,
+        description: r.description,
+        normRef: r.normRef,
+        deadline: r.deadline,
+        status: effectiveStatus(r),
+        photos: r.photos ?? [],
+      })),
+    }));
+
+    const totalPhotos = payload.reduce((sum, p) => sum + p.remarks.reduce((s, r) => s + r.photos.length, 0), 0);
+    // Примерная оценка времени формирования файла — зависит от количества фото, которые нужно скачать и уменьшить на сервере
+    const estimatedMs = Math.max(1200, totalPhotos * 35);
+
     setExporting(true);
+    setExportProgress(0);
+
+    // Плавно приближаем прогресс к 92%, не показывая 100% пока не придёт реальный ответ сервера
+    const startedAt = Date.now();
+    const progressTimer = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const ratio = Math.min(elapsed / estimatedMs, 1);
+      const eased = 1 - Math.pow(1 - ratio, 2);
+      setExportProgress(Math.min(92, Math.round(eased * 92)));
+    }, 120);
+
     try {
-      const payload = filteredPrescriptions.map(p => ({
-        number: p.number,
-        date: p.date,
-        object: p.object,
-        contractor: p.contractor,
-        inspector: p.inspector,
-        representative: p.representative,
-        responsible: p.responsible,
-        status: overallStatus(p.remarks),
-        remarks: p.remarks.map(r => ({
-          place: r.place,
-          description: r.description,
-          normRef: r.normRef,
-          deadline: r.deadline,
-          status: effectiveStatus(r),
-          photos: r.photos ?? [],
-        })),
-      }));
       const res = await fetch(EXPORT_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prescriptions: payload }),
       });
       const data = await res.json();
+      window.clearInterval(progressTimer);
+      setExportProgress(100);
       if (data.url) {
         const a = document.createElement("a");
         a.href = data.url;
@@ -191,7 +210,8 @@ export function PrescriptionsTab() {
         a.remove();
       }
     } finally {
-      setExporting(false);
+      window.clearInterval(progressTimer);
+      setTimeout(() => { setExporting(false); setExportProgress(0); }, 400);
     }
   };
 
@@ -217,10 +237,18 @@ export function PrescriptionsTab() {
           <button
             onClick={handleExport}
             disabled={filteredPrescriptions.length === 0 || exporting}
-            className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+            className="relative flex items-center gap-2 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 disabled:cursor-not-allowed transition-colors whitespace-nowrap overflow-hidden"
           >
-            {exporting ? <Icon name="Loader2" size={14} className="animate-spin" /> : <Icon name="Download" size={14} />}
-            {exporting ? "Формирование..." : "Экспорт в Excel"}
+            {exporting && (
+              <span
+                className="absolute inset-y-0 left-0 bg-primary/15 transition-all duration-150 ease-linear"
+                style={{ width: `${exportProgress}%` }}
+              />
+            )}
+            <span className="relative flex items-center gap-2">
+              {exporting ? <Icon name="Loader2" size={14} className="animate-spin" /> : <Icon name="Download" size={14} />}
+              {exporting ? `Формирование... ${exportProgress}%` : "Экспорт в Excel"}
+            </span>
           </button>
         </div>
       </div>
