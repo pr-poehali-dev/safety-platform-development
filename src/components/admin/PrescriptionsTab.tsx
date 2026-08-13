@@ -275,6 +275,7 @@ export function PrescriptionsTab({ currentUser }: { currentUser?: AppUser }) {
     preview: { number: string; date: string; object: string; contractor: string; remarksCount: number; isDuplicate: boolean }[];
   } | null>(null);
   const [importConfirming, setImportConfirming] = useState(false);
+  const [duplicateMode, setDuplicateMode] = useState<"create" | "update">("update");
 
   const readFileAsDataUrl = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -301,6 +302,7 @@ export function PrescriptionsTab({ currentUser }: { currentUser?: AppUser }) {
         setImportError(data.error);
       } else {
         setImportPreview(data);
+        setDuplicateMode("update");
       }
     } catch {
       setImportError("Не удалось прочитать файл. Убедитесь, что это корректный файл Excel.");
@@ -317,7 +319,12 @@ export function PrescriptionsTab({ currentUser }: { currentUser?: AppUser }) {
       await fetch(IMPORT_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "confirm", fileKey: importPreview.fileKey, createdBy: currentUser?.login ?? "" }),
+        body: JSON.stringify({
+          action: "confirm",
+          fileKey: importPreview.fileKey,
+          createdBy: currentUser?.login ?? "",
+          duplicateMode: importPreview.duplicateNumbers.length > 0 ? duplicateMode : "create",
+        }),
       });
       setImportPreview(null);
       setPLoading(true);
@@ -591,12 +598,23 @@ export function PrescriptionsTab({ currentUser }: { currentUser?: AppUser }) {
             </div>
 
             {importPreview.duplicateNumbers.length > 0 && (
-              <div className="flex items-start gap-2 text-xs text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 rounded-lg px-3 py-2 mb-3">
-                <Icon name="AlertTriangle" size={14} className="flex-shrink-0 mt-0.5" />
-                <span>
-                  Номера уже есть в системе: <span className="font-medium">{importPreview.duplicateNumbers.join(", ")}</span>.
-                  При импорте по ним будут созданы дублирующие записи.
-                </span>
+              <div className="mb-3 rounded-lg border border-yellow-400/20 bg-yellow-400/10 overflow-hidden">
+                <div className="flex items-start gap-2 text-xs text-yellow-400 px-3 pt-2.5">
+                  <Icon name="AlertTriangle" size={14} className="flex-shrink-0 mt-0.5" />
+                  <span>
+                    Номера уже есть в системе: <span className="font-medium">{importPreview.duplicateNumbers.join(", ")}</span>
+                  </span>
+                </div>
+                <div className="px-3 pb-2.5 pt-2 space-y-1.5">
+                  <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
+                    <input type="radio" name="duplicateMode" checked={duplicateMode === "update"} onChange={() => setDuplicateMode("update")} className="accent-primary" />
+                    Обновить существующие предписания данными из файла
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
+                    <input type="radio" name="duplicateMode" checked={duplicateMode === "create"} onChange={() => setDuplicateMode("create")} className="accent-primary" />
+                    Создать новые записи (будут дублироваться)
+                  </label>
+                </div>
               </div>
             )}
 

@@ -239,6 +239,9 @@ def handler(event: dict, context) -> dict:
     if action == "confirm":
         file_key = body.get("fileKey")
         created_by = body.get("createdBy", "")
+        # "update" — предписания с совпадающим номером обновляют существующую запись;
+        # "create" (по умолчанию) — все предписания импортируются как новые записи
+        duplicate_mode = body.get("duplicateMode", "create")
         if not file_key:
             return err("fileKey is required")
 
@@ -250,9 +253,30 @@ def handler(event: dict, context) -> dict:
         except Exception as e:
             return err(f"Не удалось прочитать файл: {e}")
 
+        # Если выбрано обновление — находим id существующих предписаний по номеру
+        existing_id_by_number = {}
+        if duplicate_mode == "update":
+            file_numbers = list({p["number"] for p in prescriptions if p["number"]})
+            if file_numbers:
+                conn0 = get_conn()
+                cur0 = conn0.cursor()
+                try:
+                    cur0.execute(
+                        f"SELECT number, id FROM {SCHEMA}.prescriptions WHERE number = ANY(%s)",
+                        (file_numbers,)
+                    )
+                    # При нескольких предписаниях с одинаковым номером берём самое раннее (первое найденное)
+                    for num, pid in cur0.fetchall():
+                        existing_id_by_number.setdefault(num, pid)
+                finally:
+                    cur0.close()
+                    conn0.close()
+
         # Присваиваем id заранее и собираем все фото в один пакет для параллельной загрузки
         for p in prescriptions:
-            p["_pid"] = f"{int(time.time() * 1000)}{uuid.uuid4().hex[:6]}"
+            existing_pid = existing_id_by_number.get(p["number"]) if p["number"] else None
+            p["_pid"] = existing_pid or f"{int(time.time() * 1000)}{uuid.uuid4().hex[:6]}"
+            p["_is_update"] = existing_pid is not None
             for r in p["remarks"]:
                 r["_rid"] = f"{int(time.time() * 1000)}{uuid.uuid4().hex[:6]}"
 
@@ -268,16 +292,28 @@ def handler(event: dict, context) -> dict:
         cur = conn.cursor()
         try:
             imported_count = 0
+            updated_count = 0
             remarks_count = 0
             for p in prescriptions:
                 pid = p["_pid"]
-                cur.execute(
-                    f"INSERT INTO {SCHEMA}.prescriptions "
-                    f"(id, number, date, object, contractor, inspector, representative, responsible, reply_email, report_deadline, comments, created_by) "
-                    f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                    (pid, p["number"] or f"IMPORT-{pid}", p["date"], p["object"], p["contractor"],
-                     p["inspector"], p["representative"], p["responsible"], "", "", "[]", created_by)
-                )
+                if p["_is_update"]:
+                    cur.execute(
+                        f"UPDATE {SCHEMA}.prescriptions SET date=%s, object=%s, contractor=%s, inspector=%s, "
+                        f"representative=%s, responsible=%s WHERE id=%s",
+                        (p["date"], p["object"], p["contractor"], p["inspector"],
+                         p["representative"], p["responsible"], pid)
+                    )
+                    cur.execute(f"DELETE FROM {SCHEMA}.remarks WHERE prescription_id = %s", (pid,))
+                    updated_count += 1
+                else:
+                    cur.execute(
+                        f"INSERT INTO {SCHEMA}.prescriptions "
+                        f"(id, number, date, object, contractor, inspector, representative, responsible, reply_email, report_deadline, comments, created_by) "
+                        f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                        (pid, p["number"] or f"IMPORT-{pid}", p["date"], p["object"], p["contractor"],
+                         p["inspector"], p["representative"], p["responsible"], "", "", "[]", created_by)
+                    )
+                    imported_count += 1
                 for i, r in enumerate(p["remarks"]):
                     photo_urls = [uploaded[(r["_rid"], idx)] for idx in range(len(r["_photos_bytes"])) if (r["_rid"], idx) in uploaded]
                     cur.execute(
@@ -288,7 +324,6 @@ def handler(event: dict, context) -> dict:
                          json.dumps(photo_urls, ensure_ascii=False))
                     )
                     remarks_count += 1
-                imported_count += 1
             conn.commit()
         finally:
             cur.close()
@@ -300,7 +335,7 @@ def handler(event: dict, context) -> dict:
         except Exception:
             pass
 
-        return ok({"ok": True, "prescriptionsCount": imported_count, "remarksCount": remarks_count})
+        return ok({"ok": True, "prescriptionsCount": imported_count, "updatedCount": updated_count, "remarksCount": remarks_count})
 
     if action == "cancel":
         file_key = body.get("fileKey")
