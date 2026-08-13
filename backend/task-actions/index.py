@@ -215,6 +215,28 @@ def handler(event: dict, context) -> dict:
                     notif_values
                 )
 
+    elif action == "complete_self":
+        # Самозадача: постановщик и исполнитель — один и тот же человек, поэтому задача
+        # закрывается сразу в "Выполнено", минуя отчёт и согласование
+        assignment_id = body["assignment_id"]
+        cur.execute(
+            f"""SELECT ta.assignee_login, t.created_by
+                FROM {SCHEMA}.task_assignments ta
+                JOIN {SCHEMA}.tasks t ON t.id = ta.task_id
+                WHERE ta.id = %s""",
+            (assignment_id,)
+        )
+        row = cur.fetchone()
+        if not row or row[0] != row[1]:
+            conn.close()
+            return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": "not a self-assigned task"})}
+        cur.execute(
+            f"""UPDATE {SCHEMA}.task_assignments
+                SET status = 'done', updated_at = NOW()
+                WHERE id = %s""",
+            (assignment_id,)
+        )
+
     elif action == "reassign":
         assignment_id = body["assignment_id"]
         new_login = body["new_login"]

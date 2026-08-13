@@ -58,10 +58,19 @@ export default function TaskCard({ assignment, user, onClose, onAction, onSendCo
   const isAssignee = assignment.assignee_login === user.login;
   const isCreator = assignment.created_by === user.login;
   const canManage = isManager || isAdmin || isCreator;
+  const isSelfAssigned = assignment.assignee_login === assignment.created_by;
+
+  const [completingSelf, setCompletingSelf] = useState(false);
+  const handleCompleteSelf = async () => {
+    setCompletingSelf(true);
+    await onAction({ action: "complete_self", assignment_id: assignment.id });
+    setCompletingSelf(false);
+  };
 
   useEffect(() => {
+    if (isSelfAssigned) return;
     fetchComments(assignment.id).then(setComments).catch(() => setComments([]));
-  }, [assignment.id]);
+  }, [assignment.id, isSelfAssigned]);
 
   useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
@@ -290,7 +299,7 @@ export default function TaskCard({ assignment, user, onClose, onAction, onSendCo
           )}
 
           {/* Действия для исполнителя */}
-          {isAssignee && !canManage && (
+          {isAssignee && !canManage && !isSelfAssigned && (
             <div className="px-5 py-4 border-b border-border space-y-2">
               {["active", "overdue", "revision"].includes(assignment.status) && (
                 <button onClick={() => setShowReport(v => !v)} className="w-full text-sm py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors flex items-center justify-center gap-2">
@@ -334,6 +343,19 @@ export default function TaskCard({ assignment, user, onClose, onAction, onSendCo
             </div>
           )}
 
+          {/* Задача, поставленная самому себе — сразу закрывается по кнопке "Выполнено" */}
+          {isSelfAssigned && assignment.status !== "done" && (
+            <div className="px-5 py-4 border-b border-border">
+              <button
+                onClick={handleCompleteSelf}
+                disabled={completingSelf}
+                className="w-full text-sm py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Icon name="CheckCircle2" size={14} /> {completingSelf ? "Сохранение..." : "Выполнено"}
+              </button>
+            </div>
+          )}
+
           {/* Смена исполнителя (только admin) */}
           {isAdmin && allUsers.length > 0 && (
             <div className="px-5 py-4 border-b border-border">
@@ -359,7 +381,8 @@ export default function TaskCard({ assignment, user, onClose, onAction, onSendCo
             </div>
           )}
 
-          {/* Чат */}
+          {/* Чат — не нужен для задач, поставленных самому себе */}
+          {!isSelfAssigned && (
           <div className="px-5 py-4">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Переписка</p>
             <div ref={chatRef} className="space-y-3 max-h-52 overflow-y-auto mb-3">
@@ -392,6 +415,7 @@ export default function TaskCard({ assignment, user, onClose, onAction, onSendCo
               </button>
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>
