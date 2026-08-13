@@ -14,6 +14,7 @@ import TasksLoginPopup from "@/components/tasks/TasksLoginPopup";
 import { useTasks } from "@/hooks/useTasks";
 import { useInspectionNotifications } from "@/hooks/useInspectionNotifications";
 import { usePrescriptionNotifications } from "@/hooks/usePrescriptionNotifications";
+import { playNotificationSound } from "@/lib/notificationSound";
 import Icon from "@/components/ui/icon";
 
 interface IndexProps {
@@ -64,6 +65,15 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
   ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   const unreadCount = taskUnreadCount + inspectionUnreadCount + prescriptionUnreadCount;
   const markAllRead = () => { markTaskNotificationsRead(); markInspectionNotificationsRead(); markPrescriptionNotificationsRead(); };
+
+  // Звуковой сигнал при появлении нового непрочитанного уведомления (не при первой загрузке страницы)
+  const prevUnreadCount = useRef<number | null>(null);
+  useEffect(() => {
+    if (prevUnreadCount.current !== null && unreadCount > prevUnreadCount.current) {
+      playNotificationSound();
+    }
+    prevUnreadCount.current = unreadCount;
+  }, [unreadCount]);
 
   useEffect(() => {
     fetch(API)
