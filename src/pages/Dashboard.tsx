@@ -178,6 +178,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
   const presIssued = filteredPrescriptions.filter(p => overallStatus(p.remarks) === "В работе").length;
   const presFixed = filteredPrescriptions.filter(p => overallStatus(p.remarks) === "Устранено").length;
   const presOverdue = filteredPrescriptions.filter(p => overallStatus(p.remarks) === "Просрочено").length;
+  const presRemarksTotal = filteredPrescriptions.reduce((s, p) => s + (p.remarks || []).length, 0);
 
   const inspTotal = filteredInspections.length;
   const inspSuspended = filteredInspections.filter(i => i.works_suspended).length;
@@ -377,6 +378,8 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
             presIssued={presIssued}
             presFixed={presFixed}
             presOverdue={presOverdue}
+            presRemarksTotal={presRemarksTotal}
+            presSuspended={presSuspendedRemarks}
             inspTotal={inspTotal}
             inspRemarks={inspRemarks}
             inspSuspended={inspSuspended}

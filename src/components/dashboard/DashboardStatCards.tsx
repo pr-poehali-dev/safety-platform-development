@@ -24,6 +24,8 @@ interface DashboardStatCardsProps {
   presIssued: number;
   presFixed: number;
   presOverdue: number;
+  presRemarksTotal: number;
+  presSuspended: number;
   inspTotal: number;
   inspRemarks: number;
   inspSuspended: number;
@@ -32,7 +34,7 @@ interface DashboardStatCardsProps {
 }
 
 export default function DashboardStatCards({
-  presTotal, presIssued, presFixed, presOverdue,
+  presTotal, presIssued, presFixed, presOverdue, presRemarksTotal, presSuspended,
   inspTotal, inspRemarks, inspSuspended,
   onNavigateToPrescriptions, onNavigateToInspections,
 }: DashboardStatCardsProps) {
@@ -42,9 +44,11 @@ export default function DashboardStatCards({
         <h2 className="text-base font-semibold py-0 my-0">Предписания</h2>
         <div className="grid grid-cols-2 gap-3">
           <StatCard label="Всего предписаний" value={presTotal} icon="ClipboardList" color="bg-indigo-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Все", true) : undefined} />
+          <StatCard label="Всего замечаний" value={presRemarksTotal} icon="AlertTriangle" color="bg-amber-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Все", true) : undefined} />
+          <StatCard label="Устранено предписаний" value={presFixed} icon="CheckCircle" color="bg-green-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Устранено", true) : undefined} />
+          <StatCard label="Просрочено предписаний" value={presOverdue} icon="AlertCircle" color="bg-red-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Просрочено", true) : undefined} />
           <StatCard label="В работе" value={presIssued} icon="Send" color="bg-primary" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("В работе", true) : undefined} />
-          <StatCard label="Устранено" value={presFixed} icon="CheckCircle" color="bg-green-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Устранено", true) : undefined} />
-          <StatCard label="Просрочено" value={presOverdue} icon="AlertCircle" color="bg-red-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Просрочено", true) : undefined} />
+          <StatCard label="Приостановлено работ" value={presSuspended} icon="OctagonX" color="bg-red-600" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Все", true) : undefined} />
         </div>
       </div>
 
