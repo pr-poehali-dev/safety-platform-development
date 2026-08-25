@@ -41,6 +41,11 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterMine, setFilterMine] = useState(false);
   const [filterSuspended, setFilterSuspended] = useState(false);
+  const [filterObject, setFilterObject] = useState<string[]>([]);
+  const [filterContractor, setFilterContractor] = useState<string[]>([]);
+  const [filterInspector, setFilterInspector] = useState<string[]>([]);
+  const [presDateFrom, setPresDateFrom] = useState("");
+  const [presDateTo, setPresDateTo] = useState("");
   const [search, setSearch] = useState("");
   const [inspectionsSuspended, setInspectionsSuspended] = useState(false);
   const [inspectionsMine, setInspectionsMine] = useState(false);
@@ -380,6 +385,11 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
         filterStatus={filterStatus}
         filterMine={filterMine}
         filterSuspended={filterSuspended}
+        filterObject={filterObject}
+        filterContractor={filterContractor}
+        filterInspector={filterInspector}
+        dateFrom={presDateFrom}
+        dateTo={presDateTo}
         canEdit={canEdit}
         isContractor={isContractor}
         activeTemplate={activeTemplate}
@@ -387,6 +397,11 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
         onFilterChange={setFilterStatus}
         onFilterMineChange={setFilterMine}
         onFilterSuspendedChange={setFilterSuspended}
+        onFilterObjectChange={setFilterObject}
+        onFilterContractorChange={setFilterContractor}
+        onFilterInspectorChange={setFilterInspector}
+        onDateFromChange={setPresDateFrom}
+        onDateToChange={setPresDateTo}
         onSelect={setSelected}
         onAddClick={() => setShowAdd(true)}
         onInspectionsClick={() => setTab("inspections")}

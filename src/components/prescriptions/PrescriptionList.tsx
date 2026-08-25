@@ -8,9 +8,19 @@ import {
   effectiveStatus, overallStatus,
 } from "@/lib/prescriptionTypes";
 import { StatusDropdown } from "@/components/prescriptions/StatusDropdown";
+import FilterDropdown from "@/components/inspections/FilterDropdown";
+import DateRangePicker from "@/components/ui/date-range-picker";
 import { useState, useRef, useEffect } from "react";
 
 const OBJECTS_API = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
+
+function parsePresDate(str: string): Date | null {
+  if (!str) return null;
+  if (str.includes("-")) return new Date(str);
+  const [d, m, y] = str.split(".").map(Number);
+  if (!d || !m || !y) return null;
+  return new Date(y, m - 1, d);
+}
 
 function ColumnFilter({ label, options, value, onChange }: {
   label: string;
@@ -160,6 +170,11 @@ interface PrescriptionListProps {
   filterStatus: string[];
   filterMine: boolean;
   filterSuspended: boolean;
+  filterObject: string[];
+  filterContractor: string[];
+  filterInspector: string[];
+  dateFrom: string;
+  dateTo: string;
   canEdit: boolean;
   isContractor: boolean;
   activeTemplate: Template;
@@ -167,6 +182,11 @@ interface PrescriptionListProps {
   onFilterChange: (v: string[]) => void;
   onFilterMineChange: (v: boolean) => void;
   onFilterSuspendedChange: (v: boolean) => void;
+  onFilterObjectChange: (v: string[]) => void;
+  onFilterContractorChange: (v: string[]) => void;
+  onFilterInspectorChange: (v: string[]) => void;
+  onDateFromChange: (v: string) => void;
+  onDateToChange: (v: string) => void;
   onSelect: (p: Prescription) => void;
   onAddClick: () => void;
   onInspectionsClick?: () => void;
@@ -179,16 +199,15 @@ interface PrescriptionListProps {
 
 export function PrescriptionList({
   user, onLogout, prescriptions, loading, search, filterStatus, filterMine, filterSuspended,
+  filterObject, filterContractor, filterInspector, dateFrom, dateTo,
   canEdit, isContractor, activeTemplate,
-  onSearchChange, onFilterChange, onFilterMineChange, onFilterSuspendedChange, onSelect, onAddClick, onInspectionsClick,
+  onSearchChange, onFilterChange, onFilterMineChange, onFilterSuspendedChange,
+  onFilterObjectChange, onFilterContractorChange, onFilterInspectorChange, onDateFromChange, onDateToChange,
+  onSelect, onAddClick, onInspectionsClick,
   onDashboardClick, onIncidentsClick, onTasksClick, onStatusChange, activeTab = "prescriptions",
 }: PrescriptionListProps) {
 
   const [colFilters, setColFilters] = useState({
-    object: "Все",
-    contractor: "Все",
-    inspector: "Все",
-    status: "Все",
     deadline: "Все",
   });
   const [objects, setObjects] = useState<{ id: number; name: string }[]>([]);
@@ -226,12 +245,14 @@ export function PrescriptionList({
       p.contractor.toLowerCase().includes(q) ||
       p.remarks.some(r => r.description.toLowerCase().includes(q));
     const nearestDeadline = p.remarks.map(r => r.deadline).sort()[0];
-    const matchColObject = colFilters.object === "Все" || p.object === colFilters.object;
-    const matchColContractor = colFilters.contractor === "Все" || p.contractor === colFilters.contractor;
-    const matchColInspector = colFilters.inspector === "Все" || p.inspector === colFilters.inspector;
-    const matchColStatus = colFilters.status === "Все" || status === colFilters.status;
     const matchColDeadline = colFilters.deadline === "Все" || nearestDeadline === colFilters.deadline;
-    return matchStatus && matchSearch && matchColObject && matchColContractor && matchColInspector && matchColStatus && matchColDeadline;
+    const matchObject = filterObject.length === 0 || filterObject.includes(p.object);
+    const matchContractor = filterContractor.length === 0 || filterContractor.includes(p.contractor);
+    const matchInspector = filterInspector.length === 0 || filterInspector.includes(p.inspector);
+    const pDate = parsePresDate(p.date);
+    const matchDateFrom = !dateFrom || (pDate && pDate >= new Date(dateFrom));
+    const matchDateTo = !dateTo || (pDate && pDate <= new Date(dateTo + "T23:59:59"));
+    return matchStatus && matchSearch && matchColDeadline && matchObject && matchContractor && matchInspector && matchDateFrom && matchDateTo;
   });
 
   return (
@@ -318,36 +339,62 @@ export function PrescriptionList({
           )}
         </div>
 
+        {/* Поиск */}
+        <div className="relative max-w-sm">
+          <Icon name="Search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={e => onSearchChange(e.target.value)}
+            placeholder="Поиск по номеру, объекту, подрядчику..."
+            className="w-full bg-card border border-border rounded-lg pl-8 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+          />
+        </div>
+
         {/* Фильтры */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Icon name="Search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={search}
-              onChange={e => onSearchChange(e.target.value)}
-              placeholder="Поиск по номеру, объекту, подрядчику..."
-              className="w-full bg-card border border-border rounded-lg pl-8 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-            />
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            <StatusMultiSelect value={filterStatus} onChange={onFilterChange} />
+        <div className="flex flex-wrap items-center gap-2 bg-card border border-border rounded-xl px-4 py-3">
+          <Icon name="Filter" size={14} className="text-muted-foreground flex-shrink-0" />
+          <DateRangePicker
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            onFromChange={onDateFromChange}
+            onToChange={onDateToChange}
+            onReset={() => { onDateFromChange(""); onDateToChange(""); }}
+          />
+          <div className="w-px h-4 bg-border" />
+          <StatusMultiSelect value={filterStatus} onChange={onFilterChange} />
+          <FilterDropdown label="Объект" options={uniqueObjects} value={filterObject} onChange={onFilterObjectChange} />
+          <FilterDropdown label="Подрядчик" options={uniqueContractors} value={filterContractor} onChange={onFilterContractorChange} />
+          <FilterDropdown label="Выдал" options={uniqueInspectors} value={filterInspector} onChange={onFilterInspectorChange} />
+          <button
+            onClick={() => onFilterSuspendedChange(!filterSuspended)}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors whitespace-nowrap ${filterSuspended ? "border-red-500 bg-red-500/10 text-red-400" : "border-border bg-secondary/30 text-muted-foreground hover:text-foreground"}`}
+          >
+            <Icon name="OctagonX" size={12} />
+            Приостановлено
+          </button>
+          {!isContractor && !isProjectTeam && (
             <button
-              onClick={() => onFilterSuspendedChange(!filterSuspended)}
-              className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border font-medium transition-colors whitespace-nowrap ${filterSuspended ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 bg-card"}`}
+              onClick={() => onFilterMineChange(!filterMine)}
+              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors whitespace-nowrap ${filterMine ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/30 text-muted-foreground hover:text-foreground"}`}
             >
-              <Icon name="OctagonX" size={12} />
-              Приостановлено
+              <Icon name="User" size={12} />
+              Мои
             </button>
-            {!isContractor && !isProjectTeam && (
-              <button
-                onClick={() => onFilterMineChange(!filterMine)}
-                className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border font-medium transition-colors whitespace-nowrap ${filterMine ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 bg-card"}`}
-              >
-                <Icon name="User" size={12} />
-                Мои
-              </button>
-            )}
-          </div>
+          )}
+          {(dateFrom || dateTo || filterStatus.length > 0 || filterObject.length > 0 || filterContractor.length > 0 || filterInspector.length > 0 || filterSuspended || filterMine) && (
+            <button
+              onClick={() => {
+                onDateFromChange(""); onDateToChange(""); onFilterChange([]);
+                onFilterObjectChange([]); onFilterContractorChange([]); onFilterInspectorChange([]);
+                onFilterSuspendedChange(false); onFilterMineChange(false);
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+            >
+              <Icon name="X" size={11} />
+              Сбросить
+            </button>
+          )}
+          <span className="ml-auto text-xs text-muted-foreground">{filtered.length} записей</span>
         </div>
 
         {/* Таблица */}
@@ -369,22 +416,14 @@ export function PrescriptionList({
                 <thead>
                   <tr className="border-b border-border bg-secondary/20">
                     <th style={{ width: "120px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Номер</th>
-                    <th style={{ width: "350px" }} className="text-left px-5 py-3">
-                      <ColumnFilter label="Объект" options={uniqueObjects} value={colFilters.object} onChange={setColFilter("object")} />
-                    </th>
-                    <th style={{ width: "180px" }} className="text-left px-5 py-3">
-                      <ColumnFilter label="Подрядчик" options={uniqueContractors} value={colFilters.contractor} onChange={setColFilter("contractor")} />
-                    </th>
-                    <th style={{ width: "180px" }} className="text-left px-5 py-3">
-                      <ColumnFilter label="Выдал" options={uniqueInspectors} value={colFilters.inspector} onChange={setColFilter("inspector")} />
-                    </th>
+                    <th style={{ width: "350px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Объект</th>
+                    <th style={{ width: "180px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Подрядчик</th>
+                    <th style={{ width: "180px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Выдал</th>
                     <th style={{ width: "120px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Замечания</th>
                     <th style={{ width: "130px" }} className="text-left px-5 py-3">
                       <ColumnFilter label="Ближайший срок" options={uniqueDeadlines} value={colFilters.deadline} onChange={setColFilter("deadline")} />
                     </th>
-                    <th style={{ width: "110px" }} className="text-left px-5 py-3">
-                      <ColumnFilter label="Статус" options={ALL_STATUSES} value={colFilters.status} onChange={setColFilter("status")} />
-                    </th>
+                    <th style={{ width: "110px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Статус</th>
                     <th style={{ width: "160px" }} className="px-5 py-3" />
                   </tr>
                 </thead>
