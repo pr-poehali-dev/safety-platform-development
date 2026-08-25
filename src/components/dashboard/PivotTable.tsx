@@ -14,6 +14,7 @@ export default function PivotTable({ pivotRows, contractors, grandTotal }: Pivot
   if (pivotRows.length === 0) return null;
 
   const medals = ["🥇", "🥈", "🥉"];
+  const contractorColWidth = contractors.length > 0 ? `${65 / contractors.length}%` : "0%";
 
   return (
     <div>
@@ -22,25 +23,25 @@ export default function PivotTable({ pivotRows, contractors, grandTotal }: Pivot
         <div className="overflow-x-auto">
           <table className="w-full text-xs" style={{ tableLayout: "fixed" }}>
             <colgroup>
-              <col style={{ minWidth: 180 }} />
-              {contractors.map(c => <col key={c} style={{ width: 50, maxWidth: 50 }} />)}
-              <col style={{ width: 50, maxWidth: 50 }} />
+              <col style={{ width: "30%" }} />
+              {contractors.map(c => <col key={c} style={{ width: contractorColWidth }} />)}
+              <col style={{ width: "5%" }} />
             </colgroup>
             <thead>
               <tr className="border-b border-border bg-secondary/30">
                 <th className="text-left px-4 py-2.5 font-semibold text-muted-foreground">Вид нарушения</th>
                 {contractors.map(c => (
-                  <th key={c} className="text-center py-2.5 font-semibold text-muted-foreground" style={{ width: 50, maxWidth: 50 }}>
+                  <th key={c} className="text-center px-1 py-2.5 font-semibold text-muted-foreground">
                     <div
                       className="overflow-hidden mx-auto"
-                      style={{ width: 50, maxHeight: "2.8em", lineHeight: "1.4em", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", cursor: "default" }}
+                      style={{ maxHeight: "2.8em", lineHeight: "1.4em", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", cursor: "default" }}
                       title={c}
                     >
                       {c}
                     </div>
                   </th>
                 ))}
-                <th className="text-center py-2.5 font-semibold text-foreground" style={{ width: 50 }}>Итого</th>
+                <th className="text-center py-2.5 font-semibold text-foreground">Итого</th>
               </tr>
             </thead>
             <tbody>
@@ -56,13 +57,13 @@ export default function PivotTable({ pivotRows, contractors, grandTotal }: Pivot
                       </span>
                     </td>
                     {contractors.map(c => (
-                      <td key={c} className="py-2 text-center text-muted-foreground" style={{ width: 50, maxWidth: 50 }}>
+                      <td key={c} className="py-2 text-center text-muted-foreground">
                         {row.byContractor[c] ? (
                           <span className="text-foreground font-medium">{row.byContractor[c]}</span>
                         ) : ""}
                       </td>
                     ))}
-                    <td className="py-2 text-center font-bold text-foreground" style={{ width: 50 }}>
+                    <td className="py-2 text-center font-bold text-foreground">
                       {isTop ? <span className={idx === 0 ? "text-red-400" : idx === 1 ? "text-amber-400" : "text-yellow-500"}>{row.total}</span> : row.total}
                     </td>
                   </tr>
@@ -71,11 +72,11 @@ export default function PivotTable({ pivotRows, contractors, grandTotal }: Pivot
               <tr className="bg-secondary/30 border-t-2 border-border">
                 <td className="px-4 py-2.5 font-bold text-foreground">Общий итог</td>
                 {contractors.map(c => (
-                  <td key={c} className="py-2.5 text-center font-bold text-foreground" style={{ width: 50, maxWidth: 50 }}>
+                  <td key={c} className="py-2.5 text-center font-bold text-foreground">
                     {grandTotal[c] || ""}
                   </td>
                 ))}
-                <td className="py-2.5 text-center font-bold text-foreground" style={{ width: 50 }}>
+                <td className="py-2.5 text-center font-bold text-foreground">
                   {pivotRows.reduce((s, r) => s + r.total, 0)}
                 </td>
               </tr>
