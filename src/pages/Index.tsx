@@ -40,6 +40,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
   const [selected, setSelected] = useState<Prescription | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("Все");
   const [filterMine, setFilterMine] = useState(false);
+  const [filterSuspended, setFilterSuspended] = useState(false);
   const [search, setSearch] = useState("");
   const [inspectionsSuspended, setInspectionsSuspended] = useState(false);
   const [inspectionsMine, setInspectionsMine] = useState(false);
@@ -331,9 +332,10 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
         <Dashboard
           user={user}
           taskAssignments={assignments}
-          onNavigateToPrescriptions={(status, mine) => {
+          onNavigateToPrescriptions={(status, mine, suspended) => {
             if (status) setFilterStatus(status);
             setFilterMine(mine ?? false);
+            setFilterSuspended(suspended ?? false);
             setTab("prescriptions");
           }}
           onNavigateToInspections={(suspended, mine) => {
@@ -377,12 +379,14 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
         search={search}
         filterStatus={filterStatus}
         filterMine={filterMine}
+        filterSuspended={filterSuspended}
         canEdit={canEdit}
         isContractor={isContractor}
         activeTemplate={activeTemplate}
         onSearchChange={setSearch}
         onFilterChange={setFilterStatus}
         onFilterMineChange={setFilterMine}
+        onFilterSuspendedChange={setFilterSuspended}
         onSelect={setSelected}
         onAddClick={() => setShowAdd(true)}
         onInspectionsClick={() => setTab("inspections")}

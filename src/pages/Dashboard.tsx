@@ -40,7 +40,7 @@ interface Incident {
 interface DashboardProps {
   user: AppUser;
   taskAssignments: TaskAssignment[];
-  onNavigateToPrescriptions?: (status?: string, mine?: boolean) => void;
+  onNavigateToPrescriptions?: (status?: string, mine?: boolean, suspended?: boolean) => void;
   onNavigateToInspections?: (suspended?: boolean, mine?: boolean) => void;
   onNavigateToIncidents?: () => void;
   onNavigateToTasks?: (filter?: string, taskId?: number) => void;

@@ -29,7 +29,7 @@ interface DashboardStatCardsProps {
   inspTotal: number;
   inspRemarks: number;
   inspSuspended: number;
-  onNavigateToPrescriptions?: (status?: string, mine?: boolean) => void;
+  onNavigateToPrescriptions?: (status?: string, mine?: boolean, suspended?: boolean) => void;
   onNavigateToInspections?: (suspended?: boolean, mine?: boolean) => void;
 }
 
@@ -48,7 +48,7 @@ export default function DashboardStatCards({
           <StatCard label="Устранено предписаний" value={presFixed} icon="CheckCircle" color="bg-green-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Устранено", true) : undefined} />
           <StatCard label="Просрочено предписаний" value={presOverdue} icon="AlertCircle" color="bg-red-500" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Просрочено", true) : undefined} />
           <StatCard label="В работе" value={presIssued} icon="Send" color="bg-primary" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("В работе", true) : undefined} />
-          <StatCard label="Приостановлено работ" value={presSuspended} icon="OctagonX" color="bg-red-600" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Все", true) : undefined} />
+          <StatCard label="Приостановлено работ" value={presSuspended} icon="OctagonX" color="bg-red-600" onClick={onNavigateToPrescriptions ? () => onNavigateToPrescriptions("Все", true, true) : undefined} />
         </div>
       </div>
 

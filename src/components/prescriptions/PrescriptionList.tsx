@@ -98,12 +98,14 @@ interface PrescriptionListProps {
   search: string;
   filterStatus: string;
   filterMine: boolean;
+  filterSuspended: boolean;
   canEdit: boolean;
   isContractor: boolean;
   activeTemplate: Template;
   onSearchChange: (v: string) => void;
   onFilterChange: (v: string) => void;
   onFilterMineChange: (v: boolean) => void;
+  onFilterSuspendedChange: (v: boolean) => void;
   onSelect: (p: Prescription) => void;
   onAddClick: () => void;
   onInspectionsClick?: () => void;
@@ -115,9 +117,9 @@ interface PrescriptionListProps {
 }
 
 export function PrescriptionList({
-  user, onLogout, prescriptions, loading, search, filterStatus, filterMine,
+  user, onLogout, prescriptions, loading, search, filterStatus, filterMine, filterSuspended,
   canEdit, isContractor, activeTemplate,
-  onSearchChange, onFilterChange, onFilterMineChange, onSelect, onAddClick, onInspectionsClick,
+  onSearchChange, onFilterChange, onFilterMineChange, onFilterSuspendedChange, onSelect, onAddClick, onInspectionsClick,
   onDashboardClick, onIncidentsClick, onTasksClick, onStatusChange, activeTab = "prescriptions",
 }: PrescriptionListProps) {
 
@@ -153,6 +155,7 @@ export function PrescriptionList({
     if (isContractor && user.contractor && p.contractor !== user.contractor) return false;
     if (isProjectTeam && !myObjectNames.has(p.object)) return false;
     if (filterMine && p.createdBy !== user.login) return false;
+    if (filterSuspended && !(p.remarks || []).some(r => r.work_suspended)) return false;
     const status = overallStatus(p.remarks);
     const matchStatus = filterStatus === "Все" || status === filterStatus;
     const q = search.toLowerCase();
@@ -275,6 +278,13 @@ export function PrescriptionList({
                 {s}
               </button>
             ))}
+            <button
+              onClick={() => onFilterSuspendedChange(!filterSuspended)}
+              className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border font-medium transition-colors whitespace-nowrap ${filterSuspended ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 bg-card"}`}
+            >
+              <Icon name="OctagonX" size={12} />
+              Приостановлено
+            </button>
             {!isContractor && !isProjectTeam && (
               <button
                 onClick={() => onFilterMineChange(!filterMine)}
