@@ -90,20 +90,81 @@ function ColumnFilter({ label, options, value, onChange }: {
   );
 }
 
+function StatusMultiSelect({ value, onChange }: {
+  value: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const toggle = (s: string) => {
+    onChange(value.includes(s) ? value.filter(v => v !== s) : [...value, s]);
+  };
+
+  const label = value.length === 0 ? "Все" : value.length === 1 ? value[0] : `Статус: ${value.length}`;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border font-medium transition-colors whitespace-nowrap ${value.length > 0 ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 bg-card"}`}
+      >
+        {label}
+        <Icon name="ChevronDown" size={12} />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-lg shadow-lg min-w-[180px]">
+          <div className="py-1">
+            <button
+              onClick={() => { onChange([]); setOpen(false); }}
+              className={`w-full text-left px-3 py-1.5 text-xs transition-colors hover:bg-secondary/50 ${value.length === 0 ? "text-primary font-medium" : "text-foreground"}`}
+            >
+              Все статусы
+            </button>
+            <div className="h-px bg-border my-1" />
+            {ALL_STATUSES.map(s => (
+              <label
+                key={s}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs text-foreground cursor-pointer hover:bg-secondary/50"
+              >
+                <input
+                  type="checkbox"
+                  checked={value.includes(s)}
+                  onChange={() => toggle(s)}
+                  className="accent-primary"
+                />
+                {s}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface PrescriptionListProps {
   user: AppUser;
   onLogout: () => void;
   prescriptions: Prescription[];
   loading: boolean;
   search: string;
-  filterStatus: string;
+  filterStatus: string[];
   filterMine: boolean;
   filterSuspended: boolean;
   canEdit: boolean;
   isContractor: boolean;
   activeTemplate: Template;
   onSearchChange: (v: string) => void;
-  onFilterChange: (v: string) => void;
+  onFilterChange: (v: string[]) => void;
   onFilterMineChange: (v: boolean) => void;
   onFilterSuspendedChange: (v: boolean) => void;
   onSelect: (p: Prescription) => void;
@@ -157,7 +218,7 @@ export function PrescriptionList({
     if (filterMine && p.createdBy !== user.login) return false;
     if (filterSuspended && !(p.remarks || []).some(r => r.work_suspended)) return false;
     const status = overallStatus(p.remarks);
-    const matchStatus = filterStatus === "Все" || status === filterStatus;
+    const matchStatus = filterStatus.length === 0 || filterStatus.includes(status);
     const q = search.toLowerCase();
     const matchSearch = !q ||
       p.number.toLowerCase().includes(q) ||
@@ -269,15 +330,7 @@ export function PrescriptionList({
             />
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {["Все", ...ALL_STATUSES].map(s => (
-              <button
-                key={s}
-                onClick={() => onFilterChange(s)}
-                className={`text-xs px-3 py-2 rounded-lg border font-medium transition-colors whitespace-nowrap ${filterStatus === s ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 bg-card"}`}
-              >
-                {s}
-              </button>
-            ))}
+            <StatusMultiSelect value={filterStatus} onChange={onFilterChange} />
             <button
               onClick={() => onFilterSuspendedChange(!filterSuspended)}
               className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border font-medium transition-colors whitespace-nowrap ${filterSuspended ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 bg-card"}`}

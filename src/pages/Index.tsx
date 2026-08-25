@@ -38,7 +38,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
   const [showAdd, setShowAdd] = useState(false);
   const [editingPrescription, setEditingPrescription] = useState<Prescription | null>(null);
   const [selected, setSelected] = useState<Prescription | null>(null);
-  const [filterStatus, setFilterStatus] = useState<string>("Все");
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterMine, setFilterMine] = useState(false);
   const [filterSuspended, setFilterSuspended] = useState(false);
   const [search, setSearch] = useState("");
@@ -333,7 +333,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
           user={user}
           taskAssignments={assignments}
           onNavigateToPrescriptions={(status, mine, suspended) => {
-            if (status) setFilterStatus(status);
+            setFilterStatus(status && status !== "Все" ? [status] : []);
             setFilterMine(mine ?? false);
             setFilterSuspended(suspended ?? false);
             setTab("prescriptions");
