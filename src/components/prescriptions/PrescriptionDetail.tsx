@@ -278,7 +278,18 @@ export function PrescriptionDetail({
                 return (
                 <div key={r.id} className="border border-border rounded-xl p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
-                    <span className="text-xs font-semibold text-primary uppercase tracking-wider">Замечание #{i + 1}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-semibold text-primary uppercase tracking-wider">Замечание #{i + 1}</span>
+                      {r.work_suspended && (
+                        <span className="flex items-center gap-1 text-[11px] font-medium text-red-400 border border-red-400/30 bg-red-400/10 rounded px-2 py-0.5 whitespace-nowrap">
+                          <Icon name="OctagonX" size={11} />
+                          Работы приостановлены
+                        </span>
+                      )}
+                      {r.work_suspended && r.suspension_act_drawn && (
+                        <span className="text-[11px] text-red-400/80 whitespace-nowrap">(составлен акт о приостановке)</span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2">
                       <StatusDropdown status={eStatus} editable={canChangeStatus} onChange={s => setRemarkStatus(r.id, s)} align="right" />
                       {canDeleteRemark && (
