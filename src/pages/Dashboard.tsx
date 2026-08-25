@@ -239,16 +239,23 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
   const spbTotal = spbStats.reduce((s, c) => s + c.count, 0);
 
   const { contractors, pivotRows, grandTotal } = useMemo(() => {
-    const contractorSet = new Set<string>();
-    const map = new Map<string, Record<string, number>>();
+    const OTHER_LABEL = "Прочие";
+    const TOP_CONTRACTORS_COUNT = 5;
+
+    const contractorTotals = new Map<string, number>();
+    const rawMap = new Map<string, Record<string, number>>();
+
+    const addEntry = (cat: string, co: string, amount: number) => {
+      if (!rawMap.has(cat)) rawMap.set(cat, {});
+      const row = rawMap.get(cat)!;
+      row[co] = (row[co] || 0) + amount;
+      contractorTotals.set(co, (contractorTotals.get(co) || 0) + amount);
+    };
 
     filteredInspections.forEach(i => {
       const cat = i.violation_type || "Без категории";
       const co = i.contractor || "Не указан";
-      contractorSet.add(co);
-      if (!map.has(cat)) map.set(cat, {});
-      const row = map.get(cat)!;
-      row[co] = (row[co] || 0) + (i.remarks_count || 0);
+      addEntry(cat, co, i.remarks_count || 0);
     });
 
     filteredPrescriptions.forEach(p => {
@@ -256,20 +263,29 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
       (p.remarks || []).forEach(r => {
         const cat = r.category;
         if (!cat) return;
-        contractorSet.add(co);
-        if (!map.has(cat)) map.set(cat, {});
-        const row = map.get(cat)!;
-        row[co] = (row[co] || 0) + 1;
+        addEntry(cat, co, 1);
       });
     });
 
-    const contractors = [...contractorSet].sort();
-    const pivotRows: PivotRow[] = [...map.entries()]
-      .map(([category, byContractor]) => ({
-        category,
-        byContractor,
-        total: Object.values(byContractor).reduce((s, v) => s + v, 0),
-      }))
+    // Топ-5 организаций по количеству замечаний — отдельные столбцы, остальные объединяются в "Прочие"
+    const sortedContractors = [...contractorTotals.entries()].sort((a, b) => b[1] - a[1]);
+    const topContractors = sortedContractors.slice(0, TOP_CONTRACTORS_COUNT).map(([name]) => name);
+    const otherContractors = new Set(sortedContractors.slice(TOP_CONTRACTORS_COUNT).map(([name]) => name));
+    const contractors = otherContractors.size > 0 ? [...topContractors, OTHER_LABEL] : topContractors;
+
+    const pivotRows: PivotRow[] = [...rawMap.entries()]
+      .map(([category, byContractorRaw]) => {
+        const byContractor: Record<string, number> = {};
+        Object.entries(byContractorRaw).forEach(([co, val]) => {
+          const key = otherContractors.has(co) ? OTHER_LABEL : co;
+          byContractor[key] = (byContractor[key] || 0) + val;
+        });
+        return {
+          category,
+          byContractor,
+          total: Object.values(byContractor).reduce((s, v) => s + v, 0),
+        };
+      })
       .sort((a, b) => b.total - a.total);
 
     const grandTotal: Record<string, number> = {};
