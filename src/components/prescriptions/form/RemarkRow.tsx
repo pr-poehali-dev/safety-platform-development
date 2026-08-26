@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import Icon from "@/components/ui/icon";
-import { PhotoLightbox } from "@/components/ui/PhotoLightbox";
+import { EditablePhotoLightbox } from "@/components/ui/ImageAnnotator";
 import { Remark, Status, ALL_STATUSES } from "@/lib/prescriptionTypes";
 import { Field, SelectBase, TextareaBase, DatePicker } from "./FormControls";
 
@@ -74,6 +74,18 @@ export function RemarkRow({
 
   const removePhoto = (idx: number) => {
     onChange({ ...remark, photos: photos.filter((_, i) => i !== idx) });
+  };
+
+  const saveEditedPhoto = async (idx: number, dataUrl: string) => {
+    const res = await fetch(UPLOAD_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dataUrl }),
+    });
+    const data = await res.json();
+    if (data.url) {
+      onChange({ ...remark, photos: photos.map((p, i) => (i === idx ? data.url : p)) });
+    }
   };
 
   return (
@@ -196,7 +208,7 @@ export function RemarkRow({
       </div>
 
       {lightboxIndex !== null && (
-        <PhotoLightbox photos={photos} startIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
+        <EditablePhotoLightbox photos={photos} startIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} onSave={saveEditedPhoto} />
       )}
 
       <Field label="Ссылка на нормативный документ *">

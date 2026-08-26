@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import Icon from "@/components/ui/icon";
-import { PhotoLightbox } from "@/components/ui/PhotoLightbox";
+import { EditablePhotoLightbox } from "@/components/ui/ImageAnnotator";
 import { AppUser } from "@/lib/auth";
 import { Template } from "@/lib/template";
 import { printPrescription, downloadPrescriptionWord } from "@/lib/printPrescription";
@@ -65,7 +65,7 @@ export function PrescriptionDetail({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploadingRemarkId, setUploadingRemarkId] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
-  const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null);
+  const [lightbox, setLightbox] = useState<{ remarkId: string; photos: string[]; index: number } | null>(null);
   const [deleteRemarkId, setDeleteRemarkId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -120,6 +120,22 @@ export function PrescriptionDetail({
   const removeRemarkPhoto = (remarkId: string, photoIdx: number) => {
     const remarks = p.remarks.map(r =>
       r.id === remarkId ? { ...r, photos: (r.photos ?? []).filter((_, i) => i !== photoIdx) } : r
+    );
+    const updated = { ...p, remarks };
+    setP(updated);
+    onUpdate(updated);
+  };
+
+  const saveEditedPhoto = async (remarkId: string, photoIdx: number, dataUrl: string) => {
+    const res = await fetch(UPLOAD_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dataUrl }),
+    });
+    const data = await res.json();
+    if (!data.url) return;
+    const remarks = p.remarks.map(r =>
+      r.id === remarkId ? { ...r, photos: (r.photos ?? []).map((url, i) => (i === photoIdx ? data.url : url)) } : r
     );
     const updated = { ...p, remarks };
     setP(updated);
@@ -315,7 +331,7 @@ export function PrescriptionDetail({
                           <div key={pi} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-border flex-shrink-0">
                             <button
                               type="button"
-                              onClick={() => setLightbox({ photos: r.photos ?? [], index: pi })}
+                              onClick={() => setLightbox({ remarkId: r.id, photos: r.photos ?? [], index: pi })}
                               className="block w-full h-full"
                             >
                               <img src={url} alt={`Фото ${pi + 1}`} className="w-full h-full object-cover" />
@@ -468,7 +484,12 @@ export function PrescriptionDetail({
       </div>
 
       {lightbox && (
-        <PhotoLightbox photos={lightbox.photos} startIndex={lightbox.index} onClose={() => setLightbox(null)} />
+        <EditablePhotoLightbox
+          photos={lightbox.photos}
+          startIndex={lightbox.index}
+          onClose={() => setLightbox(null)}
+          onSave={(idx, dataUrl) => saveEditedPhoto(lightbox.remarkId, idx, dataUrl)}
+        />
       )}
 
       {deleteRemarkId && (
