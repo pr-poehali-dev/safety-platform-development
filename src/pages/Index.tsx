@@ -10,6 +10,7 @@ import Inspections from "@/pages/Inspections";
 import Incidents from "@/pages/Incidents";
 import Dashboard from "@/pages/Dashboard";
 import Headcount from "@/pages/Headcount";
+import Fines from "@/pages/Fines";
 import TasksBlock from "@/components/tasks/TasksBlock";
 import TasksLoginPopup from "@/components/tasks/TasksLoginPopup";
 import { useTasks } from "@/hooks/useTasks";
@@ -30,7 +31,7 @@ const API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69"
 const TEMPLATES_API = "https://functions.poehali.dev/41ec60df-3f38-4561-ba9d-ca17ebd71553";
 const USERS_URL = "https://functions.poehali.dev/9f213d27-a6a3-4ce0-b6b1-0d26003c43eb";
 
-type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount";
+type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines";
 
 export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, onTasksPopupShown }: IndexProps) {
   const [tab, setTab] = useState<Tab>("dashboard");
@@ -175,6 +176,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
   };
 
   const canViewHeadcount = user.role === "manager";
+  const canViewFines = user.role === "manager" || user.role === "admin";
 
   const NAV_TABS: { id: Tab; label: string; icon: string }[] = [
     { id: "dashboard", label: "Главная", icon: "LayoutDashboard" },
@@ -183,6 +185,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
     { id: "incidents", label: "Происшествия", icon: "TriangleAlert" },
     { id: "tasks", label: "Задачи", icon: "ListChecks" },
     ...(canViewHeadcount ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }] : []),
+    ...(canViewFines ? [{ id: "fines" as Tab, label: "Штрафы", icon: "Banknote" }] : []),
   ];
 
   const NotificationBell = () => (
@@ -311,6 +314,17 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
   if (tab === "headcount" && canViewHeadcount) {
     return (
       <Headcount
+        user={user}
+        onLogout={onLogout}
+        onTabChange={(t) => setTab(t as Tab)}
+        activeTab={tab}
+      />
+    );
+  }
+
+  if (tab === "fines" && canViewFines) {
+    return (
+      <Fines
         user={user}
         onLogout={onLogout}
         onTabChange={(t) => setTab(t as Tab)}

@@ -10,7 +10,7 @@ import MonthDetailModal from "@/components/headcount/MonthDetailModal";
 import HeadcountSettingsBar from "@/components/headcount/HeadcountSettingsBar";
 import HeadcountTrendChart from "@/components/headcount/HeadcountTrendChart";
 
-type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount";
+type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines";
 
 interface Props {
   user: AppUser;
@@ -30,6 +30,9 @@ export default function Headcount({ user, onLogout, onTabChange, activeTab = "he
     { id: "incidents", label: "Происшествия", icon: "TriangleAlert" },
     { id: "tasks", label: "Задачи", icon: "ListChecks" },
     ...(canViewHeadcount ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }] : []),
+    ...(user.role === "manager" || user.role === "admin"
+      ? [{ id: "fines" as Tab, label: "Штрафы", icon: "Banknote" }]
+      : []),
   ];
   const { days, loading, saveDay } = useHeadcount(year);
   const { settings, saveSettings } = useHeadcountSettings();

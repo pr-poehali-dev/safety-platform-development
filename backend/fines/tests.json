@@ -1,0 +1,10 @@
+{
+  "tests": [
+    {
+      "name": "Get fines list",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}
