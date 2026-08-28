@@ -1,0 +1,10 @@
+{
+  "tests": [
+    {
+      "name": "Get headcount entries for year",
+      "method": "GET",
+      "path": "/?year=2026",
+      "expectedStatus": 200
+    }
+  ]
+}

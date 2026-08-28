@@ -8,7 +8,7 @@ import FilterDropdown from "@/components/inspections/FilterDropdown";
 import InspectionsTable from "@/components/inspections/InspectionsTable";
 import InspectionDetail from "@/components/inspections/InspectionDetail";
 
-type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks";
+type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount";
 
 interface InspectionsProps {
   user: AppUser;
@@ -145,6 +145,9 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
             { id: "inspections" as Tab, label: "Проверки", icon: "TableProperties", action: () => {} },
             { id: "incidents" as Tab, label: "Происшествия", icon: "TriangleAlert", action: () => onTabChange?.("incidents") },
             { id: "tasks" as Tab, label: "Задачи", icon: "ListChecks", action: () => onTabChange?.("tasks") },
+            ...(user.role === "manager" || user.role === "specialist"
+              ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users", action: () => onTabChange?.("headcount") }]
+              : []),
           ].map(t => (
             <button
               key={t.id}

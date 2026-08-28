@@ -6,7 +6,7 @@ import UserMenu from "@/components/UserMenu";
 const INCIDENTS_API = "https://functions.poehali.dev/4aedfdd0-d096-43ad-b4e7-b7b2aec3f753";
 const CONTRACTORS_API = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
 
-type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks";
+type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount";
 
 interface IncidentsProps {
   user: AppUser;
@@ -133,6 +133,9 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
     { id: "inspections", label: "Проверки", icon: "TableProperties" },
     { id: "incidents", label: "Происшествия", icon: "TriangleAlert" },
     { id: "tasks", label: "Задачи", icon: "ListChecks" },
+    ...(user.role === "manager" || user.role === "specialist"
+      ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }]
+      : []),
   ];
 
   return (
