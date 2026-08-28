@@ -26,46 +26,25 @@ export const SBD_RATE = 8;
 
 export interface YtdStats {
   dateLabel: string;
-  poSum: number;
-  sbdSum: number;
-  poHours: number;
-  sbdHours: number;
-  poAvgListed: number | null; // среднесписочная (по календарным дням с начала года)
+  poAvgListed: number | null; // среднесписочная численность за текущий месяц
   sbdAvgListed: number | null;
-  poAvgWorked: number | null; // средняя (по факту заполненным дням)
-  sbdAvgWorked: number | null;
+  poHours: number; // сумма ЧЧ за текущий месяц
+  sbdHours: number;
 }
 
 export function buildYtdStats(days: HeadcountDay[]): YtdStats {
   const today = new Date();
-  const todayIso = today.toISOString().slice(0, 10);
+  const year = today.getFullYear();
+  const month = today.getMonth() + 1;
 
-  const ytdDays = days.filter(d => d.date <= todayIso);
-  const poVals = ytdDays.map(d => d.po).filter((v): v is number => v !== null && v !== undefined);
-  const sbdVals = ytdDays.map(d => d.sbd).filter((v): v is number => v !== null && v !== undefined);
-
-  const poSum = poVals.reduce((s, v) => s + v, 0);
-  const sbdSum = sbdVals.reduce((s, v) => s + v, 0);
-
-  // Среднесписочная численность считается по текущему месяцу (с 1 числа по сегодня)
-  const monthStartIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
-  const daysElapsedInMonth = today.getDate();
-  const monthDays = days.filter(d => d.date >= monthStartIso && d.date <= todayIso);
-  const poMonthVals = monthDays.map(d => d.po).filter((v): v is number => v !== null && v !== undefined);
-  const sbdMonthVals = monthDays.map(d => d.sbd).filter((v): v is number => v !== null && v !== undefined);
-  const poMonthSum = poMonthVals.reduce((s, v) => s + v, 0);
-  const sbdMonthSum = sbdMonthVals.reduce((s, v) => s + v, 0);
+  const monthStats = buildMonthStats(year, days).find(m => m.month === month);
 
   return {
     dateLabel: today.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }),
-    poSum,
-    sbdSum,
-    poHours: poSum * PO_RATE,
-    sbdHours: sbdSum * SBD_RATE,
-    poAvgListed: daysElapsedInMonth > 0 ? poMonthSum / daysElapsedInMonth : null,
-    sbdAvgListed: daysElapsedInMonth > 0 ? sbdMonthSum / daysElapsedInMonth : null,
-    poAvgWorked: poVals.length > 0 ? poSum / poVals.length : null,
-    sbdAvgWorked: sbdVals.length > 0 ? sbdSum / sbdVals.length : null,
+    poAvgListed: monthStats?.poAvg ?? null,
+    sbdAvgListed: monthStats?.sbdAvg ?? null,
+    poHours: monthStats?.poHours ?? 0,
+    sbdHours: monthStats?.sbdHours ?? 0,
   };
 }
 

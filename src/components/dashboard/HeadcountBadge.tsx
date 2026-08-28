@@ -7,6 +7,7 @@ interface Props {
 }
 
 const fmtAvg = (n: number | null) => n === null ? "—" : Math.round(n).toLocaleString("ru-RU");
+const fmt = (n: number) => n.toLocaleString("ru-RU");
 
 export default function HeadcountBadge({ stats, loading }: Props) {
   if (loading) {
@@ -24,10 +25,15 @@ export default function HeadcountBadge({ stats, loading }: Props) {
         <Icon name="Users" size={15} className="text-primary" />
         <span className="text-sm font-semibold text-foreground">Человекочасы на {stats.dateLabel}</span>
       </div>
-      <div>
-        <p className="text-[11px] text-muted-foreground mb-1">Среднесписочная численность
-(за текущий месяц)</p>
-        <p className="text-sm font-semibold text-foreground">ПО {fmtAvg(stats.poAvgListed)} · СБД {fmtAvg(stats.sbdAvgListed)}</p>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <p className="text-[11px] text-muted-foreground mb-1">Среднесписочная численность (за текущий месяц)</p>
+          <p className="text-sm font-semibold text-foreground">ПО {fmtAvg(stats.poAvgListed)} · СБД {fmtAvg(stats.sbdAvgListed)}</p>
+        </div>
+        <div>
+          <p className="text-[11px] text-muted-foreground mb-1">ЧеловекоЧасы (за текущий месяц)</p>
+          <p className="text-sm font-semibold text-foreground">ПО {fmt(stats.poHours)} · СБД {fmt(stats.sbdHours)}</p>
+        </div>
       </div>
     </div>
   );
