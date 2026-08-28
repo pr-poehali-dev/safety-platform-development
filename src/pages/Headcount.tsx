@@ -79,7 +79,7 @@ export default function Headcount({ user, onLogout, onTabChange, activeTab = "he
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold">ЧеловекоЧасы</h1>
+            <h1 className="text-xl font-semibold">Человекочасы</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               Учёт ежедневной численности персонала за {year} год · ПО × 10ч + СБД × 8ч
             </p>
