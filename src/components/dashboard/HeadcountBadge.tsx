@@ -23,7 +23,8 @@ export default function HeadcountBadge({ stats, loading }: Props) {
     <div className="bg-card border border-primary/30 rounded-xl px-4 py-3">
       <div className="flex items-center gap-2 mb-2.5">
         <Icon name="Users" size={15} className="text-primary" />
-        <span className="text-sm font-semibold text-foreground">ЧеловекоЧасы на {stats.dateLabel}</span>
+        <span className="text-sm font-semibold text-foreground">Человекочасы
+</span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div>
