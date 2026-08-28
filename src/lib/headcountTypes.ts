@@ -21,8 +21,15 @@ export const MONTH_LABELS = [
   "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
 ];
 
-export const PO_RATE = 10;
-export const SBD_RATE = 8;
+export const DEFAULT_PO_LABEL = "ПО";
+export const DEFAULT_PO_RATE = 10;
+export const DEFAULT_SBD_RATE = 8;
+
+export interface HeadcountSettings {
+  po_label: string;
+  po_rate: number;
+  sbd_rate: number;
+}
 
 export interface YtdStats {
   dateLabel: string;
@@ -32,12 +39,12 @@ export interface YtdStats {
   sbdHours: number;
 }
 
-export function buildYtdStats(days: HeadcountDay[]): YtdStats {
+export function buildYtdStats(days: HeadcountDay[], poRate = DEFAULT_PO_RATE, sbdRate = DEFAULT_SBD_RATE): YtdStats {
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth() + 1;
 
-  const monthStats = buildMonthStats(year, days).find(m => m.month === month);
+  const monthStats = buildMonthStats(year, days, poRate, sbdRate).find(m => m.month === month);
 
   return {
     dateLabel: today.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }),
@@ -48,7 +55,7 @@ export function buildYtdStats(days: HeadcountDay[]): YtdStats {
   };
 }
 
-export function buildMonthStats(year: number, days: HeadcountDay[]): MonthStats[] {
+export function buildMonthStats(year: number, days: HeadcountDay[], poRate = DEFAULT_PO_RATE, sbdRate = DEFAULT_SBD_RATE): MonthStats[] {
   const byMonth: Record<number, HeadcountDay[]> = {};
   for (let m = 1; m <= 12; m++) byMonth[m] = [];
   for (const d of days) {
@@ -81,9 +88,9 @@ export function buildMonthStats(year: number, days: HeadcountDay[]): MonthStats[
       month,
       label: MONTH_LABELS[i],
       hasData,
-      poHours: poSum * PO_RATE,
-      sbdHours: sbdSum * SBD_RATE,
-      totalHours: poSum * PO_RATE + sbdSum * SBD_RATE,
+      poHours: poSum * poRate,
+      sbdHours: sbdSum * sbdRate,
+      totalHours: poSum * poRate + sbdSum * sbdRate,
       poAvg: poVals.length > 0 ? poVals.reduce((s, v) => s + v, 0) / poVals.length : null,
       sbdAvg: sbdVals.length > 0 ? sbdVals.reduce((s, v) => s + v, 0) / sbdVals.length : null,
       days: fullDays,

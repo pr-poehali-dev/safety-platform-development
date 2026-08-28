@@ -14,6 +14,7 @@ import HeadcountBadge from "@/components/dashboard/HeadcountBadge";
 import { type PivotRow } from "@/components/dashboard/PivotTable";
 import { TaskAssignment } from "@/lib/taskTypes";
 import { useHeadcount } from "@/hooks/useHeadcount";
+import { useHeadcountSettings } from "@/hooks/useHeadcountSettings";
 import { buildYtdStats } from "@/lib/headcountTypes";
 
 const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
@@ -77,7 +78,8 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
 
   const currentYear = new Date().getFullYear();
   const { days: headcountDays, loading: headcountLoading } = useHeadcount(currentYear);
-  const ytdStats = useMemo(() => buildYtdStats(headcountDays), [headcountDays]);
+  const { settings: headcountSettings } = useHeadcountSettings();
+  const ytdStats = useMemo(() => buildYtdStats(headcountDays, headcountSettings.po_rate, headcountSettings.sbd_rate), [headcountDays, headcountSettings]);
 
   useEffect(() => {
     Promise.all([
@@ -401,7 +403,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
         </div>
 
         <div className="flex flex-col gap-4">
-          {!isContractor && <HeadcountBadge stats={ytdStats} loading={headcountLoading} />}
+          {!isContractor && <HeadcountBadge stats={ytdStats} loading={headcountLoading} poLabel={headcountSettings.po_label} />}
 
           <DashboardSpbPanel
             spbCategories={spbCategories}

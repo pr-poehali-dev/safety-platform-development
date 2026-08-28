@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "Get headcount settings",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {"po_label": "ПО", "po_rate": 10, "sbd_rate": 8},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

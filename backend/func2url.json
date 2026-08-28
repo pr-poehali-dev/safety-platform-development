@@ -1,4 +1,5 @@
 {
+  "headcount-settings": "https://functions.poehali.dev/a35a7916-2f1f-489a-9f1d-158bfade8b39",
   "headcount": "https://functions.poehali.dev/524b275c-ad3f-4a44-bd48-10b14045a7bd",
   "import-prescriptions": "https://functions.poehali.dev/0cfc6b7f-a3e8-4102-8f59-2aa3510cf806",
   "export-prescriptions": "https://functions.poehali.dev/9f42e2d1-919f-4261-b985-93a720521cd8",

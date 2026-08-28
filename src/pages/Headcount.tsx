@@ -3,9 +3,11 @@ import { AppUser } from "@/lib/auth";
 import Icon from "@/components/ui/icon";
 import UserMenu from "@/components/UserMenu";
 import { useHeadcount } from "@/hooks/useHeadcount";
+import { useHeadcountSettings } from "@/hooks/useHeadcountSettings";
 import { buildMonthStats, MonthStats } from "@/lib/headcountTypes";
 import HeadcountSummaryTable from "@/components/headcount/HeadcountSummaryTable";
 import MonthDetailModal from "@/components/headcount/MonthDetailModal";
+import HeadcountSettingsBar from "@/components/headcount/HeadcountSettingsBar";
 
 type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount";
 
@@ -28,12 +30,14 @@ const NAV_TABS: { id: Tab; label: string; icon: string }[] = [
 export default function Headcount({ user, onLogout, onTabChange, activeTab = "headcount" }: Props) {
   const year = new Date().getFullYear();
   const { days, loading, saveDay } = useHeadcount(year);
+  const { settings, saveSettings } = useHeadcountSettings();
   const [openMonth, setOpenMonth] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [settingsSaving, setSettingsSaving] = useState(false);
 
   const canEdit = user.role === "manager";
 
-  const months = useMemo(() => buildMonthStats(year, days), [year, days]);
+  const months = useMemo(() => buildMonthStats(year, days, settings.po_rate, settings.sbd_rate), [year, days, settings]);
   const firstHalf = months.slice(0, 6);
   const secondHalf = months.slice(6, 12);
   const activeMonth: MonthStats | null = openMonth !== null ? months.find(m => m.month === openMonth) ?? null : null;
@@ -44,6 +48,15 @@ export default function Headcount({ user, onLogout, onTabChange, activeTab = "he
       await saveDay(date, po, sbd, user.login);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveSettings = async (poLabel: string, poRate: number, sbdRate: number) => {
+    setSettingsSaving(true);
+    try {
+      await saveSettings(poLabel, poRate, sbdRate, user.login);
+    } finally {
+      setSettingsSaving(false);
     }
   };
 
@@ -82,9 +95,13 @@ export default function Headcount({ user, onLogout, onTabChange, activeTab = "he
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold">Человекочасы</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Учёт ежедневной численности персонала за {year} год · ПО × 10ч + СБД × 8ч
-            </p>
+            <HeadcountSettingsBar
+              year={year}
+              settings={settings}
+              editable={canEdit}
+              saving={settingsSaving}
+              onSave={handleSaveSettings}
+            />
           </div>
         </div>
 
@@ -99,8 +116,8 @@ export default function Headcount({ user, onLogout, onTabChange, activeTab = "he
               <Icon name="MousePointerClick" size={12} />
               Нажмите на месяц, чтобы посмотреть данные по дням{canEdit ? " и отредактировать их" : ""}
             </p>
-            <HeadcountSummaryTable year={year} periodLabel="Январь — Июнь" months={firstHalf} onMonthClick={m => setOpenMonth(m.month)} />
-            <HeadcountSummaryTable year={year} periodLabel="Июль — Декабрь" months={secondHalf} onMonthClick={m => setOpenMonth(m.month)} />
+            <HeadcountSummaryTable year={year} periodLabel="Январь — Июнь" months={firstHalf} poLabel={settings.po_label} onMonthClick={m => setOpenMonth(m.month)} />
+            <HeadcountSummaryTable year={year} periodLabel="Июль — Декабрь" months={secondHalf} poLabel={settings.po_label} onMonthClick={m => setOpenMonth(m.month)} />
           </>
         )}
       </main>
@@ -110,6 +127,9 @@ export default function Headcount({ user, onLogout, onTabChange, activeTab = "he
           month={activeMonth}
           editable={canEdit}
           saving={saving}
+          poLabel={settings.po_label}
+          poRate={settings.po_rate}
+          sbdRate={settings.sbd_rate}
           onClose={() => setOpenMonth(null)}
           onSaveDay={handleSaveDay}
         />

@@ -1,18 +1,21 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
-import { MonthStats, PO_RATE, SBD_RATE } from "@/lib/headcountTypes";
+import { MonthStats, DEFAULT_PO_LABEL, DEFAULT_PO_RATE, DEFAULT_SBD_RATE } from "@/lib/headcountTypes";
 
 interface Props {
   month: MonthStats;
   editable: boolean;
   saving: boolean;
+  poLabel?: string;
+  poRate?: number;
+  sbdRate?: number;
   onClose: () => void;
   onSaveDay: (date: string, po: number | null, sbd: number | null) => Promise<void>;
 }
 
 const fmt = (n: number) => n.toLocaleString("ru-RU");
 
-export default function MonthDetailModal({ month, editable, saving, onClose, onSaveDay }: Props) {
+export default function MonthDetailModal({ month, editable, saving, poLabel = DEFAULT_PO_LABEL, poRate = DEFAULT_PO_RATE, sbdRate = DEFAULT_SBD_RATE, onClose, onSaveDay }: Props) {
   const [editDate, setEditDate] = useState<string | null>(null);
   const [poVal, setPoVal] = useState("");
   const [sbdVal, setSbdVal] = useState("");
@@ -42,7 +45,7 @@ export default function MonthDetailModal({ month, editable, saving, onClose, onS
             <h2 className="text-base font-semibold">{month.label}</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               Сумма ЧЧ: <span className="text-foreground font-medium">{fmt(month.totalHours)}</span>
-              {" · "}ПО {fmt(month.poHours)} + СБД {fmt(month.sbdHours)}
+              {" · "}{poLabel} {fmt(month.poHours)} + СБД {fmt(month.sbdHours)}
             </p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -55,7 +58,7 @@ export default function MonthDetailModal({ month, editable, saving, onClose, onS
             <thead className="sticky top-0 bg-card z-10">
               <tr className="border-b border-border">
                 <th className="text-left px-4 py-2.5 font-semibold text-muted-foreground">Дата</th>
-                <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground">ПО (числ.)</th>
+                <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground">{poLabel} (числ.)</th>
                 <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground">СБД (числ.)</th>
                 <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground">ЧЧ за день</th>
                 {editable && <th className="w-10" />}
@@ -64,7 +67,7 @@ export default function MonthDetailModal({ month, editable, saving, onClose, onS
             <tbody>
               {month.days.map(d => {
                 const isEditing = editDate === d.date;
-                const dayHours = (d.po ?? 0) * PO_RATE + (d.sbd ?? 0) * SBD_RATE;
+                const dayHours = (d.po ?? 0) * poRate + (d.sbd ?? 0) * sbdRate;
                 const isToday = d.date === today;
                 return (
                   <tr key={d.date} className={`border-b border-border last:border-0 ${isToday ? "bg-primary/5" : ""}`}>

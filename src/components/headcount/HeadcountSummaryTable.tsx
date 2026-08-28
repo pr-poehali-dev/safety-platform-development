@@ -6,6 +6,7 @@ interface Props {
   year: number;
   periodLabel: string;
   months: MonthStats[];
+  poLabel?: string;
   onMonthClick: (m: MonthStats) => void;
 }
 
@@ -14,7 +15,7 @@ const fmtAvg = (n: number | null) => n === null ? "—" : Math.round(n).toLocale
 
 const highlightMonths = new Set([7]); // Июль выделен жёлтым как в исходном файле
 
-export default function HeadcountSummaryTable({ year, periodLabel, months, onMonthClick }: Props) {
+export default function HeadcountSummaryTable({ year, periodLabel, months, poLabel = "ПО", onMonthClick }: Props) {
   const grandPo = months.reduce((s, m) => s + m.poHours, 0);
   const grandSbd = months.reduce((s, m) => s + m.sbdHours, 0);
 
@@ -50,7 +51,7 @@ export default function HeadcountSummaryTable({ year, periodLabel, months, onMon
               <th className="text-left px-3 py-2 font-semibold text-muted-foreground border-b border-border">Организация</th>
               {months.map(m => (
                 <Fragment key={m.month}>
-                  <th className="text-center px-2 py-2 font-semibold text-muted-foreground border-b border-border">ПО</th>
+                  <th className="text-center px-2 py-2 font-semibold text-muted-foreground border-b border-border">{poLabel}</th>
                   <th className="text-center px-2 py-2 font-semibold text-muted-foreground border-b border-border">СБД</th>
                 </Fragment>
               ))}
@@ -98,7 +99,7 @@ export default function HeadcountSummaryTable({ year, periodLabel, months, onMon
             <tr className="border-t-2 border-border bg-secondary/30">
               <td className="px-3 py-2.5 font-bold text-foreground whitespace-nowrap">Итого за полугодие</td>
               <td colSpan={months.length * 2} className="text-center px-3 py-2.5 font-bold text-foreground">
-                {fmt(grandPo + grandSbd)} ч (ПО {fmt(grandPo)} + СБД {fmt(grandSbd)})
+                {fmt(grandPo + grandSbd)} ч ({poLabel} {fmt(grandPo)} + СБД {fmt(grandSbd)})
               </td>
             </tr>
           </tfoot>
