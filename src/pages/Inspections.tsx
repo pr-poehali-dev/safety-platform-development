@@ -7,6 +7,7 @@ import InspectionForm from "@/components/inspections/InspectionForm";
 import FilterDropdown from "@/components/inspections/FilterDropdown";
 import InspectionsTable from "@/components/inspections/InspectionsTable";
 import InspectionDetail from "@/components/inspections/InspectionDetail";
+import { VisibilitySettings, defaultVisibilitySettings } from "@/lib/visibilityTypes";
 
 type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines";
 
@@ -19,9 +20,11 @@ interface InspectionsProps {
   initialSuspended?: boolean;
   initialMine?: boolean;
   initialOpenId?: number;
+  visibility?: VisibilitySettings;
 }
 
-export default function Inspections({ user, onLogout, onBack, onTabChange, activeTab = "inspections", initialSuspended, initialMine, initialOpenId }: InspectionsProps) {
+export default function Inspections({ user, onLogout, onBack, onTabChange, activeTab = "inspections", initialSuspended, initialMine, initialOpenId, visibility }: InspectionsProps) {
+  const tabs = visibility?.tabs ?? defaultVisibilitySettings().tabs;
   const [rows, setRows] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<string[]>([]);
@@ -141,14 +144,14 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-1 pt-2">
           {[
             { id: "dashboard" as Tab, label: "Главная", icon: "LayoutDashboard", action: () => onTabChange ? onTabChange("dashboard") : onBack() },
-            { id: "prescriptions" as Tab, label: "Предписания", icon: "ClipboardList", action: onBack },
+            ...(tabs.prescriptions ? [{ id: "prescriptions" as Tab, label: "Предписания", icon: "ClipboardList", action: onBack }] : []),
             { id: "inspections" as Tab, label: "Проверки", icon: "TableProperties", action: () => {} },
-            { id: "incidents" as Tab, label: "Происшествия", icon: "TriangleAlert", action: () => onTabChange?.("incidents") },
-            { id: "tasks" as Tab, label: "Задачи", icon: "ListChecks", action: () => onTabChange?.("tasks") },
-            ...(user.role === "manager" || user.role === "admin"
+            ...(tabs.incidents ? [{ id: "incidents" as Tab, label: "Происшествия", icon: "TriangleAlert", action: () => onTabChange?.("incidents") }] : []),
+            ...(tabs.tasks ? [{ id: "tasks" as Tab, label: "Задачи", icon: "ListChecks", action: () => onTabChange?.("tasks") }] : []),
+            ...((user.role === "manager" || user.role === "admin") && tabs.headcount
               ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users", action: () => onTabChange?.("headcount") }]
               : []),
-            ...(user.role === "manager" || user.role === "admin"
+            ...((user.role === "manager" || user.role === "admin") && tabs.fines
               ? [{ id: "fines" as Tab, label: "Штрафы", icon: "Banknote", action: () => onTabChange?.("fines") }]
               : []),
           ].map(t => (

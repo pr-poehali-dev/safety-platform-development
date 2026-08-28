@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { AppUser } from "@/lib/auth";
 import Icon from "@/components/ui/icon";
 import UserMenu from "@/components/UserMenu";
+import { VisibilitySettings, defaultVisibilitySettings } from "@/lib/visibilityTypes";
 
 const INCIDENTS_API = "https://functions.poehali.dev/4aedfdd0-d096-43ad-b4e7-b7b2aec3f753";
 const CONTRACTORS_API = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
@@ -13,6 +14,7 @@ interface IncidentsProps {
   onLogout: () => void;
   onTabChange?: (tab: Tab) => void;
   activeTab?: Tab;
+  visibility?: VisibilitySettings;
 }
 
 interface Incident {
@@ -70,7 +72,8 @@ function emptyForm() {
   };
 }
 
-export default function Incidents({ user, onLogout, onTabChange, activeTab = "incidents" }: IncidentsProps) {
+export default function Incidents({ user, onLogout, onTabChange, activeTab = "incidents", visibility }: IncidentsProps) {
+  const tabs = visibility?.tabs ?? defaultVisibilitySettings().tabs;
   const [rows, setRows] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [contractors, setContractors] = useState<string[]>([]);
@@ -129,14 +132,14 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
 
   const NAV_TABS: { id: Tab; label: string; icon: string }[] = [
     { id: "dashboard", label: "Главная", icon: "LayoutDashboard" },
-    { id: "prescriptions", label: "Предписания", icon: "ClipboardList" },
-    { id: "inspections", label: "Проверки", icon: "TableProperties" },
+    ...(tabs.prescriptions ? [{ id: "prescriptions" as Tab, label: "Предписания", icon: "ClipboardList" }] : []),
+    ...(tabs.inspections ? [{ id: "inspections" as Tab, label: "Проверки", icon: "TableProperties" }] : []),
     { id: "incidents", label: "Происшествия", icon: "TriangleAlert" },
-    { id: "tasks", label: "Задачи", icon: "ListChecks" },
-    ...(user.role === "manager" || user.role === "admin"
+    ...(tabs.tasks ? [{ id: "tasks" as Tab, label: "Задачи", icon: "ListChecks" }] : []),
+    ...((user.role === "manager" || user.role === "admin") && tabs.headcount
       ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }]
       : []),
-    ...(user.role === "manager" || user.role === "admin"
+    ...((user.role === "manager" || user.role === "admin") && tabs.fines
       ? [{ id: "fines" as Tab, label: "Штрафы", icon: "Banknote" }]
       : []),
   ];

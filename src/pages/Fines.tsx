@@ -5,6 +5,7 @@ import UserMenu from "@/components/UserMenu";
 import { IsoDatePicker, MultiSelectField } from "@/components/fines/FineFormControls";
 import DateRangePicker from "@/components/ui/date-range-picker";
 import FilterDropdown from "@/components/inspections/FilterDropdown";
+import { VisibilitySettings, defaultVisibilitySettings } from "@/lib/visibilityTypes";
 
 const FINES_API = "https://functions.poehali.dev/05dd11e6-f624-4a7b-a0b7-604951125a9b";
 const CONTRACTORS_API = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
@@ -17,6 +18,7 @@ interface FinesProps {
   onLogout: () => void;
   onTabChange?: (tab: Tab) => void;
   activeTab?: Tab;
+  visibility?: VisibilitySettings;
 }
 
 interface Fine {
@@ -62,7 +64,8 @@ function emptyForm() {
 
 type FormState = ReturnType<typeof emptyForm>;
 
-export default function Fines({ user, onLogout, onTabChange, activeTab = "fines" }: FinesProps) {
+export default function Fines({ user, onLogout, onTabChange, activeTab = "fines", visibility }: FinesProps) {
+  const tabs = visibility?.tabs ?? defaultVisibilitySettings().tabs;
   const [rows, setRows] = useState<Fine[]>([]);
   const [loading, setLoading] = useState(true);
   const [contractors, setContractors] = useState<ContractorItem[]>([]);
@@ -196,11 +199,11 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
 
   const NAV_TABS: { id: Tab; label: string; icon: string }[] = [
     { id: "dashboard", label: "Главная", icon: "LayoutDashboard" },
-    { id: "prescriptions", label: "Предписания", icon: "ClipboardList" },
-    { id: "inspections", label: "Проверки", icon: "TableProperties" },
-    { id: "incidents", label: "Происшествия", icon: "TriangleAlert" },
-    { id: "tasks", label: "Задачи", icon: "ListChecks" },
-    ...(user.role === "manager" || user.role === "admin" ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }] : []),
+    ...(tabs.prescriptions ? [{ id: "prescriptions" as Tab, label: "Предписания", icon: "ClipboardList" }] : []),
+    ...(tabs.inspections ? [{ id: "inspections" as Tab, label: "Проверки", icon: "TableProperties" }] : []),
+    ...(tabs.incidents ? [{ id: "incidents" as Tab, label: "Происшествия", icon: "TriangleAlert" }] : []),
+    ...(tabs.tasks ? [{ id: "tasks" as Tab, label: "Задачи", icon: "ListChecks" }] : []),
+    ...((user.role === "manager" || user.role === "admin") && tabs.headcount ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }] : []),
     { id: "fines", label: "Штрафы", icon: "Banknote" },
   ];
 

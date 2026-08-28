@@ -1,0 +1,10 @@
+{
+  "tests": [
+    {
+      "name": "Resolve settings for role without override",
+      "method": "GET",
+      "path": "/?resolve=1&role=specialist",
+      "expectedStatus": 200
+    }
+  ]
+}

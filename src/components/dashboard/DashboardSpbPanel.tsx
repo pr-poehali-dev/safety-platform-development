@@ -28,6 +28,8 @@ interface DashboardSpbPanelProps {
   onManualSuspendedWorksChange?: (v: number) => void;
   onPyramidSave?: () => void;
   pyramidSaving?: boolean;
+  showSpb?: boolean;
+  showPyramid?: boolean;
 }
 
 export default function DashboardSpbPanel({
@@ -35,10 +37,11 @@ export default function DashboardSpbPanel({
   pyramidEditable, manualDangerActions, manualSuspendedWorks,
   onManualDangerActionsChange, onManualSuspendedWorksChange,
   onPyramidSave, pyramidSaving,
+  showSpb = true, showPyramid = true,
 }: DashboardSpbPanelProps) {
   return (
     <div className="flex flex-col gap-4">
-      {spbCategories.length > 0 && (
+      {showSpb && spbCategories.length > 0 && (
         <div className="bg-card border border-primary/30 rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -71,17 +74,19 @@ export default function DashboardSpbPanel({
         </div>
       )}
 
-      <IncidentPyramid
-        data={pyramidData}
-        year={new Date().getFullYear()}
-        editable={pyramidEditable}
-        manualDangerActions={manualDangerActions}
-        manualSuspendedWorks={manualSuspendedWorks}
-        onManualDangerActionsChange={onManualDangerActionsChange}
-        onManualSuspendedWorksChange={onManualSuspendedWorksChange}
-        onSave={onPyramidSave}
-        saving={pyramidSaving}
-      />
+      {showPyramid && (
+        <IncidentPyramid
+          data={pyramidData}
+          year={new Date().getFullYear()}
+          editable={pyramidEditable}
+          manualDangerActions={manualDangerActions}
+          manualSuspendedWorks={manualSuspendedWorks}
+          onManualDangerActionsChange={onManualDangerActionsChange}
+          onManualSuspendedWorksChange={onManualSuspendedWorksChange}
+          onSave={onPyramidSave}
+          saving={pyramidSaving}
+        />
+      )}
     </div>
   );
 }

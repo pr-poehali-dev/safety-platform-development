@@ -8,6 +8,8 @@ import { TemplatesTab } from "@/components/admin/TemplatesTab";
 import { DataTab } from "@/components/admin/DataTab";
 import { InspectionsTab } from "@/components/admin/InspectionsTab";
 import Index from "@/pages/Index";
+import AdminVisibilityBar from "@/components/admin/AdminVisibilityBar";
+import { useAdminVisibilityEditor } from "@/hooks/useVisibilitySettings";
 
 const TEMPLATES_API = "https://functions.poehali.dev/41ec60df-3f38-4561-ba9d-ca17ebd71553";
 
@@ -20,6 +22,7 @@ interface AdminProps {
 
 export default function Admin({ currentUser, users, onUsersChange, onLogout }: AdminProps) {
   const [tab, setTab] = useState<"overview" | "users" | "prescriptions" | "inspections" | "templates" | "data">("users");
+  const visibilityEditor = useAdminVisibilityEditor();
 
   const [templates, setTemplates] = useState<Template[]>([]);
   const [tLoading, setTLoading] = useState(false);
@@ -60,11 +63,24 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
   };
 
   if (tab === "overview") {
+    const previewUser: AppUser = visibilityEditor.role
+      ? (visibilityEditor.userId
+          ? (users.find(u => u.id === visibilityEditor.userId) ?? { ...currentUser, role: visibilityEditor.role })
+          : { ...currentUser, role: visibilityEditor.role })
+      : currentUser;
+
     return (
       <div className="relative">
+        <AdminVisibilityBar
+          currentAdminLogin={currentUser.login}
+          availableUsers={users.map(u => ({ id: u.id, login: u.login, name: u.name, role: u.role }))}
+          editor={visibilityEditor}
+        />
         <Index
-          user={currentUser}
+          key={`${previewUser.id}-${visibilityEditor.role ?? ""}`}
+          user={previewUser}
           onLogout={onLogout}
+          visibilityOverride={visibilityEditor.role ? visibilityEditor.settings : null}
         />
         <button
           onClick={() => setTab("users")}

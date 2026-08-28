@@ -16,6 +16,7 @@ import { TaskAssignment } from "@/lib/taskTypes";
 import { useHeadcount } from "@/hooks/useHeadcount";
 import { useHeadcountSettings } from "@/hooks/useHeadcountSettings";
 import { buildYtdStats } from "@/lib/headcountTypes";
+import { VisibilitySettings, defaultVisibilitySettings } from "@/lib/visibilityTypes";
 
 const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
 const INSPECTIONS_API = "https://functions.poehali.dev/b2222d00-a1b0-43fd-966d-3f39732867c3";
@@ -44,6 +45,7 @@ interface Incident {
 interface DashboardProps {
   user: AppUser;
   taskAssignments: TaskAssignment[];
+  visibility?: VisibilitySettings;
   onNavigateToPrescriptions?: (status?: string, mine?: boolean, suspended?: boolean) => void;
   onNavigateToInspections?: (suspended?: boolean, mine?: boolean) => void;
   onNavigateToIncidents?: () => void;
@@ -58,7 +60,8 @@ function parseDate(str: string): Date | null {
   return new Date(y, m - 1, d);
 }
 
-export default function Dashboard({ user, taskAssignments, onNavigateToPrescriptions, onNavigateToInspections, onNavigateToIncidents, onNavigateToTasks }: DashboardProps) {
+export default function Dashboard({ user, taskAssignments, visibility, onNavigateToPrescriptions, onNavigateToInspections, onNavigateToIncidents, onNavigateToTasks }: DashboardProps) {
+  const blocks = visibility?.blocks ?? defaultVisibilitySettings().blocks;
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -392,18 +395,22 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
             inspTotal={inspTotal}
             inspRemarks={inspRemarks}
             inspSuspended={inspSuspended}
+            showPresCards={blocks.presCards}
+            showInspCards={blocks.inspCards}
             onNavigateToPrescriptions={onNavigateToPrescriptions}
             onNavigateToInspections={onNavigateToInspections}
           />
 
-          <DashboardTasksWidget
-            taskAssignments={taskAssignments}
-            onNavigateToTasks={onNavigateToTasks}
-          />
+          {blocks.tasksWidget && (
+            <DashboardTasksWidget
+              taskAssignments={taskAssignments}
+              onNavigateToTasks={onNavigateToTasks}
+            />
+          )}
         </div>
 
         <div className="flex flex-col gap-4">
-          {!isContractor && <HeadcountBadge stats={ytdStats} loading={headcountLoading} poLabel={headcountSettings.po_label} />}
+          {!isContractor && blocks.headcountWidget && <HeadcountBadge stats={ytdStats} loading={headcountLoading} poLabel={headcountSettings.po_label} />}
 
           <DashboardSpbPanel
             spbCategories={spbCategories}
@@ -417,17 +424,19 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
             onManualSuspendedWorksChange={setManualSuspendedWorks}
             onPyramidSave={savePyramidStats}
             pyramidSaving={pyramidSaving}
+            showSpb={blocks.spb}
+            showPyramid={blocks.pyramid}
           />
         </div>
       </div>
 
-      <TopContractors topContractors={topContractors} />
+      {blocks.topContractors && <TopContractors topContractors={topContractors} />}
 
-      <PivotTable pivotRows={pivotRows} contractors={contractors} grandTotal={grandTotal} />
+      {blocks.pivotTable && <PivotTable pivotRows={pivotRows} contractors={contractors} grandTotal={grandTotal} />}
 
-      <RemarksChart chartData={chartData} contractors={contractors} />
+      {blocks.remarksChart && <RemarksChart chartData={chartData} contractors={contractors} />}
 
-      {pivotRows.length === 0 && (
+      {blocks.pivotTable && pivotRows.length === 0 && (
         <div className="bg-card border border-border rounded-xl py-16 flex flex-col items-center gap-3 text-muted-foreground">
           <Icon name="BarChart3" size={36} className="opacity-30" />
           <p className="text-sm">Нет данных для отображения</p>

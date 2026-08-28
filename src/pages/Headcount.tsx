@@ -9,6 +9,7 @@ import HeadcountSummaryTable from "@/components/headcount/HeadcountSummaryTable"
 import MonthDetailModal from "@/components/headcount/MonthDetailModal";
 import HeadcountSettingsBar from "@/components/headcount/HeadcountSettingsBar";
 import HeadcountTrendChart from "@/components/headcount/HeadcountTrendChart";
+import { VisibilitySettings, defaultVisibilitySettings } from "@/lib/visibilityTypes";
 
 type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines";
 
@@ -17,20 +18,22 @@ interface Props {
   onLogout: () => void;
   onTabChange?: (tab: Tab) => void;
   activeTab?: Tab;
+  visibility?: VisibilitySettings;
 }
 
-export default function Headcount({ user, onLogout, onTabChange, activeTab = "headcount" }: Props) {
+export default function Headcount({ user, onLogout, onTabChange, activeTab = "headcount", visibility }: Props) {
   const year = new Date().getFullYear();
-  const canViewHeadcount = user.role === "manager" || user.role === "admin";
+  const tabs = visibility?.tabs ?? defaultVisibilitySettings().tabs;
+  const canViewHeadcount = (user.role === "manager" || user.role === "admin") && tabs.headcount;
 
   const NAV_TABS: { id: Tab; label: string; icon: string }[] = [
     { id: "dashboard", label: "Главная", icon: "LayoutDashboard" },
-    { id: "prescriptions", label: "Предписания", icon: "ClipboardList" },
-    { id: "inspections", label: "Проверки", icon: "TableProperties" },
-    { id: "incidents", label: "Происшествия", icon: "TriangleAlert" },
-    { id: "tasks", label: "Задачи", icon: "ListChecks" },
+    ...(tabs.prescriptions ? [{ id: "prescriptions" as Tab, label: "Предписания", icon: "ClipboardList" }] : []),
+    ...(tabs.inspections ? [{ id: "inspections" as Tab, label: "Проверки", icon: "TableProperties" }] : []),
+    ...(tabs.incidents ? [{ id: "incidents" as Tab, label: "Происшествия", icon: "TriangleAlert" }] : []),
+    ...(tabs.tasks ? [{ id: "tasks" as Tab, label: "Задачи", icon: "ListChecks" }] : []),
     ...(canViewHeadcount ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }] : []),
-    ...(user.role === "manager" || user.role === "admin"
+    ...((user.role === "manager" || user.role === "admin") && tabs.fines
       ? [{ id: "fines" as Tab, label: "Штрафы", icon: "Banknote" }]
       : []),
   ];

@@ -1,6 +1,7 @@
 import Icon from "@/components/ui/icon";
 import { AppUser } from "@/lib/auth";
 import UserMenu from "@/components/UserMenu";
+import { VisibilitySettings, defaultVisibilitySettings } from "@/lib/visibilityTypes";
 
 interface PrescriptionListHeaderProps {
   user: AppUser;
@@ -12,14 +13,16 @@ interface PrescriptionListHeaderProps {
   onHeadcountClick?: () => void;
   onFinesClick?: () => void;
   activeTab?: string;
+  visibility?: VisibilitySettings;
 }
 
 export function PrescriptionListHeader({
   user, onLogout, onInspectionsClick, onDashboardClick, onIncidentsClick, onTasksClick,
-  onHeadcountClick, onFinesClick, activeTab = "prescriptions",
+  onHeadcountClick, onFinesClick, activeTab = "prescriptions", visibility,
 }: PrescriptionListHeaderProps) {
-  const canViewHeadcount = user.role === "manager" || user.role === "admin";
-  const canViewFines = user.role === "manager" || user.role === "admin";
+  const tabs = visibility?.tabs ?? defaultVisibilitySettings().tabs;
+  const canViewHeadcount = (user.role === "manager" || user.role === "admin") && tabs.headcount;
+  const canViewFines = (user.role === "manager" || user.role === "admin") && tabs.fines;
   return (
     <>
       <header className="border-b border-border px-6 py-4 flex items-center justify-between bg-background sticky top-0 z-30">
@@ -51,7 +54,7 @@ export function PrescriptionListHeader({
               <Icon name="ClipboardList" size={14} />
               Предписания
             </button>
-            {onInspectionsClick && (
+            {tabs.inspections && onInspectionsClick && (
               <button
                 onClick={onInspectionsClick}
                 className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "inspections" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
@@ -60,20 +63,24 @@ export function PrescriptionListHeader({
                 Проверки
               </button>
             )}
-            <button
-              onClick={onIncidentsClick}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "incidents" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-            >
-              <Icon name="TriangleAlert" size={14} />
-              Происшествия
-            </button>
-            <button
-              onClick={onTasksClick}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "tasks" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-            >
-              <Icon name="ListChecks" size={14} />
-              Задачи
-            </button>
+            {tabs.incidents && (
+              <button
+                onClick={onIncidentsClick}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "incidents" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                <Icon name="TriangleAlert" size={14} />
+                Происшествия
+              </button>
+            )}
+            {tabs.tasks && (
+              <button
+                onClick={onTasksClick}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "tasks" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                <Icon name="ListChecks" size={14} />
+                Задачи
+              </button>
+            )}
             {canViewHeadcount && onHeadcountClick && (
               <button
                 onClick={onHeadcountClick}

@@ -7,6 +7,7 @@ import {
 import { PrescriptionListHeader } from "@/components/prescriptions/list/PrescriptionListHeader";
 import { PrescriptionListFilters } from "@/components/prescriptions/list/PrescriptionListFilters";
 import { PrescriptionListTable } from "@/components/prescriptions/list/PrescriptionListTable";
+import { VisibilitySettings } from "@/lib/visibilityTypes";
 import { useState, useEffect } from "react";
 
 const OBJECTS_API = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
@@ -55,6 +56,7 @@ interface PrescriptionListProps {
   onFinesClick?: () => void;
   onStatusChange?: (p: Prescription, status: Status) => void;
   activeTab?: string;
+  visibility?: VisibilitySettings;
 }
 
 export function PrescriptionList({
@@ -65,6 +67,7 @@ export function PrescriptionList({
   onFilterObjectChange, onFilterContractorChange, onFilterInspectorChange, onDateFromChange, onDateToChange,
   onSelect, onAddClick, onInspectionsClick,
   onDashboardClick, onIncidentsClick, onTasksClick, onHeadcountClick, onFinesClick, onStatusChange, activeTab = "prescriptions",
+  visibility,
 }: PrescriptionListProps) {
 
   const [colFilters, setColFilters] = useState({
@@ -125,6 +128,7 @@ export function PrescriptionList({
         onHeadcountClick={onHeadcountClick}
         onFinesClick={onFinesClick}
         activeTab={activeTab}
+        visibility={visibility}
       />
 
       <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-5">

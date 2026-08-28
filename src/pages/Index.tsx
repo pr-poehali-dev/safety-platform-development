@@ -18,6 +18,8 @@ import { useInspectionNotifications } from "@/hooks/useInspectionNotifications";
 import { usePrescriptionNotifications } from "@/hooks/usePrescriptionNotifications";
 import { playNotificationSound } from "@/lib/notificationSound";
 import Icon from "@/components/ui/icon";
+import { VisibilitySettings, TabKey, defaultVisibilitySettings } from "@/lib/visibilityTypes";
+import { useResolvedVisibility } from "@/hooks/useVisibilitySettings";
 
 interface IndexProps {
   user: AppUser;
@@ -25,6 +27,7 @@ interface IndexProps {
   onUserUpdate?: (u: AppUser) => void;
   showTasksPopup?: boolean;
   onTasksPopupShown?: () => void;
+  visibilityOverride?: VisibilitySettings | null;
 }
 
 const API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
@@ -33,7 +36,9 @@ const USERS_URL = "https://functions.poehali.dev/9f213d27-a6a3-4ce0-b6b1-0d26003
 
 type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines";
 
-export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, onTasksPopupShown }: IndexProps) {
+export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, onTasksPopupShown, visibilityOverride }: IndexProps) {
+  const resolvedVisibility = useResolvedVisibility(user);
+  const visibility: VisibilitySettings = visibilityOverride ?? resolvedVisibility.settings ?? defaultVisibilitySettings();
   const [tab, setTab] = useState<Tab>("dashboard");
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,6 +155,13 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Если текущая вкладка скрыта настройками видимости — переключаемся на Главную
+  useEffect(() => {
+    if (resolvedVisibility.loading) return;
+    if (tab === "dashboard") return;
+    if (!visibility.tabs[tab as TabKey]) setTab("dashboard");
+  }, [tab, visibility, resolvedVisibility.loading]);
+
   const isContractor = user.role === "contractor";
   const canEdit = user.role === "admin" || user.role === "specialist" || user.role === "manager";
 
@@ -175,15 +187,17 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
     updatePrescription(updated);
   };
 
-  const canViewHeadcount = user.role === "manager" || user.role === "admin";
-  const canViewFines = user.role === "manager" || user.role === "admin";
+  const canViewHeadcount = (user.role === "manager" || user.role === "admin") && visibility.tabs.headcount;
+  const canViewFines = (user.role === "manager" || user.role === "admin") && visibility.tabs.fines;
+
+  const tabVisible = (key: TabKey) => visibility.tabs[key];
 
   const NAV_TABS: { id: Tab; label: string; icon: string }[] = [
     { id: "dashboard", label: "Главная", icon: "LayoutDashboard" },
-    { id: "prescriptions", label: "Предписания", icon: "ClipboardList" },
-    { id: "inspections", label: "Проверки", icon: "TableProperties" },
-    { id: "incidents", label: "Происшествия", icon: "TriangleAlert" },
-    { id: "tasks", label: "Задачи", icon: "ListChecks" },
+    ...(tabVisible("prescriptions") ? [{ id: "prescriptions" as Tab, label: "Предписания", icon: "ClipboardList" }] : []),
+    ...(tabVisible("inspections") ? [{ id: "inspections" as Tab, label: "Проверки", icon: "TableProperties" }] : []),
+    ...(tabVisible("incidents") ? [{ id: "incidents" as Tab, label: "Происшествия", icon: "TriangleAlert" }] : []),
+    ...(tabVisible("tasks") ? [{ id: "tasks" as Tab, label: "Задачи", icon: "ListChecks" }] : []),
     ...(canViewHeadcount ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }] : []),
     ...(canViewFines ? [{ id: "fines" as Tab, label: "Штрафы", icon: "Banknote" }] : []),
   ];
@@ -285,18 +299,19 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
     </header>
   );
 
-  if (tab === "incidents") {
+  if (tab === "incidents" && tabVisible("incidents")) {
     return (
       <Incidents
         user={user}
         onLogout={onLogout}
         onTabChange={(t) => setTab(t as Tab)}
         activeTab={tab}
+        visibility={visibility}
       />
     );
   }
 
-  if (tab === "inspections") {
+  if (tab === "inspections" && tabVisible("inspections")) {
     return (
       <Inspections
         user={user}
@@ -307,6 +322,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
         initialSuspended={inspectionsSuspended}
         initialMine={inspectionsMine}
         initialOpenId={inspectionOpenId}
+        visibility={visibility}
       />
     );
   }
@@ -318,6 +334,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
         onLogout={onLogout}
         onTabChange={(t) => setTab(t as Tab)}
         activeTab={tab}
+        visibility={visibility}
       />
     );
   }
@@ -329,11 +346,12 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
         onLogout={onLogout}
         onTabChange={(t) => setTab(t as Tab)}
         activeTab={tab}
+        visibility={visibility}
       />
     );
   }
 
-  if (tab === "tasks") {
+  if (tab === "tasks" && tabVisible("tasks")) {
     return (
       <div className="min-h-screen bg-background" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
         {renderHeader()}
@@ -366,6 +384,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
         <Dashboard
           user={user}
           taskAssignments={assignments}
+          visibility={visibility}
           onNavigateToPrescriptions={(status, mine, suspended) => {
             setFilterStatus(status && status !== "Все" ? [status] : []);
             setFilterMine(mine ?? false);
@@ -401,6 +420,10 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
         )}
       </div>
     );
+  }
+
+  if (!tabVisible("prescriptions")) {
+    return null;
   }
 
   return (
@@ -441,6 +464,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
         onFinesClick={canViewFines ? () => setTab("fines") : undefined}
         onStatusChange={changePrescriptionStatus}
         activeTab={tab}
+        visibility={visibility}
       />
 
       {showAdd && canEdit && (
