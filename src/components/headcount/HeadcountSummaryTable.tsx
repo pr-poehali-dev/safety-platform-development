@@ -4,6 +4,7 @@ import Icon from "@/components/ui/icon";
 
 interface Props {
   year: number;
+  periodLabel: string;
   months: MonthStats[];
   onMonthClick: (m: MonthStats) => void;
 }
@@ -13,7 +14,7 @@ const fmtAvg = (n: number | null) => n === null ? "—" : Math.round(n).toLocale
 
 const highlightMonths = new Set([7]); // Июль выделен жёлтым как в исходном файле
 
-export default function HeadcountSummaryTable({ year, months, onMonthClick }: Props) {
+export default function HeadcountSummaryTable({ year, periodLabel, months, onMonthClick }: Props) {
   const grandPo = months.reduce((s, m) => s + m.poHours, 0);
   const grandSbd = months.reduce((s, m) => s + m.sbdHours, 0);
 
@@ -23,8 +24,8 @@ export default function HeadcountSummaryTable({ year, months, onMonthClick }: Pr
         <table className="w-full text-xs border-collapse">
           <thead>
             <tr>
-              <th className="text-left px-3 py-2 font-semibold text-muted-foreground border-b border-border bg-secondary/30">Год</th>
-              <th colSpan={months.length * 2} className="text-center px-3 py-2 font-semibold border-b border-border bg-secondary/30">{year}</th>
+              <th className="text-left px-3 py-2 font-semibold text-muted-foreground border-b border-border bg-secondary/30">{year}</th>
+              <th colSpan={months.length * 2} className="text-center px-3 py-2 font-semibold border-b border-border bg-secondary/30">{periodLabel}</th>
             </tr>
             <tr>
               <th className="text-left px-3 py-2 font-semibold text-muted-foreground border-b border-border">Месяц</th>
@@ -95,7 +96,7 @@ export default function HeadcountSummaryTable({ year, months, onMonthClick }: Pr
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-border bg-secondary/30">
-              <td className="px-3 py-2.5 font-bold text-foreground whitespace-nowrap">Итого за год</td>
+              <td className="px-3 py-2.5 font-bold text-foreground whitespace-nowrap">Итого за полугодие</td>
               <td colSpan={months.length * 2} className="text-center px-3 py-2.5 font-bold text-foreground">
                 {fmt(grandPo + grandSbd)} ч (ПО {fmt(grandPo)} + СБД {fmt(grandSbd)})
               </td>

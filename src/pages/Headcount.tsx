@@ -34,6 +34,8 @@ export default function Headcount({ user, onLogout, onTabChange, activeTab = "he
   const canEdit = user.role === "manager";
 
   const months = useMemo(() => buildMonthStats(year, days), [year, days]);
+  const firstHalf = months.slice(0, 6);
+  const secondHalf = months.slice(6, 12);
   const activeMonth: MonthStats | null = openMonth !== null ? months.find(m => m.month === openMonth) ?? null : null;
 
   const handleSaveDay = async (date: string, po: number | null, sbd: number | null) => {
@@ -97,7 +99,8 @@ export default function Headcount({ user, onLogout, onTabChange, activeTab = "he
               <Icon name="MousePointerClick" size={12} />
               Нажмите на месяц, чтобы посмотреть данные по дням{canEdit ? " и отредактировать их" : ""}
             </p>
-            <HeadcountSummaryTable year={year} months={months} onMonthClick={m => setOpenMonth(m.month)} />
+            <HeadcountSummaryTable year={year} periodLabel="Январь — Июнь" months={firstHalf} onMonthClick={m => setOpenMonth(m.month)} />
+            <HeadcountSummaryTable year={year} periodLabel="Июль — Декабрь" months={secondHalf} onMonthClick={m => setOpenMonth(m.month)} />
           </>
         )}
       </main>
