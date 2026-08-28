@@ -10,8 +10,11 @@ import RemarksChart from "@/components/dashboard/RemarksChart";
 import DashboardStatCards from "@/components/dashboard/DashboardStatCards";
 import DashboardTasksWidget from "@/components/dashboard/DashboardTasksWidget";
 import DashboardSpbPanel from "@/components/dashboard/DashboardSpbPanel";
+import HeadcountBadge from "@/components/dashboard/HeadcountBadge";
 import { type PivotRow } from "@/components/dashboard/PivotTable";
 import { TaskAssignment } from "@/lib/taskTypes";
+import { useHeadcount } from "@/hooks/useHeadcount";
+import { buildYtdStats } from "@/lib/headcountTypes";
 
 const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
 const INSPECTIONS_API = "https://functions.poehali.dev/b2222d00-a1b0-43fd-966d-3f39732867c3";
@@ -71,6 +74,10 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
   const [pyramidSaving, setPyramidSaving] = useState(false);
 
   const [myObjectNames, setMyObjectNames] = useState<string[]>([]);
+
+  const currentYear = new Date().getFullYear();
+  const { days: headcountDays, loading: headcountLoading } = useHeadcount(currentYear);
+  const ytdStats = useMemo(() => buildYtdStats(headcountDays), [headcountDays]);
 
   useEffect(() => {
     Promise.all([
@@ -393,19 +400,23 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
           />
         </div>
 
-        <DashboardSpbPanel
-          spbCategories={spbCategories}
-          spbStats={spbStats}
-          spbTotal={spbTotal}
-          pyramidData={pyramidData}
-          pyramidEditable={isAdmin}
-          manualDangerActions={manualDangerActions}
-          manualSuspendedWorks={manualSuspendedWorks}
-          onManualDangerActionsChange={setManualDangerActions}
-          onManualSuspendedWorksChange={setManualSuspendedWorks}
-          onPyramidSave={savePyramidStats}
-          pyramidSaving={pyramidSaving}
-        />
+        <div className="flex flex-col gap-4">
+          <HeadcountBadge stats={ytdStats} loading={headcountLoading} />
+
+          <DashboardSpbPanel
+            spbCategories={spbCategories}
+            spbStats={spbStats}
+            spbTotal={spbTotal}
+            pyramidData={pyramidData}
+            pyramidEditable={isAdmin}
+            manualDangerActions={manualDangerActions}
+            manualSuspendedWorks={manualSuspendedWorks}
+            onManualDangerActionsChange={setManualDangerActions}
+            onManualSuspendedWorksChange={setManualSuspendedWorks}
+            onPyramidSave={savePyramidStats}
+            pyramidSaving={pyramidSaving}
+          />
+        </div>
       </div>
 
       <TopContractors topContractors={topContractors} />
