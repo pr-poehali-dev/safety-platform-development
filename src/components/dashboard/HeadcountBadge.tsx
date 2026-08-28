@@ -31,7 +31,8 @@ export default function HeadcountBadge({ stats, loading }: Props) {
           <p className="text-sm font-semibold text-foreground">ПО {fmtAvg(stats.poAvgListed)} · СБД {fmtAvg(stats.sbdAvgListed)}</p>
         </div>
         <div>
-          <p className="text-[11px] text-muted-foreground mb-1">ЧеловекоЧасы (за текущий месяц)</p>
+          <p className="text-[11px] text-muted-foreground mb-1">Человекочасы 
+(за текущий месяц)</p>
           <p className="text-sm font-semibold text-foreground">ПО {fmt(stats.poHours)} · СБД {fmt(stats.sbdHours)}</p>
         </div>
       </div>
