@@ -5,7 +5,7 @@ import { Template } from "@/lib/template";
 import { downloadPrescriptionWord } from "@/lib/printPrescription";
 import {
   Prescription, Comment, Attachment, Status,
-  overallStatus,
+  overallStatus, effectiveStatus,
 } from "@/lib/prescriptionTypes";
 import { PrescriptionDetailHeader } from "@/components/prescriptions/detail/PrescriptionDetailHeader";
 import { PrescriptionRemarksTab } from "@/components/prescriptions/detail/PrescriptionRemarksTab";
@@ -267,6 +267,7 @@ export function PrescriptionDetail({
           startIndex={lightbox.index}
           onClose={() => setLightbox(null)}
           onSave={(idx, dataUrl) => saveEditedPhoto(lightbox.remarkId, idx, dataUrl)}
+          editable={effectiveStatus(p.remarks.find(r => r.id === lightbox.remarkId)!) === "Черновик"}
         />
       )}
 

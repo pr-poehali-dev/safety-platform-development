@@ -11,9 +11,10 @@ interface EditablePhotoLightboxProps {
   startIndex: number;
   onClose: () => void;
   onSave: (index: number, dataUrl: string) => Promise<void> | void;
+  editable?: boolean;
 }
 
-export function EditablePhotoLightbox({ photos, startIndex, onClose, onSave }: EditablePhotoLightboxProps) {
+export function EditablePhotoLightbox({ photos, startIndex, onClose, onSave, editable = true }: EditablePhotoLightboxProps) {
   const [index, setIndex] = useState(startIndex);
   const [editing, setEditing] = useState(false);
   const [tool, setTool] = useState<Tool>("pen");
@@ -226,13 +227,15 @@ export function EditablePhotoLightbox({ photos, startIndex, onClose, onSave }: E
       {!editing ? (
         <div className="relative flex flex-col items-center gap-4">
           <img src={photos[index]} alt={`Фото ${index + 1}`} className="max-w-[90vw] max-h-[75vh] rounded-lg object-contain" />
-          <button
-            onClick={() => setEditing(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm transition-colors"
-          >
-            <Icon name="Pencil" size={16} />
-            Редактировать
-          </button>
+          {editable && (
+            <button
+              onClick={() => setEditing(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm transition-colors"
+            >
+              <Icon name="Pencil" size={16} />
+              Редактировать
+            </button>
+          )}
         </div>
       ) : (
         <div className="relative flex flex-col items-center gap-3" onClick={e => e.stopPropagation()}>
