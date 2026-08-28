@@ -200,7 +200,7 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
     { id: "inspections", label: "Проверки", icon: "TableProperties" },
     { id: "incidents", label: "Происшествия", icon: "TriangleAlert" },
     { id: "tasks", label: "Задачи", icon: "ListChecks" },
-    ...(user.role === "manager" ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }] : []),
+    ...(user.role === "manager" || user.role === "admin" ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }] : []),
     { id: "fines", label: "Штрафы", icon: "Banknote" },
   ];
 

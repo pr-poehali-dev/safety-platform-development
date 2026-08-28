@@ -21,7 +21,7 @@ interface Props {
 
 export default function Headcount({ user, onLogout, onTabChange, activeTab = "headcount" }: Props) {
   const year = new Date().getFullYear();
-  const canViewHeadcount = user.role === "manager";
+  const canViewHeadcount = user.role === "manager" || user.role === "admin";
 
   const NAV_TABS: { id: Tab; label: string; icon: string }[] = [
     { id: "dashboard", label: "Главная", icon: "LayoutDashboard" },
@@ -40,7 +40,7 @@ export default function Headcount({ user, onLogout, onTabChange, activeTab = "he
   const [saving, setSaving] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
 
-  const canEdit = user.role === "manager";
+  const canEdit = user.role === "manager" || user.role === "admin";
 
   const months = useMemo(() => buildMonthStats(year, days, settings.po_rate, settings.sbd_rate), [year, days, settings]);
   const firstHalf = months.slice(0, 6);

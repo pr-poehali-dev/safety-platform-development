@@ -18,7 +18,7 @@ export function PrescriptionListHeader({
   user, onLogout, onInspectionsClick, onDashboardClick, onIncidentsClick, onTasksClick,
   onHeadcountClick, onFinesClick, activeTab = "prescriptions",
 }: PrescriptionListHeaderProps) {
-  const canViewHeadcount = user.role === "manager";
+  const canViewHeadcount = user.role === "manager" || user.role === "admin";
   const canViewFines = user.role === "manager" || user.role === "admin";
   return (
     <>
