@@ -1,16 +1,13 @@
 import Icon from "@/components/ui/icon";
-import { AppUser, ROLE_LABELS, ROLE_COLORS } from "@/lib/auth";
-import UserMenu from "@/components/UserMenu";
+import { AppUser } from "@/lib/auth";
 import { Template } from "@/lib/template";
-import { printPrescription, downloadPrescriptionWord } from "@/lib/printPrescription";
 import {
-  Prescription, Status, ALL_STATUSES,
-  effectiveStatus, overallStatus,
+  Prescription, Status, overallStatus,
 } from "@/lib/prescriptionTypes";
-import { StatusDropdown } from "@/components/prescriptions/StatusDropdown";
-import FilterDropdown from "@/components/inspections/FilterDropdown";
-import DateRangePicker from "@/components/ui/date-range-picker";
-import { useState, useRef, useEffect } from "react";
+import { PrescriptionListHeader } from "@/components/prescriptions/list/PrescriptionListHeader";
+import { PrescriptionListFilters } from "@/components/prescriptions/list/PrescriptionListFilters";
+import { PrescriptionListTable } from "@/components/prescriptions/list/PrescriptionListTable";
+import { useState, useEffect } from "react";
 
 const OBJECTS_API = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
 
@@ -20,145 +17,6 @@ function parsePresDate(str: string): Date | null {
   const [d, m, y] = str.split(".").map(Number);
   if (!d || !m || !y) return null;
   return new Date(y, m - 1, d);
-}
-
-function ColumnFilter({ label, options, value, onChange }: {
-  label: string;
-  options: string[];
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-        setSearch("");
-      }
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 50);
-  }, [open]);
-
-  const active = value !== "Все";
-  const filtered = search
-    ? options.filter(o => o.toLowerCase().includes(search.toLowerCase()))
-    : options;
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => { setOpen(o => !o); setSearch(""); }}
-        className={`flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider transition-colors ${active ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
-      >
-        {label}
-        <Icon name={active ? "FilterX" : "ChevronDown"} size={11} />
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-lg shadow-lg min-w-[200px]">
-          <div className="p-2 border-b border-border">
-            <input
-              ref={inputRef}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder={`Поиск...`}
-              className="w-full bg-background border border-border rounded px-2 py-1 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-            />
-          </div>
-          <div className="py-1 max-h-52 overflow-y-auto">
-            {!search && (
-              <button
-                onClick={() => { onChange("Все"); setOpen(false); setSearch(""); }}
-                className={`w-full text-left px-3 py-1.5 text-xs transition-colors hover:bg-secondary/50 ${value === "Все" ? "text-primary font-medium" : "text-muted-foreground"}`}
-              >
-                Все {label.toLowerCase()}
-              </button>
-            )}
-            {filtered.length === 0 ? (
-              <div className="px-3 py-2 text-xs text-muted-foreground">Ничего не найдено</div>
-            ) : filtered.map(opt => (
-              <button
-                key={opt}
-                onClick={() => { onChange(opt); setOpen(false); setSearch(""); }}
-                className={`w-full text-left px-3 py-1.5 text-xs transition-colors hover:bg-secondary/50 ${value === opt ? "text-primary font-medium" : "text-foreground"}`}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function StatusMultiSelect({ value, onChange }: {
-  value: string[];
-  onChange: (v: string[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const toggle = (s: string) => {
-    onChange(value.includes(s) ? value.filter(v => v !== s) : [...value, s]);
-  };
-
-  const label = value.length === 0 ? "Все" : value.length === 1 ? value[0] : `Статус: ${value.length}`;
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border font-medium transition-colors whitespace-nowrap ${value.length > 0 ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 bg-card"}`}
-      >
-        {label}
-        <Icon name="ChevronDown" size={12} />
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-lg shadow-lg min-w-[180px]">
-          <div className="py-1">
-            <button
-              onClick={() => { onChange([]); setOpen(false); }}
-              className={`w-full text-left px-3 py-1.5 text-xs transition-colors hover:bg-secondary/50 ${value.length === 0 ? "text-primary font-medium" : "text-foreground"}`}
-            >
-              Все статусы
-            </button>
-            <div className="h-px bg-border my-1" />
-            {ALL_STATUSES.map(s => (
-              <label
-                key={s}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs text-foreground cursor-pointer hover:bg-secondary/50"
-              >
-                <input
-                  type="checkbox"
-                  checked={value.includes(s)}
-                  onChange={() => toggle(s)}
-                  className="accent-primary"
-                />
-                {s}
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 interface PrescriptionListProps {
@@ -223,9 +81,6 @@ export function PrescriptionList({
   const setColFilter = (key: keyof typeof colFilters) => (v: string) =>
     setColFilters(prev => ({ ...prev, [key]: v }));
 
-  const uniqueObjects = [...new Set(prescriptions.map(p => p.object))].sort();
-  const uniqueContractors = [...new Set(prescriptions.map(p => p.contractor).filter(Boolean))].sort();
-  const uniqueInspectors = [...new Set(prescriptions.map(p => p.inspector).filter(Boolean))].sort();
   const uniqueDeadlines = [...new Set(prescriptions.flatMap(p => p.remarks.map(r => r.deadline)).filter(Boolean))].sort();
 
   const isProjectTeam = user.role === "project_team";
@@ -258,61 +113,15 @@ export function PrescriptionList({
   return (
     <div className="min-h-screen bg-background" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
 
-      <header className="border-b border-border px-6 py-4 flex items-center justify-between bg-background sticky top-0 z-30">
-        <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-            <Icon name="Shield" size={14} className="text-primary-foreground" />
-          </div>
-          <span className="text-sm font-semibold tracking-tight">Охрана Труда Онлайн</span>
-        </div>
-        <UserMenu user={user} onLogout={onLogout} />
-      </header>
-
-      {/* Навигационные вкладки */}
-      {(onInspectionsClick || onDashboardClick) && (
-        <div className="border-b border-border bg-background">
-          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 flex gap-1 pt-2">
-            {onDashboardClick && (
-              <button
-                onClick={onDashboardClick}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "dashboard" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-              >
-                <Icon name="LayoutDashboard" size={14} />
-                Главная
-              </button>
-            )}
-            <button
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "prescriptions" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-            >
-              <Icon name="ClipboardList" size={14} />
-              Предписания
-            </button>
-            {onInspectionsClick && (
-              <button
-                onClick={onInspectionsClick}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "inspections" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-              >
-                <Icon name="TableProperties" size={14} />
-                Проверки
-              </button>
-            )}
-            <button
-              onClick={onIncidentsClick}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "incidents" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-            >
-              <Icon name="TriangleAlert" size={14} />
-              Происшествия
-            </button>
-            <button
-              onClick={onTasksClick}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "tasks" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-            >
-              <Icon name="ListChecks" size={14} />
-              Задачи
-            </button>
-          </div>
-        </div>
-      )}
+      <PrescriptionListHeader
+        user={user}
+        onLogout={onLogout}
+        onInspectionsClick={onInspectionsClick}
+        onDashboardClick={onDashboardClick}
+        onIncidentsClick={onIncidentsClick}
+        onTasksClick={onTasksClick}
+        activeTab={activeTab}
+      />
 
       <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-5">
 
@@ -339,183 +148,43 @@ export function PrescriptionList({
           )}
         </div>
 
-        {/* Поиск */}
-        <div className="relative max-w-sm">
-          <Icon name="Search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={search}
-            onChange={e => onSearchChange(e.target.value)}
-            placeholder="Поиск по номеру, объекту, подрядчику..."
-            className="w-full bg-card border border-border rounded-lg pl-8 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-          />
-        </div>
+        <PrescriptionListFilters
+          prescriptions={prescriptions}
+          search={search}
+          filterStatus={filterStatus}
+          filterMine={filterMine}
+          filterSuspended={filterSuspended}
+          filterObject={filterObject}
+          filterContractor={filterContractor}
+          filterInspector={filterInspector}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          isContractor={isContractor}
+          isProjectTeam={isProjectTeam}
+          onSearchChange={onSearchChange}
+          onFilterChange={onFilterChange}
+          onFilterMineChange={onFilterMineChange}
+          onFilterSuspendedChange={onFilterSuspendedChange}
+          onFilterObjectChange={onFilterObjectChange}
+          onFilterContractorChange={onFilterContractorChange}
+          onFilterInspectorChange={onFilterInspectorChange}
+          onDateFromChange={onDateFromChange}
+          onDateToChange={onDateToChange}
+          filteredCount={filtered.length}
+        />
 
-        {/* Фильтры */}
-        <div className="flex flex-wrap items-center gap-2 bg-card border border-border rounded-xl px-4 py-3">
-          <Icon name="Filter" size={14} className="text-muted-foreground flex-shrink-0" />
-          <DateRangePicker
-            dateFrom={dateFrom}
-            dateTo={dateTo}
-            onFromChange={onDateFromChange}
-            onToChange={onDateToChange}
-            onReset={() => { onDateFromChange(""); onDateToChange(""); }}
-          />
-          <div className="w-px h-4 bg-border" />
-          <StatusMultiSelect value={filterStatus} onChange={onFilterChange} />
-          <FilterDropdown label="Объект" options={uniqueObjects} value={filterObject} onChange={onFilterObjectChange} />
-          <FilterDropdown label="Подрядчик" options={uniqueContractors} value={filterContractor} onChange={onFilterContractorChange} />
-          <FilterDropdown label="Выдал" options={uniqueInspectors} value={filterInspector} onChange={onFilterInspectorChange} />
-          <button
-            onClick={() => onFilterSuspendedChange(!filterSuspended)}
-            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors whitespace-nowrap ${filterSuspended ? "border-red-500 bg-red-500/10 text-red-400" : "border-border bg-secondary/30 text-muted-foreground hover:text-foreground"}`}
-          >
-            <Icon name="OctagonX" size={12} />
-            Приостановлено
-          </button>
-          {!isContractor && !isProjectTeam && (
-            <button
-              onClick={() => onFilterMineChange(!filterMine)}
-              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors whitespace-nowrap ${filterMine ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/30 text-muted-foreground hover:text-foreground"}`}
-            >
-              <Icon name="User" size={12} />
-              Мои
-            </button>
-          )}
-          {(dateFrom || dateTo || filterStatus.length > 0 || filterObject.length > 0 || filterContractor.length > 0 || filterInspector.length > 0 || filterSuspended || filterMine) && (
-            <button
-              onClick={() => {
-                onDateFromChange(""); onDateToChange(""); onFilterChange([]);
-                onFilterObjectChange([]); onFilterContractorChange([]); onFilterInspectorChange([]);
-                onFilterSuspendedChange(false); onFilterMineChange(false);
-              }}
-              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-            >
-              <Icon name="X" size={11} />
-              Сбросить
-            </button>
-          )}
-          <span className="ml-auto text-xs text-muted-foreground">{filtered.length} записей</span>
-        </div>
-
-        {/* Таблица */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Icon name="Loader" size={28} className="text-primary animate-spin mb-3" />
-              <p className="text-sm text-muted-foreground">Загрузка предписаний...</p>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Icon name="ClipboardList" size={40} className="text-muted-foreground/30 mb-3" />
-              <p className="text-sm text-muted-foreground">Предписания не найдены</p>
-              {search && <p className="text-xs text-muted-foreground mt-1">Попробуйте изменить параметры поиска</p>}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table style={{ tableLayout: "fixed", width: "1350px", minWidth: "1350px" }}>
-                <thead>
-                  <tr className="border-b border-border bg-secondary/20">
-                    <th style={{ width: "120px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Номер</th>
-                    <th style={{ width: "350px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Объект</th>
-                    <th style={{ width: "180px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Подрядчик</th>
-                    <th style={{ width: "180px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Выдал</th>
-                    <th style={{ width: "120px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Замечания</th>
-                    <th style={{ width: "130px" }} className="text-left px-5 py-3">
-                      <ColumnFilter label="Ближайший срок" options={uniqueDeadlines} value={colFilters.deadline} onChange={setColFilter("deadline")} />
-                    </th>
-                    <th style={{ width: "110px" }} className="text-left px-5 py-3 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Статус</th>
-                    <th style={{ width: "160px" }} className="px-5 py-3" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {filtered.map(p => {
-                    const status = overallStatus(p.remarks);
-                    const nearestDeadline = p.remarks.map(r => r.deadline).sort()[0];
-                    return (
-                      <tr
-                        key={p.id}
-                        onClick={() => onSelect(p)}
-                        className="hover:bg-secondary/30 cursor-pointer transition-colors group"
-                      >
-                        <td className="px-5 py-4">
-                          <span className="text-xs font-medium text-primary" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{p.number}</span>
-                          <div className="text-[11px] text-muted-foreground mt-0.5">{p.date}</div>
-                        </td>
-                        <td className="px-5 py-4 text-sm text-foreground">{p.object}</td>
-                        <td className="px-5 py-4">
-                          <span className="text-sm text-foreground">{p.contractor}</span>
-                          {p.responsible && <div className="text-[11px] text-muted-foreground mt-0.5">{p.responsible}</div>}
-                        </td>
-                        <td className="px-5 py-4 max-w-[180px]">
-                          {p.inspector ? (() => {
-                            const parts = p.inspector.trim().split(/\s+/);
-                            let nameStart = parts.length;
-                            for (let i = parts.length - 1; i >= 1; i--) {
-                              if (/^[А-ЯЁ]/.test(parts[i])) nameStart = i; else break;
-                            }
-                            const position = parts.slice(0, nameStart).join(" ");
-                            const name = parts.slice(nameStart).join(" ");
-                            return <>
-                              {name && <div className="text-sm text-foreground">{name}</div>}
-                              {position && <div className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{position}</div>}
-                            </>;
-                          })() : <span className="text-muted-foreground text-sm">—</span>}
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-medium text-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{p.remarks.length}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {p.remarks.length === 1 ? "замечание" : p.remarks.length < 5 ? "замечания" : "замечаний"}
-                              </span>
-                            </div>
-                            {(() => { const ov = p.remarks.filter(r => effectiveStatus(r) === "Просрочено").length; return ov > 0 ? <span className="text-[10px] text-red-400 bg-red-400/10 border border-red-400/20 px-1.5 py-0.5 rounded font-medium w-fit">{ov} просрочено</span> : null; })()}
-                            {(() => { const fx = p.remarks.filter(r => effectiveStatus(r) === "Устранено").length; return fx > 0 ? <span className="text-[10px] text-green-400 bg-green-400/10 border border-green-400/20 px-1.5 py-0.5 rounded font-medium w-fit">{fx} устранено</span> : null; })()}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <span className={`text-sm ${status === "Просрочено" ? "text-red-400 font-medium" : "text-foreground"}`} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                            {nearestDeadline}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4">
-                          <StatusDropdown
-                            status={status}
-                            editable={user.role === "manager" || p.createdBy === user.login}
-                            onChange={s => onStatusChange?.(p, s)}
-                          />
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-2 justify-end">
-                            <div className="flex flex-col gap-1.5 opacity-0 group-hover:opacity-100">
-                              <button
-                                onClick={e => { e.stopPropagation(); printPrescription(p, activeTemplate); }}
-                                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors whitespace-nowrap"
-                                title="Распечатать предписание"
-                              >
-                                <Icon name="Printer" size={13} />
-                                Печать
-                              </button>
-                              <button
-                                onClick={e => { e.stopPropagation(); downloadPrescriptionWord(p, activeTemplate); }}
-                                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors whitespace-nowrap"
-                                title="Скачать в формате Word"
-                              >
-                                <Icon name="Download" size={13} />
-                                Скачать
-                              </button>
-                            </div>
-                            <Icon name="ChevronRight" size={15} className="text-muted-foreground group-hover:text-foreground transition-colors" />
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        <PrescriptionListTable
+          user={user}
+          loading={loading}
+          filtered={filtered}
+          search={search}
+          uniqueDeadlines={uniqueDeadlines}
+          colFilterDeadline={colFilters.deadline}
+          onColFilterDeadlineChange={setColFilter("deadline")}
+          activeTemplate={activeTemplate}
+          onSelect={onSelect}
+          onStatusChange={onStatusChange}
+        />
       </main>
     </div>
   );
