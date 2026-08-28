@@ -13,8 +13,6 @@ interface Props {
 const fmt = (n: number) => n === 0 ? "0" : n.toLocaleString("ru-RU");
 const fmtAvg = (n: number | null) => n === null ? "—" : Math.round(n).toLocaleString("ru-RU");
 
-const highlightMonths = new Set([7]); // Июль выделен жёлтым как в исходном файле
-
 export default function HeadcountSummaryTable({ year, periodLabel, months, poLabel = "ПО", onMonthClick }: Props) {
   const grandPo = months.reduce((s, m) => s + m.poHours, 0);
   const grandSbd = months.reduce((s, m) => s + m.sbdHours, 0);
@@ -36,9 +34,7 @@ export default function HeadcountSummaryTable({ year, periodLabel, months, poLab
                   colSpan={2}
                   onClick={() => onMonthClick(m)}
                   title="Показать детали по дням"
-                  className={`text-center px-2 py-2 font-semibold border-b border-border cursor-pointer transition-colors hover:opacity-80 ${
-                    highlightMonths.has(m.month) ? "bg-yellow-400/80 text-black" : "bg-primary/10 text-foreground"
-                  }`}
+                  className="text-center px-2 py-2 font-semibold border-b border-border cursor-pointer transition-colors hover:opacity-80 bg-primary/10 text-foreground"
                 >
                   <span className="inline-flex items-center gap-1">
                     {m.label}
@@ -64,13 +60,13 @@ export default function HeadcountSummaryTable({ year, periodLabel, months, poLab
                 <Fragment key={m.month}>
                   <td
                     onClick={() => onMonthClick(m)}
-                    className={`text-center px-2 py-2.5 font-medium cursor-pointer hover:bg-primary/5 transition-colors ${highlightMonths.has(m.month) ? "bg-yellow-400/20" : ""}`}
+                    className="text-center px-2 py-2.5 font-medium cursor-pointer hover:bg-primary/5 transition-colors"
                   >
                     {fmt(m.poHours)}
                   </td>
                   <td
                     onClick={() => onMonthClick(m)}
-                    className={`text-center px-2 py-2.5 font-medium cursor-pointer hover:bg-primary/5 transition-colors ${highlightMonths.has(m.month) ? "bg-yellow-400/20" : ""}`}
+                    className="text-center px-2 py-2.5 font-medium cursor-pointer hover:bg-primary/5 transition-colors"
                   >
                     {fmt(m.sbdHours)}
                   </td>

@@ -18,17 +18,18 @@ interface Props {
   activeTab?: Tab;
 }
 
-const NAV_TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: "dashboard", label: "Главная", icon: "LayoutDashboard" },
-  { id: "prescriptions", label: "Предписания", icon: "ClipboardList" },
-  { id: "inspections", label: "Проверки", icon: "TableProperties" },
-  { id: "incidents", label: "Происшествия", icon: "TriangleAlert" },
-  { id: "tasks", label: "Задачи", icon: "ListChecks" },
-  { id: "headcount", label: "ЧеловекоЧасы", icon: "Users" },
-];
-
 export default function Headcount({ user, onLogout, onTabChange, activeTab = "headcount" }: Props) {
   const year = new Date().getFullYear();
+  const canViewHeadcount = user.role === "manager";
+
+  const NAV_TABS: { id: Tab; label: string; icon: string }[] = [
+    { id: "dashboard", label: "Главная", icon: "LayoutDashboard" },
+    { id: "prescriptions", label: "Предписания", icon: "ClipboardList" },
+    { id: "inspections", label: "Проверки", icon: "TableProperties" },
+    { id: "incidents", label: "Происшествия", icon: "TriangleAlert" },
+    { id: "tasks", label: "Задачи", icon: "ListChecks" },
+    ...(canViewHeadcount ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }] : []),
+  ];
   const { days, loading, saveDay } = useHeadcount(year);
   const { settings, saveSettings } = useHeadcountSettings();
   const [openMonth, setOpenMonth] = useState<number | null>(null);

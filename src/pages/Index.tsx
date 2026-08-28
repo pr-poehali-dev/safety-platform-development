@@ -174,7 +174,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
     updatePrescription(updated);
   };
 
-  const canViewHeadcount = user.role === "manager" || user.role === "specialist";
+  const canViewHeadcount = user.role === "manager";
 
   const NAV_TABS: { id: Tab; label: string; icon: string }[] = [
     { id: "dashboard", label: "Главная", icon: "LayoutDashboard" },
