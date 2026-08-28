@@ -27,7 +27,7 @@ export default function HeadcountBadge({ stats, loading }: Props) {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <p className="text-[11px] text-muted-foreground mb-1">Среднесписочная численность (за текущий месяц)</p>
+          <p className="text-[11px] text-muted-foreground mb-1">Численность (за текущий месяц)</p>
           <p className="text-sm font-semibold text-foreground">ПО {fmtAvg(stats.poAvgListed)} · СБД {fmtAvg(stats.sbdAvgListed)}</p>
         </div>
         <div>
