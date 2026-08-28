@@ -3,6 +3,8 @@ import { AppUser } from "@/lib/auth";
 import Icon from "@/components/ui/icon";
 import UserMenu from "@/components/UserMenu";
 import { IsoDatePicker, MultiSelectField } from "@/components/fines/FineFormControls";
+import DateRangePicker from "@/components/ui/date-range-picker";
+import FilterDropdown from "@/components/inspections/FilterDropdown";
 
 const FINES_API = "https://functions.poehali.dev/05dd11e6-f624-4a7b-a0b7-604951125a9b";
 const CONTRACTORS_API = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
@@ -70,7 +72,9 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
-  const [filterContractor, setFilterContractor] = useState("");
+  const [filterContractors, setFilterContractors] = useState<string[]>([]);
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
 
   const canManage = user.role === "admin" || user.role === "manager";
 
@@ -167,9 +171,13 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
   };
 
   const filteredRows = useMemo(() => {
-    if (!filterContractor) return rows;
-    return rows.filter(r => r.contractor === filterContractor);
-  }, [rows, filterContractor]);
+    return rows.filter(r => {
+      if (filterContractors.length > 0 && !filterContractors.includes(r.contractor)) return false;
+      if (filterDateFrom && r.period_date < filterDateFrom) return false;
+      if (filterDateTo && r.period_date > filterDateTo) return false;
+      return true;
+    });
+  }, [rows, filterContractors, filterDateFrom, filterDateTo]);
 
   const totals = useMemo(() => {
     return filteredRows.reduce((acc, r) => {
@@ -274,12 +282,28 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-muted-foreground">Организация:</label>
-          <select value={filterContractor} onChange={e => setFilterContractor(e.target.value)} className="bg-card border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50">
-            <option value="">Все</option>
-            {rowContractors.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+        <div className="flex items-center gap-2 flex-wrap">
+          <DateRangePicker
+            dateFrom={filterDateFrom}
+            dateTo={filterDateTo}
+            onFromChange={setFilterDateFrom}
+            onToChange={setFilterDateTo}
+            onReset={() => { setFilterDateFrom(""); setFilterDateTo(""); }}
+          />
+          <FilterDropdown
+            label="Организация"
+            options={rowContractors}
+            value={filterContractors}
+            onChange={setFilterContractors}
+          />
+          {(filterContractors.length > 0 || filterDateFrom || filterDateTo) && (
+            <button
+              onClick={() => { setFilterContractors([]); setFilterDateFrom(""); setFilterDateTo(""); }}
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+            >
+              <Icon name="X" size={11} /> Сбросить всё
+            </button>
+          )}
         </div>
 
         {loading ? (
