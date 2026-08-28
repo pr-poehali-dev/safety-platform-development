@@ -51,6 +51,8 @@ interface PrescriptionListProps {
   onDashboardClick?: () => void;
   onIncidentsClick?: () => void;
   onTasksClick?: () => void;
+  onHeadcountClick?: () => void;
+  onFinesClick?: () => void;
   onStatusChange?: (p: Prescription, status: Status) => void;
   activeTab?: string;
 }
@@ -62,7 +64,7 @@ export function PrescriptionList({
   onSearchChange, onFilterChange, onFilterMineChange, onFilterSuspendedChange,
   onFilterObjectChange, onFilterContractorChange, onFilterInspectorChange, onDateFromChange, onDateToChange,
   onSelect, onAddClick, onInspectionsClick,
-  onDashboardClick, onIncidentsClick, onTasksClick, onStatusChange, activeTab = "prescriptions",
+  onDashboardClick, onIncidentsClick, onTasksClick, onHeadcountClick, onFinesClick, onStatusChange, activeTab = "prescriptions",
 }: PrescriptionListProps) {
 
   const [colFilters, setColFilters] = useState({
@@ -120,6 +122,8 @@ export function PrescriptionList({
         onDashboardClick={onDashboardClick}
         onIncidentsClick={onIncidentsClick}
         onTasksClick={onTasksClick}
+        onHeadcountClick={onHeadcountClick}
+        onFinesClick={onFinesClick}
         activeTab={activeTab}
       />
 

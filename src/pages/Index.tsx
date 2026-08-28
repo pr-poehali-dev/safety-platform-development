@@ -437,6 +437,8 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
         onDashboardClick={() => setTab("dashboard")}
         onIncidentsClick={() => setTab("incidents")}
         onTasksClick={() => setTab("tasks")}
+        onHeadcountClick={canViewHeadcount ? () => setTab("headcount") : undefined}
+        onFinesClick={canViewFines ? () => setTab("fines") : undefined}
         onStatusChange={changePrescriptionStatus}
         activeTab={tab}
       />

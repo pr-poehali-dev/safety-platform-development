@@ -9,12 +9,17 @@ interface PrescriptionListHeaderProps {
   onDashboardClick?: () => void;
   onIncidentsClick?: () => void;
   onTasksClick?: () => void;
+  onHeadcountClick?: () => void;
+  onFinesClick?: () => void;
   activeTab?: string;
 }
 
 export function PrescriptionListHeader({
-  user, onLogout, onInspectionsClick, onDashboardClick, onIncidentsClick, onTasksClick, activeTab = "prescriptions",
+  user, onLogout, onInspectionsClick, onDashboardClick, onIncidentsClick, onTasksClick,
+  onHeadcountClick, onFinesClick, activeTab = "prescriptions",
 }: PrescriptionListHeaderProps) {
+  const canViewHeadcount = user.role === "manager";
+  const canViewFines = user.role === "manager" || user.role === "admin";
   return (
     <>
       <header className="border-b border-border px-6 py-4 flex items-center justify-between bg-background sticky top-0 z-30">
@@ -69,6 +74,24 @@ export function PrescriptionListHeader({
               <Icon name="ListChecks" size={14} />
               Задачи
             </button>
+            {canViewHeadcount && onHeadcountClick && (
+              <button
+                onClick={onHeadcountClick}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${activeTab === "headcount" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                <Icon name="Users" size={14} />
+                ЧеловекоЧасы
+              </button>
+            )}
+            {canViewFines && onFinesClick && (
+              <button
+                onClick={onFinesClick}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${activeTab === "fines" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                <Icon name="Banknote" size={14} />
+                Штрафы
+              </button>
+            )}
           </div>
         </div>
       )}
