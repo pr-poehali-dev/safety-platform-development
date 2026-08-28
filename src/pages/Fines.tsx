@@ -2,9 +2,11 @@ import { useState, useEffect, useMemo } from "react";
 import { AppUser } from "@/lib/auth";
 import Icon from "@/components/ui/icon";
 import UserMenu from "@/components/UserMenu";
+import { IsoDatePicker, MultiSelectField } from "@/components/fines/FineFormControls";
 
 const FINES_API = "https://functions.poehali.dev/05dd11e6-f624-4a7b-a0b7-604951125a9b";
 const CONTRACTORS_API = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
+const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
 
 type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines";
 
@@ -29,8 +31,14 @@ interface Fine {
   created_at: string;
 }
 
+interface ContractorContract {
+  id: number;
+  contract_number: string;
+}
+
 interface ContractorItem {
   name: string;
+  contracts: ContractorContract[];
 }
 
 const inp = "w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50";
@@ -42,7 +50,7 @@ function emptyForm() {
     period_date: new Date().toISOString().slice(0, 10),
     contractor: "",
     contract_number: "",
-    act_number: "",
+    act_numbers: [] as string[],
     amount_issued: "",
     amount_paid: "",
     amount_proactive: "",
@@ -55,7 +63,8 @@ type FormState = ReturnType<typeof emptyForm>;
 export default function Fines({ user, onLogout, onTabChange, activeTab = "fines" }: FinesProps) {
   const [rows, setRows] = useState<Fine[]>([]);
   const [loading, setLoading] = useState(true);
-  const [contractors, setContractors] = useState<string[]>([]);
+  const [contractors, setContractors] = useState<ContractorItem[]>([]);
+  const [prescriptionNumbers, setPrescriptionNumbers] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -79,11 +88,22 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
     fetch(CONTRACTORS_API)
       .then(r => r.json())
       .then(data => {
-        if (Array.isArray(data)) setContractors(data.map((c: ContractorItem) => c.name).filter(Boolean));
+        if (Array.isArray(data)) setContractors(data);
+      });
+    fetch(PRESCRIPTIONS_API)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const numbers = data.map((p: { number: string }) => p.number).filter(Boolean);
+          setPrescriptionNumbers([...new Set(numbers)].sort());
+        }
       });
   }, []);
 
-  const set = (field: keyof FormState, value: string) => setForm(prev => ({ ...prev, [field]: value }));
+  const set = (field: keyof Omit<FormState, "act_numbers">, value: string) => setForm(prev => ({ ...prev, [field]: value }));
+
+  const selectedContractor = contractors.find(c => c.name === form.contractor);
+  const contractorNames = contractors.map(c => c.name);
 
   const openAdd = () => {
     setEditingId(null);
@@ -97,7 +117,7 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
       period_date: row.period_date,
       contractor: row.contractor,
       contract_number: row.contract_number ?? "",
-      act_number: row.act_number ?? "",
+      act_numbers: row.act_number ? row.act_number.split(",").map(s => s.trim()).filter(Boolean) : [],
       amount_issued: row.amount_issued ? String(row.amount_issued) : "",
       amount_paid: row.amount_paid !== null && row.amount_paid !== undefined ? String(row.amount_paid) : "",
       amount_proactive: row.amount_proactive !== null && row.amount_proactive !== undefined ? String(row.amount_proactive) : "",
@@ -113,7 +133,7 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
       period_date: form.period_date,
       contractor: form.contractor,
       contract_number: form.contract_number || null,
-      act_number: form.act_number || null,
+      act_number: form.act_numbers.length > 0 ? form.act_numbers.join(", ") : null,
       amount_issued: Number(form.amount_issued) || 0,
       amount_paid: form.amount_paid === "" ? null : Number(form.amount_paid),
       amount_proactive: form.amount_proactive === "" ? null : Number(form.amount_proactive),
@@ -348,25 +368,51 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={lbl}>Месяц/год *</label>
-                  <input type="date" value={form.period_date} onChange={e => set("period_date", e.target.value)} className={inp} />
+                  <IsoDatePicker value={form.period_date} onChange={v => set("period_date", v)} />
                 </div>
                 <div>
                   <label className={lbl}>Акт о нарушениях ОТ</label>
-                  <input type="text" value={form.act_number} onChange={e => set("act_number", e.target.value)} placeholder="Номер акта" className={inp} />
+                  <MultiSelectField
+                    options={prescriptionNumbers}
+                    selected={form.act_numbers}
+                    onChange={v => setForm(prev => ({ ...prev, act_numbers: v }))}
+                    placeholder="Выбрать акты"
+                    searchPlaceholder="Поиск по номеру предписания"
+                  />
                 </div>
               </div>
 
               <div>
                 <label className={lbl}>Организация (КА) *</label>
-                <select value={form.contractor} onChange={e => set("contractor", e.target.value)} className={inp}>
+                <select
+                  value={form.contractor}
+                  onChange={e => setForm(prev => ({ ...prev, contractor: e.target.value, contract_number: "" }))}
+                  className={inp}
+                >
                   <option value="">— выберите организацию —</option>
-                  {contractors.map(c => <option key={c} value={c}>{c}</option>)}
+                  {contractorNames.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
 
               <div>
                 <label className={lbl}>Договор</label>
-                <input type="text" value={form.contract_number} onChange={e => set("contract_number", e.target.value)} placeholder="Номер и дата договора" className={inp} />
+                <select
+                  value={form.contract_number}
+                  onChange={e => set("contract_number", e.target.value)}
+                  disabled={!selectedContractor || selectedContractor.contracts.length === 0}
+                  className={inp + " disabled:opacity-50 disabled:cursor-not-allowed"}
+                >
+                  <option value="">— выберите договор —</option>
+                  {form.contract_number && !(selectedContractor?.contracts ?? []).some(c => c.contract_number === form.contract_number) && (
+                    <option value={form.contract_number}>{form.contract_number}</option>
+                  )}
+                  {(selectedContractor?.contracts ?? []).map(c => (
+                    <option key={c.id} value={c.contract_number}>{c.contract_number}</option>
+                  ))}
+                </select>
+                {selectedContractor && selectedContractor.contracts.length === 0 && (
+                  <p className="text-[10px] text-muted-foreground mt-1">У выбранной организации нет договоров в справочнике</p>
+                )}
               </div>
 
               <div className="grid grid-cols-3 gap-4">
