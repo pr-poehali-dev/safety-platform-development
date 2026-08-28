@@ -401,7 +401,7 @@ export default function Dashboard({ user, taskAssignments, onNavigateToPrescript
         </div>
 
         <div className="flex flex-col gap-4">
-          <HeadcountBadge stats={ytdStats} loading={headcountLoading} />
+          {!isContractor && <HeadcountBadge stats={ytdStats} loading={headcountLoading} />}
 
           <DashboardSpbPanel
             spbCategories={spbCategories}
