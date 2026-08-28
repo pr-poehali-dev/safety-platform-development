@@ -8,6 +8,7 @@ import { buildMonthStats, MonthStats } from "@/lib/headcountTypes";
 import HeadcountSummaryTable from "@/components/headcount/HeadcountSummaryTable";
 import MonthDetailModal from "@/components/headcount/MonthDetailModal";
 import HeadcountSettingsBar from "@/components/headcount/HeadcountSettingsBar";
+import HeadcountTrendChart from "@/components/headcount/HeadcountTrendChart";
 
 type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount";
 
@@ -119,6 +120,7 @@ export default function Headcount({ user, onLogout, onTabChange, activeTab = "he
             </p>
             <HeadcountSummaryTable year={year} periodLabel="Январь — Июнь" months={firstHalf} poLabel={settings.po_label} onMonthClick={m => setOpenMonth(m.month)} />
             <HeadcountSummaryTable year={year} periodLabel="Июль — Декабрь" months={secondHalf} poLabel={settings.po_label} onMonthClick={m => setOpenMonth(m.month)} />
+            <HeadcountTrendChart months={months} poLabel={settings.po_label} />
           </>
         )}
       </main>
