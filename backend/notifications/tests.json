@@ -1,0 +1,10 @@
+{
+  "tests": [
+    {
+      "name": "GET notifications missing login",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 400
+    }
+  ]
+}
