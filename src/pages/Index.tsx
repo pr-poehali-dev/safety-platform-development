@@ -187,8 +187,8 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
     updatePrescription(updated);
   };
 
-  const canViewHeadcount = (user.role === "manager" || user.role === "admin") && visibility.tabs.headcount;
-  const canViewFines = (user.role === "manager" || user.role === "admin") && visibility.tabs.fines;
+  const canViewHeadcount = visibility.tabs.headcount;
+  const canViewFines = visibility.tabs.fines;
 
   const tabVisible = (key: TabKey) => visibility.tabs[key];
 

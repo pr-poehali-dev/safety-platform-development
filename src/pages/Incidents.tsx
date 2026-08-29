@@ -136,12 +136,8 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
     ...(tabs.inspections ? [{ id: "inspections" as Tab, label: "Проверки", icon: "TableProperties" }] : []),
     { id: "incidents", label: "Происшествия", icon: "TriangleAlert" },
     ...(tabs.tasks ? [{ id: "tasks" as Tab, label: "Задачи", icon: "ListChecks" }] : []),
-    ...((user.role === "manager" || user.role === "admin") && tabs.headcount
-      ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }]
-      : []),
-    ...((user.role === "manager" || user.role === "admin") && tabs.fines
-      ? [{ id: "fines" as Tab, label: "Штрафы", icon: "Banknote" }]
-      : []),
+    ...(tabs.headcount ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }] : []),
+    ...(tabs.fines ? [{ id: "fines" as Tab, label: "Штрафы", icon: "Banknote" }] : []),
   ];
 
   return (

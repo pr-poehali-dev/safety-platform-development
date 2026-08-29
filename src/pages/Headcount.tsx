@@ -24,7 +24,7 @@ interface Props {
 export default function Headcount({ user, onLogout, onTabChange, activeTab = "headcount", visibility }: Props) {
   const year = new Date().getFullYear();
   const tabs = visibility?.tabs ?? defaultVisibilitySettings().tabs;
-  const canViewHeadcount = (user.role === "manager" || user.role === "admin") && tabs.headcount;
+  const canViewHeadcount = tabs.headcount;
 
   const NAV_TABS: { id: Tab; label: string; icon: string }[] = [
     { id: "dashboard", label: "Главная", icon: "LayoutDashboard" },
@@ -33,9 +33,7 @@ export default function Headcount({ user, onLogout, onTabChange, activeTab = "he
     ...(tabs.incidents ? [{ id: "incidents" as Tab, label: "Происшествия", icon: "TriangleAlert" }] : []),
     ...(tabs.tasks ? [{ id: "tasks" as Tab, label: "Задачи", icon: "ListChecks" }] : []),
     ...(canViewHeadcount ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }] : []),
-    ...((user.role === "manager" || user.role === "admin") && tabs.fines
-      ? [{ id: "fines" as Tab, label: "Штрафы", icon: "Banknote" }]
-      : []),
+    ...(tabs.fines ? [{ id: "fines" as Tab, label: "Штрафы", icon: "Banknote" }] : []),
   ];
   const { days, loading, saveDay } = useHeadcount(year);
   const { settings, saveSettings } = useHeadcountSettings();
@@ -43,7 +41,7 @@ export default function Headcount({ user, onLogout, onTabChange, activeTab = "he
   const [saving, setSaving] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
 
-  const canEdit = user.role === "manager" || user.role === "admin";
+  const canEdit = user.role === "admin" || tabs.headcount;
 
   const months = useMemo(() => buildMonthStats(year, days, settings.po_rate, settings.sbd_rate), [year, days, settings]);
   const firstHalf = months.slice(0, 6);

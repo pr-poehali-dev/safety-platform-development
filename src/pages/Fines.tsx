@@ -79,7 +79,7 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
 
-  const canManage = user.role === "admin" || user.role === "manager";
+  const canManage = user.role === "admin" || tabs.fines;
 
   const load = () => {
     setLoading(true);
@@ -203,7 +203,7 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
     ...(tabs.inspections ? [{ id: "inspections" as Tab, label: "Проверки", icon: "TableProperties" }] : []),
     ...(tabs.incidents ? [{ id: "incidents" as Tab, label: "Происшествия", icon: "TriangleAlert" }] : []),
     ...(tabs.tasks ? [{ id: "tasks" as Tab, label: "Задачи", icon: "ListChecks" }] : []),
-    ...((user.role === "manager" || user.role === "admin") && tabs.headcount ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }] : []),
+    ...(tabs.headcount ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }] : []),
     { id: "fines", label: "Штрафы", icon: "Banknote" },
   ];
 

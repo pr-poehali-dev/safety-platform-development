@@ -148,10 +148,10 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
             { id: "inspections" as Tab, label: "Проверки", icon: "TableProperties", action: () => {} },
             ...(tabs.incidents ? [{ id: "incidents" as Tab, label: "Происшествия", icon: "TriangleAlert", action: () => onTabChange?.("incidents") }] : []),
             ...(tabs.tasks ? [{ id: "tasks" as Tab, label: "Задачи", icon: "ListChecks", action: () => onTabChange?.("tasks") }] : []),
-            ...((user.role === "manager" || user.role === "admin") && tabs.headcount
+            ...(tabs.headcount
               ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users", action: () => onTabChange?.("headcount") }]
               : []),
-            ...((user.role === "manager" || user.role === "admin") && tabs.fines
+            ...(tabs.fines
               ? [{ id: "fines" as Tab, label: "Штрафы", icon: "Banknote", action: () => onTabChange?.("fines") }]
               : []),
           ].map(t => (

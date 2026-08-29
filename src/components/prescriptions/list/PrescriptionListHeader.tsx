@@ -21,8 +21,8 @@ export function PrescriptionListHeader({
   onHeadcountClick, onFinesClick, activeTab = "prescriptions", visibility,
 }: PrescriptionListHeaderProps) {
   const tabs = visibility?.tabs ?? defaultVisibilitySettings().tabs;
-  const canViewHeadcount = (user.role === "manager" || user.role === "admin") && tabs.headcount;
-  const canViewFines = (user.role === "manager" || user.role === "admin") && tabs.fines;
+  const canViewHeadcount = tabs.headcount;
+  const canViewFines = tabs.fines;
   return (
     <>
       <header className="border-b border-border px-6 py-4 flex items-center justify-between bg-background sticky top-0 z-30">
