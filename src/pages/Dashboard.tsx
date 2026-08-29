@@ -11,6 +11,7 @@ import DashboardStatCards from "@/components/dashboard/DashboardStatCards";
 import DashboardTasksWidget from "@/components/dashboard/DashboardTasksWidget";
 import DashboardSpbPanel from "@/components/dashboard/DashboardSpbPanel";
 import HeadcountBadge from "@/components/dashboard/HeadcountBadge";
+import FinesBadge from "@/components/dashboard/FinesBadge";
 import { type PivotRow } from "@/components/dashboard/PivotTable";
 import { TaskAssignment } from "@/lib/taskTypes";
 import { useHeadcount } from "@/hooks/useHeadcount";
@@ -24,6 +25,7 @@ const INCIDENTS_API = "https://functions.poehali.dev/4aedfdd0-d096-43ad-b4e7-b7b
 const CATEGORIES_API = "https://functions.poehali.dev/ea358d23-fa1e-4907-88c0-87cd78732293";
 const PYRAMID_STATS_API = "https://functions.poehali.dev/7cb54511-8788-48e9-b719-37233cb062e5";
 const OBJECTS_API = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
+const FINES_API = "https://functions.poehali.dev/05dd11e6-f624-4a7b-a0b7-604951125a9b";
 
 interface SpbCategory {
   id: number;
@@ -40,6 +42,13 @@ interface Incident {
   severe_injury: number;
   fatal: number;
   no_consequences: number;
+}
+
+interface Fine {
+  id: number;
+  period_date: string;
+  amount_issued: number;
+  amount_paid: number | null;
 }
 
 interface DashboardProps {
@@ -76,6 +85,8 @@ export default function Dashboard({ user, taskAssignments, visibility, onNavigat
   const [manualDangerActions, setManualDangerActions] = useState(0);
   const [manualSuspendedWorks, setManualSuspendedWorks] = useState(0);
   const [pyramidSaving, setPyramidSaving] = useState(false);
+  const [fines, setFines] = useState<Fine[]>([]);
+  const [finesLoading, setFinesLoading] = useState(true);
 
   const [myObjectNames, setMyObjectNames] = useState<string[]>([]);
 
@@ -83,6 +94,32 @@ export default function Dashboard({ user, taskAssignments, visibility, onNavigat
   const { days: headcountDays, loading: headcountLoading } = useHeadcount(currentYear);
   const { settings: headcountSettings } = useHeadcountSettings();
   const ytdStats = useMemo(() => buildYtdStats(headcountDays, headcountSettings.po_rate, headcountSettings.sbd_rate), [headcountDays, headcountSettings]);
+
+  useEffect(() => {
+    fetch(FINES_API)
+      .then(r => r.json())
+      .then(data => setFines(Array.isArray(data) ? data : []))
+      .catch(() => setFines([]))
+      .finally(() => setFinesLoading(false));
+  }, []);
+
+  const finesStats = useMemo(() => {
+    const now = new Date();
+    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    return fines.reduce((acc, f) => {
+      const issued = f.amount_issued || 0;
+      const paid = f.amount_paid || 0;
+      acc.totalIssued += issued;
+      acc.totalPaid += paid;
+      if ((f.period_date || "").slice(0, 7) === monthKey) {
+        acc.monthIssued += issued;
+        acc.monthPaid += paid;
+      }
+      return acc;
+    }, { totalIssued: 0, totalPaid: 0, monthIssued: 0, monthPaid: 0 });
+  }, [fines]);
+
+  const currentMonthLabel = new Date().toLocaleDateString("ru-RU", { month: "long" });
 
   useEffect(() => {
     Promise.all([
@@ -411,6 +448,17 @@ export default function Dashboard({ user, taskAssignments, visibility, onNavigat
 
         <div className="flex flex-col gap-4">
           {!isContractor && blocks.headcountWidget && <HeadcountBadge stats={ytdStats} loading={headcountLoading} poLabel={headcountSettings.po_label} />}
+
+          {!isContractor && blocks.finesWidget && (visibility?.tabs.fines ?? true) && (
+            <FinesBadge
+              totalIssued={finesStats.totalIssued}
+              totalPaid={finesStats.totalPaid}
+              monthIssued={finesStats.monthIssued}
+              monthPaid={finesStats.monthPaid}
+              loading={finesLoading}
+              monthLabel={currentMonthLabel}
+            />
+          )}
 
           <DashboardSpbPanel
             spbCategories={spbCategories}

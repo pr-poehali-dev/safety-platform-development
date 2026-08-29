@@ -2,7 +2,7 @@ export const TAB_KEYS = ["prescriptions", "inspections", "incidents", "tasks", "
 export type TabKey = typeof TAB_KEYS[number];
 
 export const BLOCK_KEYS = [
-  "presCards", "inspCards", "tasksWidget", "headcountWidget",
+  "presCards", "inspCards", "tasksWidget", "headcountWidget", "finesWidget",
   "spb", "pyramid", "topContractors", "pivotTable", "remarksChart",
 ] as const;
 export type BlockKey = typeof BLOCK_KEYS[number];
@@ -35,6 +35,7 @@ export const BLOCK_LABELS: Record<BlockKey, string> = {
   inspCards: "Карточки проверок",
   tasksWidget: "Виджет «Задачи»",
   headcountWidget: "Виджет «Человекочасы»",
+  finesWidget: "Виджет «Штрафы»",
   spb: "Стратегические приоритеты безопасности (СПБ)",
   pyramid: "Пирамида происшествий",
   topContractors: "Топ подрядчиков",

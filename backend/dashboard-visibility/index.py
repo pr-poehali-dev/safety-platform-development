@@ -13,7 +13,7 @@ CORS = {
 
 TAB_KEYS = ["prescriptions", "inspections", "incidents", "tasks", "headcount", "fines"]
 BLOCK_KEYS = [
-    "presCards", "inspCards", "tasksWidget", "headcountWidget",
+    "presCards", "inspCards", "tasksWidget", "headcountWidget", "finesWidget",
     "spb", "pyramid", "topContractors", "pivotTable", "remarksChart",
 ]
 
@@ -79,7 +79,8 @@ def handler(event: dict, context) -> dict:
             if not scope_type or not scope_key:
                 return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": "scope_type and scope_key required"})}
             settings = fetch_settings(cur, scope_type, scope_key)
-            return {"statusCode": 200, "headers": CORS, "body": json.dumps({"settings": settings})}
+            normalized = normalize_settings(settings) if settings is not None else None
+            return {"statusCode": 200, "headers": CORS, "body": json.dumps({"settings": normalized})}
 
         body = json.loads(event.get("body") or "{}")
 
