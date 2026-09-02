@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 import { AppUser, fetchUsers, loadSession, saveSession, clearSession, isSessionInvalidated } from "@/lib/auth";
 
 const queryClient = new QueryClient();
@@ -101,6 +102,7 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <PwaInstallPrompt />
           <BrowserRouter>
             <Routes>
               <Route
