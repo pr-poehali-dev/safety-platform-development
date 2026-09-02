@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { AppUser } from "@/lib/auth";
 import Icon from "@/components/ui/icon";
+import Logo from "@/components/Logo";
 import UserMenu from "@/components/UserMenu";
 import { VisibilitySettings, defaultVisibilitySettings } from "@/lib/visibilityTypes";
 
@@ -144,9 +145,7 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
     <div className="min-h-screen bg-background" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
       <header className="border-b border-border px-6 py-4 flex items-center justify-between bg-background sticky top-0 z-30">
         <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-            <Icon name="Shield" size={14} className="text-primary-foreground" />
-          </div>
+          <Logo size={28} />
           <span className="text-sm font-semibold tracking-tight">Охрана Труда Онлайн</span>
         </div>
         <UserMenu user={user} onLogout={onLogout} />

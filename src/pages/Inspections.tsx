@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { AppUser } from "@/lib/auth";
 import Icon from "@/components/ui/icon";
+import Logo from "@/components/Logo";
 import UserMenu from "@/components/UserMenu";
 import { API, CATEGORIES_API, OBJECTS_API, CONTRACTORS_API, Inspection, InspectionFormData, ContractorItem, emptyForm } from "@/components/inspections/types";
 import InspectionForm from "@/components/inspections/InspectionForm";
@@ -131,9 +132,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
       {/* Header */}
       <header className="border-b border-border px-6 py-4 flex items-center justify-between bg-background sticky top-0 z-30">
         <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-            <Icon name="Shield" size={14} className="text-primary-foreground" />
-          </div>
+          <Logo size={28} />
           <span className="text-sm font-semibold tracking-tight">Охрана Труда Онлайн</span>
         </div>
         <UserMenu user={user} onLogout={onLogout} />

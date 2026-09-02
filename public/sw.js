@@ -1,5 +1,5 @@
-const CACHE_NAME = "safework-shell-v1";
-const APP_SHELL = ["/", "/favicon.svg", "/manifest.webmanifest"];
+const CACHE_NAME = "safework-shell-v2";
+const APP_SHELL = ["/", "/favicon-32.png", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

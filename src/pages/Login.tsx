@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
+import Logo from "@/components/Logo";
 import { Switch } from "@/components/ui/switch";
 import { AppUser } from "@/lib/auth";
 
@@ -47,8 +48,8 @@ export default function Login({ users, onLogin }: LoginProps) {
       <div className="relative w-full max-w-sm animate-fade-in">
         {/* Логотип */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-4" style={{ boxShadow: "0 0 24px hsl(199 89% 48% / 0.3)" }}>
-            <Icon name="Shield" size={22} className="text-primary-foreground" />
+          <div className="mb-4">
+            <Logo size={72} />
           </div>
           <h1 className="text-xl font-semibold text-foreground tracking-tight">SafeWork</h1>
           <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest py-0 px-0 mx-0 text-center">СИСТЕМА УПРАВЛЕНИЯ ОХРАНОЙ ТРУДА И ПРОМЫШЛЕННОЙ БЕЗОПАСНОСТЬЮ</p>
