@@ -449,7 +449,7 @@ export default function Dashboard({ user, taskAssignments, visibility, onNavigat
         <div className="flex flex-col gap-4">
           {!isContractor && blocks.headcountWidget && <HeadcountBadge stats={ytdStats} loading={headcountLoading} poLabel={headcountSettings.po_label} />}
 
-          {!isContractor && blocks.finesWidget && (visibility?.tabs.fines ?? true) && (
+          {!isContractor && blocks.finesWidget && (
             <FinesBadge
               totalIssued={finesStats.totalIssued}
               totalPaid={finesStats.totalPaid}
