@@ -105,12 +105,16 @@ export function ExportImportToolbar({
       window.clearInterval(progressTimer);
       setExportProgress(100);
       if (data.url) {
+        const fileRes = await fetch(data.url);
+        const blob = await fileRes.blob();
+        const blobUrl = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = data.url;
+        a.href = blobUrl;
         a.download = `Предписания_${new Date().toLocaleDateString("ru-RU").replace(/\./g, "-")}.xlsx`;
         document.body.appendChild(a);
         a.click();
         a.remove();
+        URL.revokeObjectURL(blobUrl);
       }
     } finally {
       window.clearInterval(progressTimer);
