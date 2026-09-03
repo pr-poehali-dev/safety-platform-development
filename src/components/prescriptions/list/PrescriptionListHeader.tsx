@@ -37,65 +37,65 @@ export function PrescriptionListHeader({
       {/* Навигационные вкладки */}
       {(onInspectionsClick || onDashboardClick) && (
         <div className="border-b border-border bg-background">
-          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 flex gap-1 pt-2">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 flex gap-1 pt-2 overflow-x-auto">
             {onDashboardClick && (
               <button
                 onClick={onDashboardClick}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "dashboard" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${activeTab === "dashboard" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
               >
                 <Icon name="LayoutDashboard" size={14} />
-                Главная
+                <span className="hidden sm:inline">Главная</span>
               </button>
             )}
             <button
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "prescriptions" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${activeTab === "prescriptions" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
             >
               <Icon name="ClipboardList" size={14} />
-              Предписания
+              <span className="hidden sm:inline">Предписания</span>
             </button>
             {tabs.inspections && onInspectionsClick && (
               <button
                 onClick={onInspectionsClick}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "inspections" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${activeTab === "inspections" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
               >
                 <Icon name="TableProperties" size={14} />
-                Проверки
+                <span className="hidden sm:inline">Проверки</span>
               </button>
             )}
             {tabs.incidents && (
               <button
                 onClick={onIncidentsClick}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "incidents" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${activeTab === "incidents" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
               >
                 <Icon name="TriangleAlert" size={14} />
-                Происшествия
+                <span className="hidden sm:inline">Происшествия</span>
               </button>
             )}
             {tabs.tasks && (
               <button
                 onClick={onTasksClick}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "tasks" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${activeTab === "tasks" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
               >
                 <Icon name="ListChecks" size={14} />
-                Задачи
+                <span className="hidden sm:inline">Задачи</span>
               </button>
             )}
             {canViewHeadcount && onHeadcountClick && (
               <button
                 onClick={onHeadcountClick}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${activeTab === "headcount" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${activeTab === "headcount" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
               >
                 <Icon name="Users" size={14} />
-                ЧеловекоЧасы
+                <span className="hidden sm:inline">ЧеловекоЧасы</span>
               </button>
             )}
             {canViewFines && onFinesClick && (
               <button
                 onClick={onFinesClick}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${activeTab === "fines" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${activeTab === "fines" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
               >
                 <Icon name="Banknote" size={14} />
-                Штрафы
+                <span className="hidden sm:inline">Штрафы</span>
               </button>
             )}
           </div>
