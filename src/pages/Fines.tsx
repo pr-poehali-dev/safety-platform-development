@@ -211,10 +211,13 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
   return (
     <div className="min-h-screen bg-background" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
       <header className="border-b border-border px-6 py-4 flex items-center justify-between bg-background sticky top-0 z-30">
-        <div className="flex items-center gap-3">
+        <button
+          onClick={() => onTabChange?.("dashboard")}
+          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+        >
           <Logo size={28} />
           <span className="text-sm font-semibold tracking-tight">SafeWork</span>
-        </div>
+        </button>
         <UserMenu user={user} onLogout={onLogout} />
       </header>
 

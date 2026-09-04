@@ -287,10 +287,13 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
 
   const renderHeader = () => (
     <header className="border-b border-border px-6 py-4 flex items-center justify-between bg-background sticky top-0 z-30">
-      <div className="flex items-center gap-3">
+      <button
+        onClick={() => setTab("dashboard")}
+        className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+      >
         <Logo size={28} />
         <span className="text-sm font-semibold tracking-tight">SafeWork</span>
-      </div>
+      </button>
       <div className="flex items-center gap-2">
         <NotificationBell />
         <UserMenu user={user} onLogout={onLogout} onUserUpdate={onUserUpdate} />
