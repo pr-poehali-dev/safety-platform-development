@@ -131,7 +131,7 @@ export default function DateRangePicker({
               weekdays: "flex mb-1",
               weekday: "w-9 text-center text-[11px] text-muted-foreground font-medium",
               week: "flex",
-              day: "p-0",
+              day: "w-9 h-9 p-0",
               day_button: "w-9 h-9 text-xs rounded-lg hover:bg-secondary transition-colors flex items-center justify-center cursor-pointer text-foreground",
               outside: "opacity-30",
               disabled: "opacity-25 cursor-not-allowed",
