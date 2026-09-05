@@ -108,7 +108,7 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
                 cx="50%"
                 cy="50%"
                 outerRadius={140}
-                label={({ percent }) => `${((percent ?? 0) * 100).toFixed(0)}%`}
+                label={({ percent, value }) => `${((percent ?? 0) * 100).toFixed(0)}% (${value})`}
                 labelLine={{ stroke: "#8b9ab0" }}
               >
                 {pieData.map((_, i) => (
@@ -126,7 +126,8 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
                   maxWidth: 260,
                 }}
                 labelStyle={{ color: "#d0d8e8", fontWeight: 600, whiteSpace: "normal", wordBreak: "break-word" }}
-                itemStyle={{ color: "#8b9ab0" }}
+                itemStyle={{ display: "none" }}
+                formatter={() => ""}
               />
               <Legend
                 verticalAlign="bottom"
