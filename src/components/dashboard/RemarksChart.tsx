@@ -15,7 +15,7 @@ type ChartType = "bar" | "pie";
 
 interface PieTooltipPayload {
   name: string;
-  breakdown: { category: string; count: number }[];
+  breakdown?: { category: string; count: number }[];
 }
 
 const PieTooltip = ({ active, payload }: { active?: boolean; payload?: { payload: PieTooltipPayload }[] }) => {
@@ -34,15 +34,17 @@ const PieTooltip = ({ active, payload }: { active?: boolean; payload?: { payload
         maxWidth: 280,
       }}
     >
-      <div style={{ fontWeight: 600, whiteSpace: "normal", wordBreak: "break-word", marginBottom: 6 }}>{name}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        {breakdown.map((b) => (
-          <div key={b.category} style={{ color: "#8b9ab0", display: "flex", justifyContent: "space-between", gap: 12 }}>
-            <span>{b.category}</span>
-            <span>{b.count}</span>
-          </div>
-        ))}
-      </div>
+      <div style={{ fontWeight: 600, whiteSpace: "normal", wordBreak: "break-word", marginBottom: breakdown?.length ? 6 : 0 }}>{name}</div>
+      {!!breakdown?.length && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {breakdown.map((b) => (
+            <div key={b.category} style={{ color: "#8b9ab0", display: "flex", justifyContent: "space-between", gap: 12 }}>
+              <span>{b.category}</span>
+              <span>{b.count}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -55,7 +57,19 @@ interface RemarksChartProps {
 export default function RemarksChart({ chartData, contractors }: RemarksChartProps) {
   const [chartType, setChartType] = useState<ChartType>("bar");
 
+  const singleContractor = contractors.length === 1 ? contractors[0] : null;
+
   const pieData = useMemo(() => {
+    if (singleContractor) {
+      return chartData
+        .map((row) => ({
+          name: String(row.category ?? ""),
+          value: Number(row[singleContractor]) || 0,
+        }))
+        .filter((d) => d.value > 0)
+        .sort((a, b) => b.value - a.value);
+    }
+
     return contractors
       .map((c) => {
         const breakdown = chartData
@@ -69,14 +83,19 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
         };
       })
       .filter((d) => d.value > 0);
-  }, [chartData, contractors]);
+  }, [chartData, contractors, singleContractor]);
 
   if (chartData.length === 0 || contractors.length === 0) return null;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-semibold">Распределение замечаний (диаграмма)</h2>
+        <div>
+          <h2 className="text-base font-semibold">Распределение замечаний (диаграмма)</h2>
+          {chartType === "pie" && singleContractor && (
+            <p className="text-xs text-muted-foreground mt-0.5">По видам нарушений: {singleContractor}</p>
+          )}
+        </div>
         <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-0.5">
           <button
             onClick={() => setChartType("bar")}
