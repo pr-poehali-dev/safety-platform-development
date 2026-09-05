@@ -18,7 +18,7 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
 
   return (
     <div>
-      <h2 className="text-base font-semibold mb-3">Количество замечаний (диаграмма)</h2>
+      <h2 className="text-base font-semibold mb-3">Распределение замечаний (диаграмма)</h2>
       <div className="bg-card border border-border rounded-xl p-4">
         <ResponsiveContainer width="100%" height={420}>
           <BarChart data={chartData} margin={{ top: 8, right: 20, left: 0, bottom: 100 }}>
