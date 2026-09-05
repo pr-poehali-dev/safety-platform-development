@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend,
-  PieChart, Pie,
+  PieChart, Pie, LabelList,
 } from "recharts";
 import Icon from "@/components/ui/icon";
 
@@ -154,6 +154,24 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
                   {chartData.map((_, ci) => (
                     <Cell key={ci} fill={COLORS[i % COLORS.length]} />
                   ))}
+                  {i === contractors.length - 1 && (
+                    <LabelList
+                      dataKey={c}
+                      position="top"
+                      content={(props) => {
+                        const { x, y, width, index } = props as { x?: number; y?: number; width?: number; index?: number };
+                        if (index === undefined || x === undefined || y === undefined || width === undefined) return null;
+                        const row = chartData[index];
+                        const total = contractors.reduce((sum, co) => sum + (Number(row[co]) || 0), 0);
+                        if (!total) return null;
+                        return (
+                          <text x={x + width / 2} y={y - 6} textAnchor="middle" fontSize={11} fontWeight={600} fill="#d0d8e8">
+                            {total}
+                          </text>
+                        );
+                      }}
+                    />
+                  )}
                 </Bar>
               ))}
             </BarChart>
