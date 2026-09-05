@@ -119,15 +119,15 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
       </div>
       <div className="bg-card border border-border rounded-xl p-4">
         {chartType === "bar" ? (
-          <ResponsiveContainer width="100%" height={420}>
-            <BarChart data={chartData} margin={{ top: 8, right: 20, left: 0, bottom: 100 }}>
+          <ResponsiveContainer width="100%" height={500}>
+            <BarChart data={chartData} margin={{ top: 8, right: 20, left: 0, bottom: 140 }}>
               <XAxis
                 dataKey="category"
                 tick={{ fontSize: 10, fill: "#8b9ab0" }}
                 angle={-45}
                 textAnchor="end"
                 interval={0}
-                height={100}
+                height={140}
               />
               <YAxis tick={{ fontSize: 10, fill: "#8b9ab0" }} allowDecimals={false} />
               <Tooltip
@@ -146,7 +146,7 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
               />
               <Legend
                 verticalAlign="bottom"
-                wrapperStyle={{ fontSize: 11, paddingTop: 16, position: "relative" }}
+                wrapperStyle={{ fontSize: 11, paddingTop: 32, position: "relative" }}
                 formatter={(value) => <span style={{ color: "#8b9ab0" }}>{value}</span>}
               />
               {contractors.map((c, i) => (
