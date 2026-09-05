@@ -15,27 +15,34 @@ type ChartType = "bar" | "pie";
 
 interface PieTooltipPayload {
   name: string;
+  breakdown: { category: string; count: number }[];
 }
 
 const PieTooltip = ({ active, payload }: { active?: boolean; payload?: { payload: PieTooltipPayload }[] }) => {
   if (!active || !payload || !payload.length) return null;
+  const { name, breakdown } = payload[0].payload;
   return (
     <div
       style={{
         background: "rgba(22, 26, 35, 0.97)",
         border: "1px solid #2e3547",
         borderRadius: 8,
-        padding: "6px 10px",
+        padding: "8px 12px",
         fontSize: 12,
-        fontWeight: 600,
         color: "#d0d8e8",
         boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
-        maxWidth: 260,
-        whiteSpace: "normal",
-        wordBreak: "break-word",
+        maxWidth: 280,
       }}
     >
-      {payload[0].payload.name}
+      <div style={{ fontWeight: 600, whiteSpace: "normal", wordBreak: "break-word", marginBottom: 6 }}>{name}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {breakdown.map((b) => (
+          <div key={b.category} style={{ color: "#8b9ab0", display: "flex", justifyContent: "space-between", gap: 12 }}>
+            <span>{b.category}</span>
+            <span>{b.count}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -50,10 +57,17 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
 
   const pieData = useMemo(() => {
     return contractors
-      .map((c) => ({
-        name: c,
-        value: chartData.reduce((sum, row) => sum + (Number(row[c]) || 0), 0),
-      }))
+      .map((c) => {
+        const breakdown = chartData
+          .map((row) => ({ category: String(row.category ?? ""), count: Number(row[c]) || 0 }))
+          .filter((b) => b.count > 0)
+          .sort((a, b) => b.count - a.count);
+        return {
+          name: c,
+          value: breakdown.reduce((sum, b) => sum + b.count, 0),
+          breakdown,
+        };
+      })
       .filter((d) => d.value > 0);
   }, [chartData, contractors]);
 
