@@ -13,6 +13,33 @@ const COLORS = [
 
 type ChartType = "bar" | "pie";
 
+interface PieTooltipPayload {
+  name: string;
+}
+
+const PieTooltip = ({ active, payload }: { active?: boolean; payload?: { payload: PieTooltipPayload }[] }) => {
+  if (!active || !payload || !payload.length) return null;
+  return (
+    <div
+      style={{
+        background: "rgba(22, 26, 35, 0.97)",
+        border: "1px solid #2e3547",
+        borderRadius: 8,
+        padding: "6px 10px",
+        fontSize: 12,
+        fontWeight: 600,
+        color: "#d0d8e8",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
+        maxWidth: 260,
+        whiteSpace: "normal",
+        wordBreak: "break-word",
+      }}
+    >
+      {payload[0].payload.name}
+    </div>
+  );
+};
+
 interface RemarksChartProps {
   chartData: Record<string, unknown>[];
   contractors: string[];
@@ -115,20 +142,7 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip
-                contentStyle={{
-                  background: "rgba(22, 26, 35, 0.97)",
-                  border: "1px solid #2e3547",
-                  borderRadius: 8,
-                  fontSize: 12,
-                  color: "#d0d8e8",
-                  boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
-                  maxWidth: 260,
-                }}
-                labelStyle={{ color: "#d0d8e8", fontWeight: 600, whiteSpace: "normal", wordBreak: "break-word" }}
-                itemStyle={{ display: "none" }}
-                formatter={() => ""}
-              />
+              <Tooltip content={<PieTooltip />} />
               <Legend
                 verticalAlign="bottom"
                 wrapperStyle={{ fontSize: 11, paddingTop: 16 }}
