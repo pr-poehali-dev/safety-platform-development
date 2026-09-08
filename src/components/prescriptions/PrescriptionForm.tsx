@@ -84,6 +84,7 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
     );
 
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const buildPrescription = (asDraft: boolean): Prescription => {
     const now = new Date();
@@ -107,14 +108,25 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
   };
 
   const handleSave = async () => {
-    if (!isValid) return;
-    await onSave(buildPrescription(false));
-    onClose();
+    if (!isValid || isSaving) return;
+    setIsSaving(true);
+    try {
+      await onSave(buildPrescription(false));
+      onClose();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSaveDraft = async () => {
-    await onSave(buildPrescription(true));
-    onClose();
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      await onSave(buildPrescription(true));
+      onClose();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -177,10 +189,10 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
           </button>
           <button
             onClick={handleSave}
-            disabled={!isValid}
+            disabled={!isValid || isSaving}
             className="text-base px-10 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            {editPrescription ? "Сохранить изменения" : "Создать предписание"}
+            {isSaving ? "Сохранение..." : editPrescription ? "Сохранить изменения" : "Создать предписание"}
           </button>
         </div>
       </div>
@@ -202,16 +214,18 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
+                disabled={isSaving}
+                className="flex-1 text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Нет
               </button>
               <button
                 type="button"
                 onClick={handleSaveDraft}
-                className="flex-1 text-sm px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+                disabled={isSaving}
+                className="flex-1 text-sm px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Да
+                {isSaving ? "Сохранение..." : "Да"}
               </button>
             </div>
           </div>
