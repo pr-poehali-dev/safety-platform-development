@@ -12,7 +12,7 @@ const FINES_API = "https://functions.poehali.dev/05dd11e6-f624-4a7b-a0b7-6049511
 const CONTRACTORS_API = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
 const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
 
-type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines";
+type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines" | "suspensions";
 
 interface FinesProps {
   user: AppUser;
@@ -206,6 +206,7 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
     ...(tabs.tasks ? [{ id: "tasks" as Tab, label: "Задачи", icon: "ListChecks" }] : []),
     ...(tabs.headcount ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }] : []),
     { id: "fines", label: "Штрафы", icon: "Banknote" },
+    ...(tabs.suspensions ? [{ id: "suspensions" as Tab, label: "Приостановки", icon: "OctagonPause" }] : []),
   ];
 
   return (

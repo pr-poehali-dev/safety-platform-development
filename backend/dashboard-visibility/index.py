@@ -11,7 +11,7 @@ CORS = {
     "Content-Type": "application/json",
 }
 
-TAB_KEYS = ["prescriptions", "inspections", "incidents", "tasks", "headcount", "fines"]
+TAB_KEYS = ["prescriptions", "inspections", "incidents", "tasks", "headcount", "fines", "suspensions"]
 BLOCK_KEYS = [
     "presCards", "inspCards", "tasksWidget", "headcountWidget", "finesWidget",
     "spb", "pyramid", "topContractors", "pivotTable", "remarksChart",

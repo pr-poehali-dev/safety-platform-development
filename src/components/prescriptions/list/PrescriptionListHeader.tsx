@@ -13,17 +13,19 @@ interface PrescriptionListHeaderProps {
   onTasksClick?: () => void;
   onHeadcountClick?: () => void;
   onFinesClick?: () => void;
+  onSuspensionsClick?: () => void;
   activeTab?: string;
   visibility?: VisibilitySettings;
 }
 
 export function PrescriptionListHeader({
   user, onLogout, onInspectionsClick, onDashboardClick, onIncidentsClick, onTasksClick,
-  onHeadcountClick, onFinesClick, activeTab = "prescriptions", visibility,
+  onHeadcountClick, onFinesClick, onSuspensionsClick, activeTab = "prescriptions", visibility,
 }: PrescriptionListHeaderProps) {
   const tabs = visibility?.tabs ?? defaultVisibilitySettings().tabs;
   const canViewHeadcount = tabs.headcount;
   const canViewFines = tabs.fines;
+  const canViewSuspensions = tabs.suspensions;
   return (
     <>
       <header className="border-b border-border px-6 py-4 flex items-center justify-between bg-background sticky top-0 z-30">
@@ -96,6 +98,15 @@ export function PrescriptionListHeader({
               >
                 <Icon name="Banknote" size={14} />
                 <span className="hidden sm:inline">Штрафы</span>
+              </button>
+            )}
+            {canViewSuspensions && onSuspensionsClick && (
+              <button
+                onClick={onSuspensionsClick}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${activeTab === "suspensions" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                <Icon name="OctagonPause" size={14} />
+                <span className="hidden sm:inline">Приостановки</span>
               </button>
             )}
           </div>

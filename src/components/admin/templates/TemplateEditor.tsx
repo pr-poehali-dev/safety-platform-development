@@ -90,6 +90,14 @@ export function TemplateEditor({ template: initial, onClose, onSave }: {
             <Icon name="Info" size={11} />
             Используйте &#123;&#123;number&#125;&#125;, &#123;&#123;date&#125;&#125;, &#123;&#123;contractor&#125;&#125; для переменных
           </div>
+          <select
+            value={t.type ?? "prescription"}
+            onChange={e => setT(prev => ({ ...prev, type: e.target.value as "prescription" | "suspension" }))}
+            className="text-xs bg-[#1a1b1e] border border-white/10 rounded-lg px-2 py-1.5 text-white/70"
+          >
+            <option value="prescription">Предписание</option>
+            <option value="suspension">Приостановка</option>
+          </select>
           <label className="flex items-center gap-1.5 text-xs text-white/50 cursor-pointer">
             <input
               type="checkbox"

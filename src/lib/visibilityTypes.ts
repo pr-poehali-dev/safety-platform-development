@@ -1,4 +1,4 @@
-export const TAB_KEYS = ["prescriptions", "inspections", "incidents", "tasks", "headcount", "fines"] as const;
+export const TAB_KEYS = ["prescriptions", "inspections", "incidents", "tasks", "headcount", "fines", "suspensions"] as const;
 export type TabKey = typeof TAB_KEYS[number];
 
 export const BLOCK_KEYS = [
@@ -19,6 +19,7 @@ export const TAB_LABELS: Record<TabKey, string> = {
   tasks: "Задачи",
   headcount: "ЧеловекоЧасы",
   fines: "Штрафы",
+  suspensions: "Приостановки",
 };
 
 export const TAB_ICONS: Record<TabKey, string> = {
@@ -28,6 +29,7 @@ export const TAB_ICONS: Record<TabKey, string> = {
   tasks: "ListChecks",
   headcount: "Users",
   fines: "Banknote",
+  suspensions: "OctagonPause",
 };
 
 export const BLOCK_LABELS: Record<BlockKey, string> = {

@@ -20,7 +20,7 @@ FIELDS = (
     "block_representative_label, block_violations_title, block_copies_text, "
     "block_report_text, font_size, font_family, margin_top, margin_right, "
     "margin_bottom, margin_left, sig_issuer_label, sig_receiver_label, "
-    "is_default, paper_size, orientation, content"
+    "is_default, paper_size, orientation, content, type"
 )
 
 
@@ -63,6 +63,7 @@ def row_to_template(row):
         "paperSize": row[22],
         "orientation": row[23],
         "content": row[24],
+        "type": row[25],
     }
 
 
@@ -80,7 +81,12 @@ def handler(event: dict, context) -> dict:
 
     try:
         if method == "GET":
-            cur.execute(f"SELECT {FIELDS} FROM {SCHEMA}.templates ORDER BY is_default DESC, created_at ASC")
+            qs = event.get("queryStringParameters") or {}
+            ttype = qs.get("type")
+            if ttype:
+                cur.execute(f"SELECT {FIELDS} FROM {SCHEMA}.templates WHERE type = %s ORDER BY is_default DESC, created_at ASC", (ttype,))
+            else:
+                cur.execute(f"SELECT {FIELDS} FROM {SCHEMA}.templates ORDER BY is_default DESC, created_at ASC")
             return ok([row_to_template(r) for r in cur.fetchall()])
 
         if method == "POST":
@@ -93,8 +99,8 @@ def handler(event: dict, context) -> dict:
                 f"block_representative_label, block_violations_title, block_copies_text, "
                 f"block_report_text, font_size, font_family, margin_top, margin_right, "
                 f"margin_bottom, margin_left, sig_issuer_label, sig_receiver_label, "
-                f"is_default, paper_size, orientation, content) "
-                f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                f"is_default, paper_size, orientation, content, type) "
+                f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                 (tid, t["name"],
                  t.get("title", "АКТ-ПРЕДПИСАНИЕ № {{number}}"),
                  t.get("subtitle", "о нарушении требований охраны труда, пожарной, промышленной безопасности и экологии"),
@@ -115,7 +121,8 @@ def handler(event: dict, context) -> dict:
                  t.get("isDefault", False),
                  t.get("paperSize", "A4"),
                  t.get("orientation", "portrait"),
-                 t.get("content"))
+                 t.get("content"),
+                 t.get("type", "prescription"))
             )
             conn.commit()
             return ok({"ok": True, "id": tid})
@@ -131,7 +138,7 @@ def handler(event: dict, context) -> dict:
                 f"block_report_text=%s, font_size=%s, font_family=%s, "
                 f"margin_top=%s, margin_right=%s, margin_bottom=%s, margin_left=%s, "
                 f"sig_issuer_label=%s, sig_receiver_label=%s, is_default=%s, "
-                f"paper_size=%s, orientation=%s, content=%s, updated_at=now() "
+                f"paper_size=%s, orientation=%s, content=%s, type=COALESCE(%s, type), updated_at=now() "
                 f"WHERE id=%s",
                 (t["name"], t.get("title"), t.get("subtitle"), t.get("companyName"),
                  json.dumps(t.get("tableColumns", []), ensure_ascii=False),
@@ -146,6 +153,7 @@ def handler(event: dict, context) -> dict:
                  t.get("paperSize", "A4"),
                  t.get("orientation", "portrait"),
                  t.get("content"),
+                 t.get("type"),
                  tid)
             )
             conn.commit()

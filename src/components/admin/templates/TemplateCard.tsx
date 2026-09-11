@@ -17,7 +17,12 @@ export function TemplateCard({ template: t, onEdit, onDelete }: TemplateCardProp
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground truncate">{t.name}</p>
-            {t.isDefault && <span className="text-[10px] text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-medium">По умолчанию</span>}
+            <div className="flex items-center gap-1.5 mt-1">
+              {t.isDefault && <span className="text-[10px] text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-medium">По умолчанию</span>}
+              <span className="text-[10px] text-muted-foreground bg-secondary/50 border border-border px-1.5 py-0.5 rounded font-medium">
+                {t.type === "suspension" ? "Приостановка" : "Предписание"}
+              </span>
+            </div>
           </div>
         </div>
         <div className="flex gap-1 flex-shrink-0">

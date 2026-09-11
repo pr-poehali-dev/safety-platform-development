@@ -31,6 +31,7 @@ export interface Template {
   paperSize: "A4" | "A3";
   orientation: "portrait" | "landscape";
   content?: string;
+  type?: "prescription" | "suspension";
 }
 
 export const DEFAULT_TEMPLATE: Omit<Template, "id" | "name" | "isDefault"> = {
@@ -58,4 +59,5 @@ export const DEFAULT_TEMPLATE: Omit<Template, "id" | "name" | "isDefault"> = {
   sigReceiverLabel: "С Актом ознакомлен, согласен и принял к исполнению:",
   paperSize: "A4",
   orientation: "portrait",
+  type: "prescription",
 };

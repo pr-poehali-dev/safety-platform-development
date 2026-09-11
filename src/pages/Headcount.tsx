@@ -12,7 +12,7 @@ import HeadcountSettingsBar from "@/components/headcount/HeadcountSettingsBar";
 import HeadcountTrendChart from "@/components/headcount/HeadcountTrendChart";
 import { VisibilitySettings, defaultVisibilitySettings } from "@/lib/visibilityTypes";
 
-type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines";
+type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines" | "suspensions";
 
 interface Props {
   user: AppUser;
@@ -35,6 +35,7 @@ export default function Headcount({ user, onLogout, onTabChange, activeTab = "he
     ...(tabs.tasks ? [{ id: "tasks" as Tab, label: "Задачи", icon: "ListChecks" }] : []),
     ...(canViewHeadcount ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }] : []),
     ...(tabs.fines ? [{ id: "fines" as Tab, label: "Штрафы", icon: "Banknote" }] : []),
+    ...(tabs.suspensions ? [{ id: "suspensions" as Tab, label: "Приостановки", icon: "OctagonPause" }] : []),
   ];
   const { days, loading, saveDay } = useHeadcount(year);
   const { settings, saveSettings } = useHeadcountSettings();

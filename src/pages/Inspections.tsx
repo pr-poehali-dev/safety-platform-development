@@ -10,7 +10,7 @@ import InspectionsTable from "@/components/inspections/InspectionsTable";
 import InspectionDetail from "@/components/inspections/InspectionDetail";
 import { VisibilitySettings, defaultVisibilitySettings } from "@/lib/visibilityTypes";
 
-type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines";
+type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines" | "suspensions";
 
 interface InspectionsProps {
   user: AppUser;
@@ -155,6 +155,9 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
               : []),
             ...(tabs.fines
               ? [{ id: "fines" as Tab, label: "Штрафы", icon: "Banknote", action: () => onTabChange?.("fines") }]
+              : []),
+            ...(tabs.suspensions
+              ? [{ id: "suspensions" as Tab, label: "Приостановки", icon: "OctagonPause", action: () => onTabChange?.("suspensions") }]
               : []),
           ].map(t => (
             <button

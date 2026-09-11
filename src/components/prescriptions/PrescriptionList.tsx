@@ -54,6 +54,7 @@ interface PrescriptionListProps {
   onTasksClick?: () => void;
   onHeadcountClick?: () => void;
   onFinesClick?: () => void;
+  onSuspensionsClick?: () => void;
   onStatusChange?: (p: Prescription, status: Status) => void;
   activeTab?: string;
   visibility?: VisibilitySettings;
@@ -66,7 +67,7 @@ export function PrescriptionList({
   onSearchChange, onFilterChange, onFilterMineChange, onFilterSuspendedChange,
   onFilterObjectChange, onFilterContractorChange, onFilterInspectorChange, onDateFromChange, onDateToChange,
   onSelect, onAddClick, onInspectionsClick,
-  onDashboardClick, onIncidentsClick, onTasksClick, onHeadcountClick, onFinesClick, onStatusChange, activeTab = "prescriptions",
+  onDashboardClick, onIncidentsClick, onTasksClick, onHeadcountClick, onFinesClick, onSuspensionsClick, onStatusChange, activeTab = "prescriptions",
   visibility,
 }: PrescriptionListProps) {
 
@@ -127,6 +128,7 @@ export function PrescriptionList({
         onTasksClick={onTasksClick}
         onHeadcountClick={onHeadcountClick}
         onFinesClick={onFinesClick}
+        onSuspensionsClick={onSuspensionsClick}
         activeTab={activeTab}
         visibility={visibility}
       />

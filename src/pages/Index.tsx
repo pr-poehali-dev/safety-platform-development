@@ -11,6 +11,7 @@ import Incidents from "@/pages/Incidents";
 import Dashboard from "@/pages/Dashboard";
 import Headcount from "@/pages/Headcount";
 import Fines from "@/pages/Fines";
+import Suspensions from "@/pages/Suspensions";
 import TasksBlock from "@/components/tasks/TasksBlock";
 import TasksLoginPopup from "@/components/tasks/TasksLoginPopup";
 import { useTasks } from "@/hooks/useTasks";
@@ -35,7 +36,7 @@ const API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69"
 const TEMPLATES_API = "https://functions.poehali.dev/41ec60df-3f38-4561-ba9d-ca17ebd71553";
 const USERS_URL = "https://functions.poehali.dev/9f213d27-a6a3-4ce0-b6b1-0d26003c43eb";
 
-type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines";
+type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines" | "suspensions";
 
 export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, onTasksPopupShown, visibilityOverride }: IndexProps) {
   const resolvedVisibility = useResolvedVisibility(user);
@@ -113,7 +114,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
   }, [showTasksPopup, tasksLoading]);
 
   useEffect(() => {
-    fetch(TEMPLATES_API)
+    fetch(`${TEMPLATES_API}?type=prescription`)
       .then(r => r.json())
       .then((data: Template[]) => {
         const parsed = typeof data === "string" ? JSON.parse(data) : data;
@@ -190,6 +191,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
 
   const canViewHeadcount = visibility.tabs.headcount;
   const canViewFines = visibility.tabs.fines;
+  const canViewSuspensions = visibility.tabs.suspensions;
 
   const tabVisible = (key: TabKey) => visibility.tabs[key];
 
@@ -201,6 +203,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
     ...(tabVisible("tasks") ? [{ id: "tasks" as Tab, label: "Задачи", icon: "ListChecks" }] : []),
     ...(canViewHeadcount ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }] : []),
     ...(canViewFines ? [{ id: "fines" as Tab, label: "Штрафы", icon: "Banknote" }] : []),
+    ...(canViewSuspensions ? [{ id: "suspensions" as Tab, label: "Приостановки", icon: "OctagonPause" }] : []),
   ];
 
   const NotificationBell = () => (
@@ -353,6 +356,18 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
     );
   }
 
+  if (tab === "suspensions" && canViewSuspensions) {
+    return (
+      <Suspensions
+        user={user}
+        onLogout={onLogout}
+        onTabChange={(t) => setTab(t as Tab)}
+        activeTab={tab}
+        visibility={visibility}
+      />
+    );
+  }
+
   if (tab === "tasks" && tabVisible("tasks")) {
     return (
       <div className="min-h-screen bg-background" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
@@ -464,6 +479,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
         onTasksClick={() => setTab("tasks")}
         onHeadcountClick={canViewHeadcount ? () => setTab("headcount") : undefined}
         onFinesClick={canViewFines ? () => setTab("fines") : undefined}
+        onSuspensionsClick={canViewSuspensions ? () => setTab("suspensions") : undefined}
         onStatusChange={changePrescriptionStatus}
         activeTab={tab}
         visibility={visibility}

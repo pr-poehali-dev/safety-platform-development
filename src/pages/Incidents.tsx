@@ -8,7 +8,7 @@ import { VisibilitySettings, defaultVisibilitySettings } from "@/lib/visibilityT
 const INCIDENTS_API = "https://functions.poehali.dev/4aedfdd0-d096-43ad-b4e7-b7b2aec3f753";
 const CONTRACTORS_API = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
 
-type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines";
+type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines" | "suspensions";
 
 interface IncidentsProps {
   user: AppUser;
@@ -139,6 +139,7 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
     ...(tabs.tasks ? [{ id: "tasks" as Tab, label: "Задачи", icon: "ListChecks" }] : []),
     ...(tabs.headcount ? [{ id: "headcount" as Tab, label: "ЧеловекоЧасы", icon: "Users" }] : []),
     ...(tabs.fines ? [{ id: "fines" as Tab, label: "Штрафы", icon: "Banknote" }] : []),
+    ...(tabs.suspensions ? [{ id: "suspensions" as Tab, label: "Приостановки", icon: "OctagonPause" }] : []),
   ];
 
   return (
