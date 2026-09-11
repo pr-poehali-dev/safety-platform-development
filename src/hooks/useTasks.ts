@@ -5,7 +5,7 @@ import { AppUser } from "@/lib/auth";
 const TASKS_URL = "https://functions.poehali.dev/3cd2f397-c85b-47cf-88b9-f1d303552101";
 const ACTIONS_URL = "https://functions.poehali.dev/570e5413-e4df-4335-9a01-f1ae1c598955";
 const COMMENTS_URL = "https://functions.poehali.dev/c2751a4b-682c-4ef9-ac9e-8dfb976f5758";
-const NOTIFICATIONS_URL = "https://functions.poehali.dev/644be78f-101c-4b5a-9b70-fe30ce8f0bdd";
+const NOTIFICATIONS_URL = "https://functions.poehali.dev/b4b9a381-f8b4-4204-b581-2de5c3f8a583";
 
 export function useTasks(user: AppUser) {
   const [assignments, setAssignments] = useState<TaskAssignment[]>([]);
@@ -17,7 +17,7 @@ export function useTasks(user: AppUser) {
     try {
       const [tasksRes, notifRes] = await Promise.all([
         fetch(`${TASKS_URL}?role=${user.role}&login=${user.login}`),
-        fetch(`${NOTIFICATIONS_URL}?login=${user.login}`),
+        fetch(`${NOTIFICATIONS_URL}?type=task&login=${user.login}`),
       ]);
       const tasksData = await tasksRes.json();
       const notifData = await notifRes.json();
@@ -79,7 +79,7 @@ export function useTasks(user: AppUser) {
   };
 
   const markAllRead = async () => {
-    await fetch(NOTIFICATIONS_URL, {
+    await fetch(`${NOTIFICATIONS_URL}?type=task`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "mark_read", login: user.login }),

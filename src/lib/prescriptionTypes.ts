@@ -143,7 +143,7 @@ export interface Comment {
   attachments?: Attachment[];
 }
 
-export const PRESCRIPTION_NOTIFICATIONS_API = "https://functions.poehali.dev/8e15e4fd-7d73-49e8-b017-27cee863998c";
+export const PRESCRIPTION_NOTIFICATIONS_API = "https://functions.poehali.dev/b4b9a381-f8b4-4204-b581-2de5c3f8a583?type=prescription";
 
 export interface PrescriptionNotification {
   id: number;

@@ -7,7 +7,7 @@ export function useInspectionNotifications(user: AppUser) {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`${NOTIFICATIONS_API}?login=${user.login}`);
+      const res = await fetch(`${NOTIFICATIONS_API}&login=${user.login}`);
       const data = await res.json();
       setNotifications(Array.isArray(data) ? data : []);
     } catch {

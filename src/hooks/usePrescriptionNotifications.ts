@@ -7,7 +7,7 @@ export function usePrescriptionNotifications(user: AppUser) {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`${PRESCRIPTION_NOTIFICATIONS_API}?login=${user.login}`);
+      const res = await fetch(`${PRESCRIPTION_NOTIFICATIONS_API}&login=${user.login}`);
       const data = await res.json();
       setNotifications(Array.isArray(data) ? data : []);
     } catch {
