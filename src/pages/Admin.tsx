@@ -163,7 +163,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
         )}
         {tab === "inspections" && <InspectionsTab />}
         {tab === "suspensions" && <SuspensionsTab />}
-        {tab === "data" && <DataTab />}
+        {tab === "data" && <DataTab currentAdminLogin={currentUser.login} />}
       </main>
     </div>
   );

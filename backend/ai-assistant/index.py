@@ -1,8 +1,9 @@
 import json
 import os
+import random
 import psycopg2
-import urllib.request
-import urllib.error
+import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 
 SCHEMA = "t_p5901577_safety_platform_deve"
 
@@ -13,6 +14,7 @@ CORS = {
 }
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+PROXMINT_LIST_URL = "https://raw.githubusercontent.com/proxmint/free-proxy-list/main/proxies/socks5.txt"
 
 SYSTEM_PROMPT = """Ты — ИИ-помощник в корпоративном веб-приложении SafeWork для управления охраной труда на строительных объектах.
 Твои задачи:
@@ -72,28 +74,97 @@ def build_data_context() -> str:
         return "Данные приложения временно недоступны."
 
 
-def call_gemini(api_key: str, contents: list) -> str:
+def get_proxy_settings() -> dict:
+    try:
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute(
+            f"SELECT mode, paid_proxy_url, paid_proxy_login, paid_proxy_password FROM {SCHEMA}.proxy_settings WHERE id = 1"
+        )
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return {"mode": "proxmint", "paid_proxy_url": "", "paid_proxy_login": "", "paid_proxy_password": ""}
+        return {
+            "mode": row[0] or "proxmint",
+            "paid_proxy_url": row[1] or "",
+            "paid_proxy_login": row[2] or "",
+            "paid_proxy_password": row[3] or "",
+        }
+    except Exception:
+        return {"mode": "proxmint", "paid_proxy_url": "", "paid_proxy_login": "", "paid_proxy_password": ""}
+
+
+def build_paid_proxy_url(cfg: dict) -> str | None:
+    url = (cfg.get("paid_proxy_url") or "").strip()
+    if not url:
+        return None
+    login = (cfg.get("paid_proxy_login") or "").strip()
+    password = (cfg.get("paid_proxy_password") or "").strip()
+    if "://" not in url:
+        url = f"http://{url}"
+    if login and "@" not in url:
+        scheme, rest = url.split("://", 1)
+        url = f"{scheme}://{login}:{password}@{rest}"
+    return url
+
+
+def fetch_proxmint_list() -> list:
+    try:
+        resp = requests.get(PROXMINT_LIST_URL, timeout=2)
+        return [line.strip() for line in resp.text.splitlines() if line.strip()]
+    except Exception:
+        return []
+
+
+def call_gemini(api_key: str, contents: list, proxy_cfg: dict) -> dict:
     payload = {
         "contents": contents,
         "generationConfig": {"temperature": 0.4, "maxOutputTokens": 1024},
     }
-    req = urllib.request.Request(
-        f"{GEMINI_URL}?key={api_key}",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=25) as resp:
-        data = json.loads(resp.read().decode("utf-8"))
-    candidates = data.get("candidates") or []
+    url = f"{GEMINI_URL}?key={api_key}"
+
+    if proxy_cfg["mode"] == "paid":
+        proxy_url = build_paid_proxy_url(proxy_cfg)
+        if not proxy_url:
+            raise RuntimeError("Платный прокси включён, но не настроен. Укажите адрес прокси в настройках.")
+        resp = requests.post(url, json=payload, proxies={"http": proxy_url, "https": proxy_url}, timeout=25)
+        resp.raise_for_status()
+        return resp.json()
+
+    candidates = fetch_proxmint_list()
+    random.shuffle(candidates)
+    candidates = candidates[:15]
     if not candidates:
-        return "Не удалось получить ответ от ИИ. Попробуйте переформулировать вопрос."
-    parts = candidates[0].get("content", {}).get("parts", [])
-    return "".join(p.get("text", "") for p in parts).strip() or "Пустой ответ от ИИ."
+        raise RuntimeError("Список бесплатных прокси Proxmint временно недоступен.")
+
+    def try_proxy(proxy_ip: str):
+        proxy_url = f"socks5://{proxy_ip}"
+        resp = requests.post(url, json=payload, proxies={"http": proxy_url, "https": proxy_url}, timeout=3)
+        if resp.status_code >= 400:
+            raise RuntimeError(f"{resp.status_code}: {resp.text[:200]}")
+        return resp.json()
+
+    last_error = None
+    pool = ThreadPoolExecutor(max_workers=15)
+    futures = {pool.submit(try_proxy, ip): ip for ip in candidates}
+    try:
+        for future in as_completed(futures, timeout=3.5):
+            try:
+                result = future.result()
+                pool.shutdown(wait=False, cancel_futures=True)
+                return result
+            except Exception as e:
+                last_error = e
+                continue
+    except FuturesTimeoutError:
+        last_error = last_error or "таймаут ожидания ответа от прокси"
+    pool.shutdown(wait=False, cancel_futures=True)
+    raise RuntimeError(f"Не удалось подключиться через бесплатные прокси Proxmint: {str(last_error).replace(api_key, '***')}")
 
 
 def handler(event: dict, context) -> dict:
-    """Чат с ИИ-помощником (Google Gemini) по вопросам охраны труда и данным SafeWork."""
+    """Чат с ИИ-помощником (Google Gemini через прокси) по вопросам охраны труда и данным SafeWork."""
     if event.get("httpMethod") == "OPTIONS":
         return {"statusCode": 200, "headers": CORS, "body": ""}
 
@@ -118,6 +189,7 @@ def handler(event: dict, context) -> dict:
     user_role = body.get("user_role") or ""
 
     data_context = build_data_context()
+    proxy_cfg = get_proxy_settings()
 
     contents = [
         {"role": "user", "parts": [{"text": SYSTEM_PROMPT}]},
@@ -135,13 +207,27 @@ def handler(event: dict, context) -> dict:
     contents.append({"role": "user", "parts": [{"text": message}]})
 
     try:
-        reply = call_gemini(api_key, contents)
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode("utf-8", errors="ignore")
+        data = call_gemini(api_key, contents, proxy_cfg)
+    except requests.HTTPError as e:
+        error_body = e.response.text[:300] if e.response is not None else str(e)
         return {
             "statusCode": 502,
             "headers": CORS,
-            "body": json.dumps({"error": f"Ошибка Gemini API: {error_body[:300]}"}, ensure_ascii=False),
+            "body": json.dumps({"error": f"Ошибка Gemini API: {error_body}"}, ensure_ascii=False),
         }
+    except Exception as e:
+        safe_error = str(e).replace(api_key, "***")
+        return {
+            "statusCode": 502,
+            "headers": CORS,
+            "body": json.dumps({"error": safe_error}, ensure_ascii=False),
+        }
+
+    candidates = data.get("candidates") or []
+    if not candidates:
+        reply = "Не удалось получить ответ от ИИ. Попробуйте переформулировать вопрос."
+    else:
+        parts = candidates[0].get("content", {}).get("parts", [])
+        reply = "".join(p.get("text", "") for p in parts).strip() or "Пустой ответ от ИИ."
 
     return {"statusCode": 200, "headers": CORS, "body": json.dumps({"reply": reply}, ensure_ascii=False)}
