@@ -39,7 +39,7 @@ function resizeImage(file: File): Promise<string> {
 }
 
 export function PrescriptionDetail({
-  prescription, onClose, onUpdate, user, canEdit, template, onEditRequest,
+  prescription, onClose, onUpdate, user, canEdit, template, onEditRequest, onOpenSuspension,
 }: {
   prescription: Prescription;
   onClose: () => void;
@@ -48,6 +48,7 @@ export function PrescriptionDetail({
   canEdit: boolean;
   template: Template;
   onEditRequest?: (p: Prescription) => void;
+  onOpenSuspension?: (number: string) => void;
 }) {
   const [p, setP] = useState(prescription);
   const [newComment, setNewComment] = useState("");
@@ -241,6 +242,7 @@ export function PrescriptionDetail({
               setLightbox={setLightbox}
               removeRemarkPhoto={removeRemarkPhoto}
               handleRemarkPhotos={handleRemarkPhotos}
+              onOpenSuspension={onOpenSuspension}
             />
           )}
 

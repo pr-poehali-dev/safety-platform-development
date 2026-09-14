@@ -62,6 +62,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
   const [taskOpenId, setTaskOpenId] = useState<number | undefined>(undefined);
   const [inspectionOpenId, setInspectionOpenId] = useState<number | undefined>(undefined);
   const [prescriptionOpenId, setPrescriptionOpenId] = useState<string | undefined>(undefined);
+  const [suspensionOpenNumber, setSuspensionOpenNumber] = useState<string | undefined>(undefined);
   const [activeTemplate, setActiveTemplate] = useState<Template>({ ...DEFAULT_TEMPLATE, id: "default", name: "По умолчанию", isDefault: true });
   const [availableUsers, setAvailableUsers] = useState<{ login: string; name: string; role: string }[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -364,6 +365,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
         onTabChange={(t) => setTab(t as Tab)}
         activeTab={tab}
         visibility={visibility}
+        initialOpenNumber={suspensionOpenNumber}
       />
     );
   }
@@ -510,6 +512,11 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
           }
           template={activeTemplate}
           onEditRequest={p => { setEditingPrescription(p); setSelected(null); }}
+          onOpenSuspension={canViewSuspensions ? (number) => {
+            setSuspensionOpenNumber(number);
+            setSelected(null);
+            setTab("suspensions");
+          } : undefined}
         />
       )}
     </>

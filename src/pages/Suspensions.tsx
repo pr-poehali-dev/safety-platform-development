@@ -22,9 +22,10 @@ interface SuspensionsProps {
   onTabChange?: (tab: Tab) => void;
   activeTab?: Tab;
   visibility?: VisibilitySettings;
+  initialOpenNumber?: string;
 }
 
-export default function Suspensions({ user, onLogout, onTabChange, activeTab = "suspensions", visibility }: SuspensionsProps) {
+export default function Suspensions({ user, onLogout, onTabChange, activeTab = "suspensions", visibility, initialOpenNumber }: SuspensionsProps) {
   const tabs = visibility?.tabs ?? defaultVisibilitySettings().tabs;
   const [rows, setRows] = useState<Suspension[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,6 +38,8 @@ export default function Suspensions({ user, onLogout, onTabChange, activeTab = "
   const [dateTo, setDateTo] = useState("");
   const [activeTemplate, setActiveTemplate] = useState<Template>({ ...DEFAULT_TEMPLATE, id: "default", name: "По умолчанию", isDefault: true });
 
+  const [highlightNumber, setHighlightNumber] = useState<string | undefined>(initialOpenNumber);
+
   const canEdit = user.role === "admin" || user.role === "specialist" || user.role === "manager";
 
   const load = () => {
@@ -48,6 +51,26 @@ export default function Suspensions({ user, onLogout, onTabChange, activeTab = "
   };
 
   useEffect(() => { load(); }, []);
+
+  // Открытие по конкретному номеру акта (переход из карточки предписания)
+  useEffect(() => {
+    if (!initialOpenNumber) return;
+    setSearch(initialOpenNumber);
+    setFilterStatus([]);
+    setFilterObject([]);
+    setFilterContractor([]);
+    setDateFrom("");
+    setDateTo("");
+    setHighlightNumber(initialOpenNumber);
+  }, [initialOpenNumber]);
+
+  useEffect(() => {
+    if (!highlightNumber) return;
+    const el = document.getElementById(`suspension-row-${highlightNumber}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const t = setTimeout(() => setHighlightNumber(undefined), 2500);
+    return () => clearTimeout(t);
+  }, [highlightNumber, rows]);
 
   useEffect(() => {
     fetch(`${TEMPLATES_API}?type=suspension`)
@@ -221,7 +244,11 @@ export default function Suspensions({ user, onLogout, onTabChange, activeTab = "
                 </thead>
                 <tbody className="divide-y divide-border">
                   {filteredRows.map(r => (
-                    <tr key={r.id} className="hover:bg-secondary/30 transition-colors group">
+                    <tr
+                      key={r.id}
+                      id={`suspension-row-${r.number}`}
+                      className={`hover:bg-secondary/30 transition-colors group ${highlightNumber === r.number ? "bg-primary/10 ring-1 ring-inset ring-primary/40" : ""}`}
+                    >
                       <td className="px-5 py-4 whitespace-nowrap">
                         <span className="text-xs font-medium text-primary" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{r.number}</span>
                         <div className="text-[11px] text-muted-foreground mt-0.5">

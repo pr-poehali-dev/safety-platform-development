@@ -19,11 +19,13 @@ interface PrescriptionRemarksTabProps {
   setLightbox: (v: { remarkId: string; photos: string[]; index: number } | null) => void;
   removeRemarkPhoto: (remarkId: string, photoIdx: number) => void;
   handleRemarkPhotos: (remarkId: string, files: FileList | null) => void;
+  onOpenSuspension?: (number: string) => void;
 }
 
 export function PrescriptionRemarksTab({
   p, canEdit, canChangeStatus, canDeleteRemark, uploadingRemarkId, photoInputRefs,
   setRemarkStatus, setDeleteRemarkId, setLightbox, removeRemarkPhoto, handleRemarkPhotos,
+  onOpenSuspension,
 }: PrescriptionRemarksTabProps) {
   return (
     <div className="px-6 py-4 space-y-4">
@@ -40,9 +42,6 @@ export function PrescriptionRemarksTab({
                   <Icon name="OctagonX" size={11} />
                   Работы приостановлены
                 </span>
-              )}
-              {r.work_suspended && r.suspension_act_drawn && (
-                <span className="text-[11px] text-red-400/80 whitespace-nowrap">(составлен акт о приостановке)</span>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -61,6 +60,23 @@ export function PrescriptionRemarksTab({
             </div>
           </div>
           <p className="text-sm text-foreground leading-relaxed bg-secondary/40 rounded-lg p-3">{r.description}</p>
+
+          {/* Связанный акт о приостановке */}
+          {r.work_suspended && r.suspension_act_drawn && r.suspension_act_number && (
+            <button
+              type="button"
+              onClick={() => onOpenSuspension?.(r.suspension_act_number!)}
+              disabled={!onOpenSuspension}
+              className="w-full flex items-center gap-2.5 text-left bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2.5 transition-colors enabled:hover:bg-red-400/20 disabled:cursor-default"
+            >
+              <Icon name="OctagonPause" size={15} className="text-red-400 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-red-400/80 uppercase tracking-wider">Акт о приостановке</p>
+                <p className="text-sm font-medium text-red-400 truncate" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{r.suspension_act_number}</p>
+              </div>
+              {onOpenSuspension && <Icon name="ChevronRight" size={16} className="text-red-400/70 flex-shrink-0" />}
+            </button>
+          )}
 
           {/* Фото нарушения */}
           <div>
