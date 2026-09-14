@@ -8,6 +8,7 @@ import { PrescriptionsTab } from "@/components/admin/PrescriptionsTab";
 import { TemplatesTab } from "@/components/admin/TemplatesTab";
 import { DataTab } from "@/components/admin/DataTab";
 import { InspectionsTab } from "@/components/admin/InspectionsTab";
+import { SuspensionsTab } from "@/components/admin/SuspensionsTab";
 import Index from "@/pages/Index";
 import AdminVisibilityBar from "@/components/admin/AdminVisibilityBar";
 import { useAdminVisibilityEditor } from "@/hooks/useVisibilitySettings";
@@ -22,7 +23,7 @@ interface AdminProps {
 }
 
 export default function Admin({ currentUser, users, onUsersChange, onLogout }: AdminProps) {
-  const [tab, setTab] = useState<"overview" | "users" | "prescriptions" | "inspections" | "templates" | "data">("users");
+  const [tab, setTab] = useState<"overview" | "users" | "prescriptions" | "inspections" | "suspensions" | "templates" | "data">("users");
   const visibilityEditor = useAdminVisibilityEditor();
 
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -124,6 +125,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
             { key: "users", label: "Управление пользователями", icon: "Users" },
             { key: "prescriptions", label: "Управление предписаниями", icon: "ClipboardList" },
             { key: "inspections", label: "Управление проверками", icon: "TableProperties" },
+            { key: "suspensions", label: "Управление Приостановками", icon: "OctagonPause" },
             { key: "templates", label: "Управление шаблонами", icon: "FileText" },
             { key: "data", label: "Управление данными", icon: "Database" },
           ] as const).map(t => (
@@ -160,6 +162,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
           />
         )}
         {tab === "inspections" && <InspectionsTab />}
+        {tab === "suspensions" && <SuspensionsTab />}
         {tab === "data" && <DataTab />}
       </main>
     </div>

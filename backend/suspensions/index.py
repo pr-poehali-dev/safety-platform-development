@@ -42,6 +42,45 @@ def row_to_suspension(row):
     }
 
 
+def handle_numbering(method, body, cur, conn):
+    if method == "GET":
+        cur.execute(
+            f"SELECT id, prefix, start_number, next_number, auto_reset_yearly, last_year "
+            f"FROM {SCHEMA}.suspension_numbering ORDER BY id LIMIT 1"
+        )
+        row = cur.fetchone()
+        if not row:
+            return ok({"prefix": "", "start_number": 1, "next_number": 1, "auto_reset_yearly": False})
+        return ok({
+            "id": row[0], "prefix": row[1], "start_number": row[2],
+            "next_number": row[3], "auto_reset_yearly": row[4], "last_year": row[5],
+        })
+
+    if method == "PUT":
+        s = body
+        prefix = (s.get("prefix") or "").strip()
+        start_number = int(s.get("start_number", 1))
+        auto_reset_yearly = bool(s.get("auto_reset_yearly", False))
+        cur.execute(f"SELECT id FROM {SCHEMA}.suspension_numbering ORDER BY id LIMIT 1")
+        row = cur.fetchone()
+        if row:
+            cur.execute(
+                f"UPDATE {SCHEMA}.suspension_numbering "
+                f"SET prefix=%s, start_number=%s, next_number=%s, auto_reset_yearly=%s WHERE id=%s",
+                (prefix, start_number, start_number, auto_reset_yearly, row[0])
+            )
+        else:
+            cur.execute(
+                f"INSERT INTO {SCHEMA}.suspension_numbering (prefix, start_number, next_number, auto_reset_yearly) "
+                f"VALUES (%s,%s,%s,%s)",
+                (prefix, start_number, start_number, auto_reset_yearly)
+            )
+        conn.commit()
+        return ok({"ok": True})
+
+    return err("Method not allowed", 405)
+
+
 def next_suspension_number(cur):
     cur.execute(
         f"SELECT id, prefix, start_number, next_number, auto_reset_yearly, last_year "
@@ -88,6 +127,10 @@ def handler(event: dict, context) -> dict:
     cur = conn.cursor()
 
     try:
+        qs = event.get("queryStringParameters") or {}
+        if qs.get("type") == "numbering" or body.get("_type") == "numbering":
+            return handle_numbering(method, body, cur, conn)
+
         if method == "GET":
             cur.execute(
                 f"""SELECT id, number, issued_at, object, place, contractor, issued_by, reason, status, created_by
