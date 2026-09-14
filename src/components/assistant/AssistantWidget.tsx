@@ -3,6 +3,7 @@ import Icon from "@/components/ui/icon";
 import { AppUser, ROLE_LABELS } from "@/lib/auth";
 
 const AI_ASSISTANT_URL = "https://functions.poehali.dev/8baa3992-c91f-45b7-abf8-2a4082e8c671";
+const PROXY_SETTINGS_URL = "https://functions.poehali.dev/618f0e3d-5e12-4e77-9fc8-d29306fcc7a6";
 
 interface ChatMessage {
   role: "user" | "model";
@@ -10,12 +11,22 @@ interface ChatMessage {
 }
 
 export default function AssistantWidget({ user }: { user: AppUser }) {
+  const [enabled, setEnabled] = useState(true);
+  const [checked, setChecked] = useState(false);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch(`${PROXY_SETTINGS_URL}?public=1`)
+      .then(r => r.json())
+      .then(data => setEnabled(data.assistant_enabled !== false))
+      .catch(() => setEnabled(true))
+      .finally(() => setChecked(true));
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -51,6 +62,8 @@ export default function AssistantWidget({ user }: { user: AppUser }) {
       setLoading(false);
     }
   };
+
+  if (!checked || !enabled) return null;
 
   return (
     <>

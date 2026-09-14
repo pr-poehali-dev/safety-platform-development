@@ -81,6 +81,8 @@ DEFAULT_PROXY_CFG = {
     "paid_proxy_protocol": "http",
     "paid_proxy_login": "",
     "paid_proxy_password": "",
+    "assistant_enabled": True,
+    "gemini_api_key": "",
 }
 
 
@@ -90,7 +92,7 @@ def get_proxy_settings() -> dict:
         cur = conn.cursor()
         cur.execute(
             f"""SELECT mode, paid_proxy_url, paid_proxy_port, paid_proxy_protocol,
-                       paid_proxy_login, paid_proxy_password
+                       paid_proxy_login, paid_proxy_password, assistant_enabled, gemini_api_key
                 FROM {SCHEMA}.proxy_settings WHERE id = 1"""
         )
         row = cur.fetchone()
@@ -104,6 +106,8 @@ def get_proxy_settings() -> dict:
             "paid_proxy_protocol": row[3] or "http",
             "paid_proxy_login": row[4] or "",
             "paid_proxy_password": row[5] or "",
+            "assistant_enabled": row[6] if row[6] is not None else True,
+            "gemini_api_key": row[7] or "",
         }
     except Exception:
         return dict(DEFAULT_PROXY_CFG)
@@ -195,12 +199,21 @@ def handler(event: dict, context) -> dict:
     if event.get("httpMethod") != "POST":
         return {"statusCode": 405, "headers": CORS, "body": json.dumps({"error": "method not allowed"})}
 
-    api_key = os.environ.get("GEMINI_API_KEY")
+    proxy_cfg = get_proxy_settings()
+
+    if not proxy_cfg.get("assistant_enabled", True):
+        return {
+            "statusCode": 200,
+            "headers": CORS,
+            "body": json.dumps({"reply": "ИИ-помощник временно отключён администратором."}, ensure_ascii=False),
+        }
+
+    api_key = proxy_cfg.get("gemini_api_key") or os.environ.get("GEMINI_API_KEY")
     if not api_key:
         return {
             "statusCode": 500,
             "headers": CORS,
-            "body": json.dumps({"error": "GEMINI_API_KEY не настроен"}, ensure_ascii=False),
+            "body": json.dumps({"error": "API-ключ Gemini не настроен"}, ensure_ascii=False),
         }
 
     body = json.loads(event.get("body") or "{}")
@@ -213,7 +226,6 @@ def handler(event: dict, context) -> dict:
     user_role = body.get("user_role") or ""
 
     data_context = build_data_context()
-    proxy_cfg = get_proxy_settings()
 
     contents = [
         {"role": "user", "parts": [{"text": SYSTEM_PROMPT}]},

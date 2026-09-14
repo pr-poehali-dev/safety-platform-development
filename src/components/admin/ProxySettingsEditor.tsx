@@ -13,6 +13,9 @@ interface ProxySettings {
   paid_proxy_protocol: Protocol;
   paid_proxy_login: string;
   paid_proxy_password: string;
+  assistant_enabled: boolean;
+  gemini_api_key_masked: string;
+  has_gemini_api_key: boolean;
 }
 
 const PROTOCOLS: Protocol[] = ["http", "https", "socks5"];
@@ -21,6 +24,11 @@ function ProxySettingsEditor({ onClose, currentAdminLogin }: { onClose: () => vo
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const [assistantEnabled, setAssistantEnabled] = useState(true);
+  const [maskedKey, setMaskedKey] = useState("");
+  const [hasKey, setHasKey] = useState(false);
+  const [newApiKey, setNewApiKey] = useState("");
 
   const [mode, setMode] = useState<"proxmint" | "paid">("proxmint");
   const [protocol, setProtocol] = useState<Protocol>("http");
@@ -34,6 +42,9 @@ function ProxySettingsEditor({ onClose, currentAdminLogin }: { onClose: () => vo
     fetch(API)
       .then(r => r.json())
       .then((data: ProxySettings) => {
+        setAssistantEnabled(data.assistant_enabled !== false);
+        setMaskedKey(data.gemini_api_key_masked ?? "");
+        setHasKey(!!data.has_gemini_api_key);
         setMode(data.mode === "paid" ? "paid" : "proxmint");
         setProtocol(PROTOCOLS.includes(data.paid_proxy_protocol) ? data.paid_proxy_protocol : "http");
         setProxyHost(data.paid_proxy_url ?? "");
@@ -54,6 +65,8 @@ function ProxySettingsEditor({ onClose, currentAdminLogin }: { onClose: () => vo
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         mode,
+        assistant_enabled: assistantEnabled,
+        gemini_api_key: newApiKey.trim(),
         paid_proxy_protocol: protocol,
         paid_proxy_url: proxyHost.trim(),
         paid_proxy_port: proxyPort.trim(),
@@ -62,8 +75,10 @@ function ProxySettingsEditor({ onClose, currentAdminLogin }: { onClose: () => vo
         updated_by: currentAdminLogin,
       }),
     });
+    setNewApiKey("");
     setSaving(false);
     setSaved(true);
+    load();
     setTimeout(() => setSaved(false), 2000);
   };
 
@@ -86,12 +101,6 @@ function ProxySettingsEditor({ onClose, currentAdminLogin }: { onClose: () => vo
 
       <div className="flex-1 overflow-auto">
         <div className="max-w-xl mx-auto px-6 py-8 space-y-6">
-          <p className="text-xs text-muted-foreground">
-            Google Gemini недоступен из региона размещения серверов проекта. Запросы ИИ-помощника идут через прокси.
-            По умолчанию используется бесплатный список Proxmint (обновляется автоматически). При оформлении платной
-            подписки на прокси включите переключатель и укажите свои данные — приоритет отдаётся платному прокси.
-          </p>
-
           {loading ? (
             <div className="flex items-center justify-center py-10 text-muted-foreground gap-2">
               <Icon name="Loader2" size={16} className="animate-spin" />
@@ -99,6 +108,47 @@ function ProxySettingsEditor({ onClose, currentAdminLogin }: { onClose: () => vo
             </div>
           ) : (
             <>
+              <div className="bg-card border border-border rounded-lg px-4 py-3.5 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm text-foreground font-medium">ИИ-помощник включён</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {assistantEnabled ? "Работает для всех пользователей" : "Отключён — скрыт у всех пользователей"}
+                  </p>
+                </div>
+                <Switch
+                  checked={assistantEnabled}
+                  onCheckedChange={setAssistantEnabled}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground block">API-ключ Google Gemini</label>
+                {hasKey && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/30 border border-border rounded-lg px-3 py-2">
+                    <Icon name="KeyRound" size={13} />
+                    Текущий ключ: <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{maskedKey}</span>
+                  </div>
+                )}
+                <input
+                  value={newApiKey}
+                  onChange={e => setNewApiKey(e.target.value)}
+                  placeholder={hasKey ? "Вставьте новый ключ, чтобы заменить текущий" : "Вставьте API-ключ Gemini"}
+                  className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Получить ключ можно в Google AI Studio. Оставьте поле пустым, если не хотите менять текущий ключ
+                </p>
+              </div>
+
+              <div className="border-t border-border pt-5 space-y-1.5">
+                <p className="text-xs text-muted-foreground">
+                  Google Gemini недоступен из региона размещения серверов проекта. Запросы ИИ-помощника идут через прокси.
+                  По умолчанию используется бесплатный список Proxmint (обновляется автоматически). При оформлении платной
+                  подписки на прокси включите переключатель и укажите свои данные — приоритет отдаётся платному прокси.
+                </p>
+              </div>
+
               <div className="bg-card border border-border rounded-lg px-4 py-3.5 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm text-foreground font-medium">Использовать платный прокси</p>
