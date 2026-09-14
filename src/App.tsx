@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import PwaInstallPrompt from "@/components/PwaInstallPrompt";
+import AssistantWidget from "@/components/assistant/AssistantWidget";
 import { AppUser, fetchUsers, loadSession, saveSession, clearSession, isSessionInvalidated } from "@/lib/auth";
 
 const queryClient = new QueryClient();
@@ -103,6 +104,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <PwaInstallPrompt />
+          {user && <AssistantWidget user={user} />}
           <BrowserRouter>
             <Routes>
               <Route
