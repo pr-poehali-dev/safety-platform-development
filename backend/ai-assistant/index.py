@@ -74,39 +74,63 @@ def build_data_context() -> str:
         return "Данные приложения временно недоступны."
 
 
+DEFAULT_PROXY_CFG = {
+    "mode": "proxmint",
+    "paid_proxy_url": "",
+    "paid_proxy_port": "",
+    "paid_proxy_protocol": "http",
+    "paid_proxy_login": "",
+    "paid_proxy_password": "",
+}
+
+
 def get_proxy_settings() -> dict:
     try:
         conn = get_conn()
         cur = conn.cursor()
         cur.execute(
-            f"SELECT mode, paid_proxy_url, paid_proxy_login, paid_proxy_password FROM {SCHEMA}.proxy_settings WHERE id = 1"
+            f"""SELECT mode, paid_proxy_url, paid_proxy_port, paid_proxy_protocol,
+                       paid_proxy_login, paid_proxy_password
+                FROM {SCHEMA}.proxy_settings WHERE id = 1"""
         )
         row = cur.fetchone()
         conn.close()
         if not row:
-            return {"mode": "proxmint", "paid_proxy_url": "", "paid_proxy_login": "", "paid_proxy_password": ""}
+            return dict(DEFAULT_PROXY_CFG)
         return {
             "mode": row[0] or "proxmint",
             "paid_proxy_url": row[1] or "",
-            "paid_proxy_login": row[2] or "",
-            "paid_proxy_password": row[3] or "",
+            "paid_proxy_port": row[2] or "",
+            "paid_proxy_protocol": row[3] or "http",
+            "paid_proxy_login": row[4] or "",
+            "paid_proxy_password": row[5] or "",
         }
     except Exception:
-        return {"mode": "proxmint", "paid_proxy_url": "", "paid_proxy_login": "", "paid_proxy_password": ""}
+        return dict(DEFAULT_PROXY_CFG)
 
 
 def build_paid_proxy_url(cfg: dict) -> str | None:
-    url = (cfg.get("paid_proxy_url") or "").strip()
-    if not url:
+    host = (cfg.get("paid_proxy_url") or "").strip()
+    if not host:
         return None
+    port = (cfg.get("paid_proxy_port") or "").strip()
+    protocol = cfg.get("paid_proxy_protocol") or "http"
     login = (cfg.get("paid_proxy_login") or "").strip()
     password = (cfg.get("paid_proxy_password") or "").strip()
-    if "://" not in url:
-        url = f"http://{url}"
-    if login and "@" not in url:
-        scheme, rest = url.split("://", 1)
-        url = f"{scheme}://{login}:{password}@{rest}"
-    return url
+
+    if "://" in host:
+        protocol, host = host.split("://", 1)
+    if "@" in host:
+        creds, host = host.rsplit("@", 1)
+        if not login:
+            login, _, password = creds.partition(":")
+    if ":" in host:
+        host, existing_port = host.split(":", 1)
+        port = port or existing_port
+
+    netloc = f"{host}:{port}" if port else host
+    auth = f"{login}:{password}@" if login else ""
+    return f"{protocol}://{auth}{netloc}"
 
 
 def fetch_proxmint_list() -> list:

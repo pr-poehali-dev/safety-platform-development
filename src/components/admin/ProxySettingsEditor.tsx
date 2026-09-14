@@ -4,12 +4,18 @@ import { Switch } from "@/components/ui/switch";
 
 const API = "https://functions.poehali.dev/618f0e3d-5e12-4e77-9fc8-d29306fcc7a6";
 
+type Protocol = "http" | "https" | "socks5";
+
 interface ProxySettings {
   mode: "proxmint" | "paid";
   paid_proxy_url: string;
+  paid_proxy_port: string;
+  paid_proxy_protocol: Protocol;
   paid_proxy_login: string;
   paid_proxy_password: string;
 }
+
+const PROTOCOLS: Protocol[] = ["http", "https", "socks5"];
 
 function ProxySettingsEditor({ onClose, currentAdminLogin }: { onClose: () => void; currentAdminLogin: string }) {
   const [loading, setLoading] = useState(true);
@@ -17,7 +23,9 @@ function ProxySettingsEditor({ onClose, currentAdminLogin }: { onClose: () => vo
   const [saved, setSaved] = useState(false);
 
   const [mode, setMode] = useState<"proxmint" | "paid">("proxmint");
-  const [proxyUrl, setProxyUrl] = useState("");
+  const [protocol, setProtocol] = useState<Protocol>("http");
+  const [proxyHost, setProxyHost] = useState("");
+  const [proxyPort, setProxyPort] = useState("");
   const [proxyLogin, setProxyLogin] = useState("");
   const [proxyPassword, setProxyPassword] = useState("");
 
@@ -27,7 +35,9 @@ function ProxySettingsEditor({ onClose, currentAdminLogin }: { onClose: () => vo
       .then(r => r.json())
       .then((data: ProxySettings) => {
         setMode(data.mode === "paid" ? "paid" : "proxmint");
-        setProxyUrl(data.paid_proxy_url ?? "");
+        setProtocol(PROTOCOLS.includes(data.paid_proxy_protocol) ? data.paid_proxy_protocol : "http");
+        setProxyHost(data.paid_proxy_url ?? "");
+        setProxyPort(data.paid_proxy_port ?? "");
         setProxyLogin(data.paid_proxy_login ?? "");
         setProxyPassword(data.paid_proxy_password ?? "");
       })
@@ -44,7 +54,9 @@ function ProxySettingsEditor({ onClose, currentAdminLogin }: { onClose: () => vo
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         mode,
-        paid_proxy_url: proxyUrl.trim(),
+        paid_proxy_protocol: protocol,
+        paid_proxy_url: proxyHost.trim(),
+        paid_proxy_port: proxyPort.trim(),
         paid_proxy_login: proxyLogin.trim(),
         paid_proxy_password: proxyPassword.trim(),
         updated_by: currentAdminLogin,
@@ -101,20 +113,45 @@ function ProxySettingsEditor({ onClose, currentAdminLogin }: { onClose: () => vo
               </div>
 
               <div className={`space-y-4 transition-opacity ${mode === "paid" ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground block">Адрес прокси-сервера</label>
-                  <input
-                    value={proxyUrl}
-                    onChange={e => setProxyUrl(e.target.value)}
-                    placeholder="Например: http://1.2.3.4:8080"
-                    className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-                  />
-                  <p className="text-[10px] text-muted-foreground">Полный адрес с протоколом (http:// или socks5://) и портом</p>
+                <div className="grid grid-cols-[1fr_auto_1fr] gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground block">Адрес (Proxy Address)</label>
+                    <input
+                      value={proxyHost}
+                      onChange={e => setProxyHost(e.target.value)}
+                      placeholder="198.23.243.226"
+                      className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground block">Порт (Port)</label>
+                    <input
+                      value={proxyPort}
+                      onChange={e => setProxyPort(e.target.value)}
+                      placeholder="6361"
+                      className="w-20 bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground block">Протокол</label>
+                    <select
+                      value={protocol}
+                      onChange={e => setProtocol(e.target.value as Protocol)}
+                      className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    >
+                      {PROTOCOLS.map(p => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
+                <p className="text-[10px] text-muted-foreground -mt-2">
+                  Возьмите значения из личного кабинета вашего прокси-сервиса: столбцы Proxy Address и Port
+                </p>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground block">Логин (если есть)</label>
+                    <label className="text-xs font-medium text-muted-foreground block">Логин (Username)</label>
                     <input
                       value={proxyLogin}
                       onChange={e => setProxyLogin(e.target.value)}
@@ -122,7 +159,7 @@ function ProxySettingsEditor({ onClose, currentAdminLogin }: { onClose: () => vo
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground block">Пароль (если есть)</label>
+                    <label className="text-xs font-medium text-muted-foreground block">Пароль (Password)</label>
                     <input
                       type="password"
                       value={proxyPassword}
