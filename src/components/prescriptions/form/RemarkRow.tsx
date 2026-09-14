@@ -32,9 +32,9 @@ function resizeImage(file: File): Promise<string> {
 
 // --- Строка замечания ---
 export function RemarkRow({
-  remark, index, onChange, onRemove, canRemove, categories, places,
+  remark, index, onChange, onRemove, canRemove, categories, places, suspensionNumbers,
 }: {
-  remark: Remark; index: number; onChange: (r: Remark) => void; onRemove: () => void; canRemove: boolean; categories: string[]; places: string[];
+  remark: Remark; index: number; onChange: (r: Remark) => void; onRemove: () => void; canRemove: boolean; categories: string[]; places: string[]; suspensionNumbers: string[];
 }) {
   const set = (key: keyof Remark, val: string | boolean) => onChange({ ...remark, [key]: val });
   const [uploading, setUploading] = useState(false);
@@ -89,7 +89,7 @@ export function RemarkRow({
   };
 
   return (
-    <div className="border border-border rounded-xl p-8 space-y-6 bg-secondary/20 relative">
+    <div className="border border-border rounded-xl p-4 sm:p-8 space-y-6 bg-secondary/20 relative">
       <div className="flex items-center justify-between mb-1">
         <span className="text-sm font-semibold text-primary uppercase tracking-wider">Замечание #{index + 1}</span>
         {canRemove && (
@@ -98,8 +98,8 @@ export function RemarkRow({
           </button>
         )}
       </div>
-      <div className="flex gap-4">
-        <div style={{ flex: "0 0 50%" }}>
+      <div className="flex flex-wrap gap-4">
+        <div className="flex-1 min-w-[220px] basis-full sm:basis-[calc(50%_-_0.5rem)] lg:basis-[0] lg:flex-[0_0_38%]">
           <Field label="Место нарушения *">
             <SelectBase value={remark.place} onChange={e => set("place", e.target.value)} disabled={places.length === 0}>
               <option value="">{places.length === 0 ? "— Сначала выберите объект —" : "— Выберите место нарушения —"}</option>
@@ -107,7 +107,7 @@ export function RemarkRow({
             </SelectBase>
           </Field>
         </div>
-        <div style={{ flex: "0 0 30%" }}>
+        <div className="flex-1 min-w-[220px] basis-full sm:basis-[calc(50%_-_0.5rem)] lg:basis-[0] lg:flex-[0_0_25%]">
           <Field label="Вид нарушения *">
             <SelectBase value={remark.category} onChange={e => set("category", e.target.value)}>
               <option value="">— Выберите вид нарушения —</option>
@@ -115,13 +115,18 @@ export function RemarkRow({
             </SelectBase>
           </Field>
         </div>
-        <div style={{ flex: "0 0 20%" }} className="space-y-3">
+        <div className="flex-1 min-w-[220px] basis-full lg:basis-[0] lg:flex-[0_0_calc(37%_-_1rem)] space-y-3">
           <Field label="Работы приостановлены">
             <SelectBase
               value={remark.work_suspended ? "yes" : "no"}
               onChange={e => {
                 const suspended = e.target.value === "yes";
-                onChange({ ...remark, work_suspended: suspended, suspension_act_drawn: suspended ? remark.suspension_act_drawn : false });
+                onChange({
+                  ...remark,
+                  work_suspended: suspended,
+                  suspension_act_drawn: suspended ? remark.suspension_act_drawn : false,
+                  suspension_act_number: suspended ? remark.suspension_act_number : "",
+                });
               }}
             >
               <option value="no">Нет</option>
@@ -130,9 +135,23 @@ export function RemarkRow({
           </Field>
           {remark.work_suspended && (
             <Field label="Составлен акт о приостановке работ">
-              <SelectBase value={remark.suspension_act_drawn ? "yes" : "no"} onChange={e => set("suspension_act_drawn", e.target.value === "yes")}>
+              <SelectBase
+                value={remark.suspension_act_drawn ? "yes" : "no"}
+                onChange={e => {
+                  const drawn = e.target.value === "yes";
+                  onChange({ ...remark, suspension_act_drawn: drawn, suspension_act_number: drawn ? remark.suspension_act_number : "" });
+                }}
+              >
                 <option value="no">Нет</option>
                 <option value="yes">Да</option>
+              </SelectBase>
+            </Field>
+          )}
+          {remark.work_suspended && remark.suspension_act_drawn && (
+            <Field label="Номер акта о приостановке">
+              <SelectBase value={remark.suspension_act_number ?? ""} onChange={e => set("suspension_act_number", e.target.value)}>
+                <option value="">{suspensionNumbers.length === 0 ? "— Нет актов в разделе «Приостановки» —" : "— Выберите номер акта —"}</option>
+                {suspensionNumbers.map(n => <option key={n} value={n}>{n}</option>)}
               </SelectBase>
             </Field>
           )}
@@ -214,7 +233,7 @@ export function RemarkRow({
       <Field label="Ссылка на нормативный документ *">
         <TextareaBase value={remark.normRef} onChange={e => set("normRef", e.target.value)} placeholder="Например: ППР РФ п. 24" rows={4} />
       </Field>
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         <Field label="Срок устранения *">
           <DatePicker value={remark.deadline} onChange={v => set("deadline", v)} placeholder="Выбрать дату" allowImmediate />
         </Field>

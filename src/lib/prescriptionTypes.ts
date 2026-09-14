@@ -102,6 +102,7 @@ export interface Remark {
   category: string;
   work_suspended: boolean;
   suspension_act_drawn: boolean;
+  suspension_act_number?: string;
   description: string;
   normRef: string;
   deadline: string;
@@ -190,5 +191,5 @@ export function overallStatus(remarks: Remark[]): Status {
 }
 
 export function newRemark(): Remark {
-  return { id: Date.now().toString() + Math.random(), place: "", category: "", work_suspended: false, suspension_act_drawn: false, description: "", normRef: "", deadline: "", status: "В работе" };
+  return { id: Date.now().toString() + Math.random(), place: "", category: "", work_suspended: false, suspension_act_drawn: false, suspension_act_number: "", description: "", normRef: "", deadline: "", status: "В работе" };
 }
