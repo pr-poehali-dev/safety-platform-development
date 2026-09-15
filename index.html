@@ -73,3 +73,39 @@
 <!-- /Yandex.Metrika counter -->
 </body>
 </html>
+
+<!-- Кнопка ИИ-помощника -->
+<button
+  id="ai-chat-button"
+  style="
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 14px 22px;
+    border-radius: 50px;
+    border: none;
+    background: #2563eb;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: sans-serif;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    z-index: 9999;
+    transition: transform 0.2s;
+  "
+  onmouseover="this.style.transform='scale(1.05)'"
+  onmouseout="this.style.transform='scale(1)'"
+>
+  💬 ИИ-помощник
+</button>
+
+<script>
+  document.getElementById('ai-chat-button').addEventListener('click', function () {
+    window.open(
+      'https://functions.pro-talk.ru/api/v1.0/chatgpt_widget_dialog_api?record_id=recEO0vschpVvQXLB&promt_id=73219&lang=ru&fullscreen=1&voice=1&prod=1&file=1',
+      'ai_chat',
+      'width=500,height=700,left=' + (screen.width - 520) + ',top=100'
+    );
+  });
+</script>
