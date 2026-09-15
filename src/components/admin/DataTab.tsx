@@ -174,7 +174,7 @@ export function DataTab({ currentAdminLogin }: { currentAdminLogin: string }) {
                 <Icon name="Network" size={15} className="text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">Прокси для ИИ-помощника</p>
+                <p className="text-sm font-semibold text-foreground truncate">Настройки ИИ-помощника</p>
                 <p className="text-[10px] text-muted-foreground">Proxmint / платный прокси</p>
               </div>
             </div>
