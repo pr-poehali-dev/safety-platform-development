@@ -1,5 +1,6 @@
 import json
 import os
+import uuid
 import psycopg2
 import requests
 
@@ -170,7 +171,7 @@ def call_gigachat(cfg: dict, contents: list) -> str:
         "https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
         headers={
             "Authorization": f"Basic {cfg['api_key']}",
-            "RqUID": os.urandom(16).hex(),
+            "RqUID": str(uuid.uuid4()),
             "Content-Type": "application/x-www-form-urlencoded",
         },
         data={"scope": cfg["api_base_url"] or "GIGACHAT_API_PERS"},
