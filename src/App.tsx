@@ -15,6 +15,9 @@ import { AppUser, fetchUsers, loadSession, saveSession, clearSession, isSessionI
 
 const queryClient = new QueryClient();
 
+// Временно отключено, чтобы не расходовать квоту облачных функций
+const ASSISTANT_ENABLED = false;
+
 const App = () => {
   const [user, setUser] = useState<AppUser | null>(() => loadSession());
   const [users, setUsers] = useState<AppUser[]>([]);
@@ -104,7 +107,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <PwaInstallPrompt />
-          {user && <AssistantWidget user={user} />}
+          {ASSISTANT_ENABLED && user && <AssistantWidget user={user} />}
           <BrowserRouter>
             <Routes>
               <Route
