@@ -81,7 +81,7 @@ export default function AssistantWidget({ user }: { user: AppUser }) {
               <div className="w-7 h-7 rounded-full bg-primary/15 text-primary flex items-center justify-center flex-shrink-0">
                 <Icon name="Sparkles" size={14} />
               </div>
-              <span className="text-sm font-semibold">ИИ-помощник</span>
+              <span className="text-sm font-semibold">Хелпер</span>
             </div>
             <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
               <Icon name="X" size={16} />
