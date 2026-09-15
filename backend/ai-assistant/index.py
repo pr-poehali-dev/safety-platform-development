@@ -1,20 +1,18 @@
 import json
 import os
-import random
 import psycopg2
 import requests
-from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 
 SCHEMA = "t_p5901577_safety_platform_deve"
 
 CORS = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, X-User-Id, X-Auth-Token",
+    "Content-Type": "application/json",
 }
 
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
-PROXMINT_LIST_URL = "https://raw.githubusercontent.com/proxmint/free-proxy-list/main/proxies/socks5.txt"
+PROVIDERS = ("gemini", "yandexgpt", "gigachat", "deepseek", "openai_compatible")
 
 SYSTEM_PROMPT = """Ты — ИИ-помощник в корпоративном веб-приложении SafeWork для управления охраной труда на строительных объектах.
 Твои задачи:
@@ -27,6 +25,43 @@ SYSTEM_PROMPT = """Ты — ИИ-помощник в корпоративном 
 
 def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"])
+
+
+def mask_key(key: str) -> str:
+    if not key:
+        return ""
+    if len(key) <= 8:
+        return "•" * len(key)
+    return f"{key[:4]}{'•' * 8}{key[-4:]}"
+
+
+DEFAULT_SETTINGS = {
+    "assistant_enabled": True,
+    "provider": "gemini",
+    "api_key": "",
+    "api_base_url": "",
+    "model": "",
+}
+
+
+def get_settings() -> dict:
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        f"""SELECT assistant_enabled, provider, api_key, api_base_url, model
+            FROM {SCHEMA}.ai_settings WHERE id = 1"""
+    )
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return dict(DEFAULT_SETTINGS)
+    return {
+        "assistant_enabled": row[0] if row[0] is not None else True,
+        "provider": row[1] or "gemini",
+        "api_key": row[2] or "",
+        "api_base_url": row[3] or "",
+        "model": row[4] or "",
+    }
 
 
 def build_data_context() -> str:
@@ -74,196 +109,239 @@ def build_data_context() -> str:
         return "Данные приложения временно недоступны."
 
 
-DEFAULT_PROXY_CFG = {
-    "mode": "proxmint",
-    "paid_proxy_url": "",
-    "paid_proxy_port": "",
-    "paid_proxy_protocol": "http",
-    "paid_proxy_login": "",
-    "paid_proxy_password": "",
-    "assistant_enabled": True,
-    "gemini_api_key": "",
-}
-
-
-def get_proxy_settings() -> dict:
-    try:
-        conn = get_conn()
-        cur = conn.cursor()
-        cur.execute(
-            f"""SELECT mode, paid_proxy_url, paid_proxy_port, paid_proxy_protocol,
-                       paid_proxy_login, paid_proxy_password, assistant_enabled, gemini_api_key
-                FROM {SCHEMA}.proxy_settings WHERE id = 1"""
-        )
-        row = cur.fetchone()
-        conn.close()
-        if not row:
-            return dict(DEFAULT_PROXY_CFG)
-        return {
-            "mode": row[0] or "proxmint",
-            "paid_proxy_url": row[1] or "",
-            "paid_proxy_port": row[2] or "",
-            "paid_proxy_protocol": row[3] or "http",
-            "paid_proxy_login": row[4] or "",
-            "paid_proxy_password": row[5] or "",
-            "assistant_enabled": row[6] if row[6] is not None else True,
-            "gemini_api_key": row[7] or "",
-        }
-    except Exception:
-        return dict(DEFAULT_PROXY_CFG)
-
-
-def build_paid_proxy_url(cfg: dict) -> str | None:
-    host = (cfg.get("paid_proxy_url") or "").strip()
-    if not host:
-        return None
-    port = (cfg.get("paid_proxy_port") or "").strip()
-    protocol = cfg.get("paid_proxy_protocol") or "http"
-    login = (cfg.get("paid_proxy_login") or "").strip()
-    password = (cfg.get("paid_proxy_password") or "").strip()
-
-    if "://" in host:
-        protocol, host = host.split("://", 1)
-    if "@" in host:
-        creds, host = host.rsplit("@", 1)
-        if not login:
-            login, _, password = creds.partition(":")
-    if ":" in host:
-        host, existing_port = host.split(":", 1)
-        port = port or existing_port
-
-    netloc = f"{host}:{port}" if port else host
-    auth = f"{login}:{password}@" if login else ""
-    return f"{protocol}://{auth}{netloc}"
-
-
-def fetch_proxmint_list() -> list:
-    try:
-        resp = requests.get(PROXMINT_LIST_URL, timeout=2)
-        return [line.strip() for line in resp.text.splitlines() if line.strip()]
-    except Exception:
-        return []
-
-
-def call_gemini(api_key: str, contents: list, proxy_cfg: dict) -> dict:
-    payload = {
-        "contents": contents,
-        "generationConfig": {"temperature": 0.4, "maxOutputTokens": 1024},
-    }
-    url = f"{GEMINI_URL}?key={api_key}"
-
-    if proxy_cfg["mode"] == "paid":
-        proxy_url = build_paid_proxy_url(proxy_cfg)
-        if not proxy_url:
-            raise RuntimeError("Платный прокси включён, но не настроен. Укажите адрес прокси в настройках.")
-        resp = requests.post(url, json=payload, proxies={"http": proxy_url, "https": proxy_url}, timeout=25)
-        resp.raise_for_status()
-        return resp.json()
-
-    candidates = fetch_proxmint_list()
-    random.shuffle(candidates)
-    candidates = candidates[:15]
+def call_gemini(cfg: dict, contents: list) -> str:
+    model = cfg["model"] or "gemini-flash-latest"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={cfg['api_key']}"
+    gemini_contents = []
+    for role, text in contents:
+        gemini_contents.append({"role": "model" if role == "model" else "user", "parts": [{"text": text}]})
+    payload = {"contents": gemini_contents, "generationConfig": {"temperature": 0.4, "maxOutputTokens": 1024}}
+    resp = requests.post(url, json=payload, timeout=25)
+    resp.raise_for_status()
+    data = resp.json()
+    candidates = data.get("candidates") or []
     if not candidates:
-        raise RuntimeError("Список бесплатных прокси Proxmint временно недоступен.")
+        return "Не удалось получить ответ от ИИ. Попробуйте переформулировать вопрос."
+    parts = candidates[0].get("content", {}).get("parts", [])
+    return "".join(p.get("text", "") for p in parts).strip() or "Пустой ответ от ИИ."
 
-    def try_proxy(proxy_ip: str):
-        proxy_url = f"socks5://{proxy_ip}"
-        resp = requests.post(url, json=payload, proxies={"http": proxy_url, "https": proxy_url}, timeout=3)
-        if resp.status_code >= 400:
-            raise RuntimeError(f"{resp.status_code}: {resp.text[:200]}")
-        return resp.json()
 
-    last_error = None
-    pool = ThreadPoolExecutor(max_workers=15)
-    futures = {pool.submit(try_proxy, ip): ip for ip in candidates}
-    try:
-        for future in as_completed(futures, timeout=3.5):
-            try:
-                result = future.result()
-                pool.shutdown(wait=False, cancel_futures=True)
-                return result
-            except Exception as e:
-                last_error = e
-                continue
-    except FuturesTimeoutError:
-        last_error = last_error or "таймаут ожидания ответа от прокси"
-    pool.shutdown(wait=False, cancel_futures=True)
-    raise RuntimeError(f"Не удалось подключиться через бесплатные прокси Proxmint: {str(last_error).replace(api_key, '***')}")
+def call_openai_compatible(cfg: dict, contents: list, default_base_url: str, default_model: str) -> str:
+    """Единый вызов для DeepSeek / любого OpenAI-совместимого API (chat/completions)."""
+    base_url = (cfg["api_base_url"] or default_base_url).rstrip("/")
+    model = cfg["model"] or default_model
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for role, text in contents:
+        messages.append({"role": "assistant" if role == "model" else "user", "content": text})
+    resp = requests.post(
+        f"{base_url}/chat/completions",
+        headers={"Authorization": f"Bearer {cfg['api_key']}", "Content-Type": "application/json"},
+        json={"model": model, "messages": messages, "temperature": 0.4, "max_tokens": 1024},
+        timeout=25,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return (data.get("choices") or [{}])[0].get("message", {}).get("content", "").strip() or "Пустой ответ от ИИ."
+
+
+def call_yandexgpt(cfg: dict, contents: list) -> str:
+    folder_id, api_key = (cfg["api_key"].split(":", 1) + [""])[:2] if ":" in cfg["api_key"] else (cfg["api_base_url"], cfg["api_key"])
+    model = cfg["model"] or "yandexgpt-lite"
+    messages = [{"role": "system", "text": SYSTEM_PROMPT}]
+    for role, text in contents:
+        messages.append({"role": "assistant" if role == "model" else "user", "text": text})
+    resp = requests.post(
+        "https://llm.api.cloud.yandex.net/foundationModels/v1/completion",
+        headers={"Authorization": f"Api-Key {api_key}", "Content-Type": "application/json"},
+        json={
+            "modelUri": f"gpt://{folder_id}/{model}",
+            "completionOptions": {"stream": False, "temperature": 0.4, "maxTokens": 1024},
+            "messages": messages,
+        },
+        timeout=25,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return data["result"]["alternatives"][0]["message"]["text"].strip()
+
+
+def call_gigachat(cfg: dict, contents: list) -> str:
+    token_resp = requests.post(
+        "https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
+        headers={
+            "Authorization": f"Basic {cfg['api_key']}",
+            "RqUID": os.urandom(16).hex(),
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        data={"scope": cfg["api_base_url"] or "GIGACHAT_API_PERS"},
+        timeout=15,
+        verify=False,
+    )
+    token_resp.raise_for_status()
+    access_token = token_resp.json()["access_token"]
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for role, text in contents:
+        messages.append({"role": "assistant" if role == "model" else "user", "content": text})
+    resp = requests.post(
+        "https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
+        headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
+        json={"model": cfg["model"] or "GigaChat", "messages": messages, "temperature": 0.4, "max_tokens": 1024},
+        timeout=25,
+        verify=False,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return (data.get("choices") or [{}])[0].get("message", {}).get("content", "").strip() or "Пустой ответ от ИИ."
+
+
+def call_provider(cfg: dict, contents: list) -> str:
+    provider = cfg["provider"]
+    if provider == "gemini":
+        return call_gemini(cfg, contents)
+    if provider == "deepseek":
+        return call_openai_compatible(cfg, contents, "https://api.deepseek.com", "deepseek-chat")
+    if provider == "openai_compatible":
+        return call_openai_compatible(cfg, contents, cfg["api_base_url"], cfg["model"] or "gpt-4o-mini")
+    if provider == "yandexgpt":
+        return call_yandexgpt(cfg, contents)
+    if provider == "gigachat":
+        return call_gigachat(cfg, contents)
+    raise RuntimeError(f"Неизвестный провайдер: {provider}")
 
 
 def handler(event: dict, context) -> dict:
-    """Чат с ИИ-помощником (Google Gemini через прокси) по вопросам охраны труда и данным SafeWork."""
+    """Настройки и чат ИИ-помощника: хранение ключей/провайдера (GET/PUT) и обработка сообщений (POST)."""
     if event.get("httpMethod") == "OPTIONS":
         return {"statusCode": 200, "headers": CORS, "body": ""}
 
-    if event.get("httpMethod") != "POST":
-        return {"statusCode": 405, "headers": CORS, "body": json.dumps({"error": "method not allowed"})}
+    method = event.get("httpMethod", "GET")
+    params = event.get("queryStringParameters") or {}
 
-    proxy_cfg = get_proxy_settings()
-
-    if not proxy_cfg.get("assistant_enabled", True):
+    if method == "GET":
+        cfg = get_settings()
+        if params.get("public") == "1":
+            return {
+                "statusCode": 200,
+                "headers": CORS,
+                "body": json.dumps({"assistant_enabled": bool(cfg["assistant_enabled"])}),
+            }
         return {
             "statusCode": 200,
             "headers": CORS,
-            "body": json.dumps({"reply": "ИИ-помощник временно отключён администратором."}, ensure_ascii=False),
+            "body": json.dumps(
+                {
+                    "assistant_enabled": bool(cfg["assistant_enabled"]),
+                    "provider": cfg["provider"],
+                    "api_base_url": cfg["api_base_url"],
+                    "model": cfg["model"],
+                    "api_key_masked": mask_key(cfg["api_key"]),
+                    "has_api_key": bool(cfg["api_key"]),
+                },
+                ensure_ascii=False,
+            ),
         }
 
-    api_key = proxy_cfg.get("gemini_api_key") or os.environ.get("GEMINI_API_KEY")
-    if not api_key:
+    if method == "PUT":
+        body = json.loads(event.get("body") or "{}")
+        assistant_enabled = bool(body.get("assistant_enabled", True))
+        provider = body.get("provider") if body.get("provider") in PROVIDERS else "gemini"
+        api_base_url = (body.get("api_base_url") or "").strip()
+        model = (body.get("model") or "").strip()
+        new_api_key = (body.get("api_key") or "").strip()
+        updated_by = body.get("updated_by")
+
+        conn = get_conn()
+        cur = conn.cursor()
+        if new_api_key:
+            cur.execute(
+                f"""UPDATE {SCHEMA}.ai_settings
+                    SET assistant_enabled = %s, provider = %s, api_base_url = %s, model = %s,
+                        api_key = %s, updated_by = %s, updated_at = now()
+                    WHERE id = 1""",
+                (assistant_enabled, provider, api_base_url, model, new_api_key, updated_by),
+            )
+        else:
+            cur.execute(
+                f"""UPDATE {SCHEMA}.ai_settings
+                    SET assistant_enabled = %s, provider = %s, api_base_url = %s, model = %s,
+                        updated_by = %s, updated_at = now()
+                    WHERE id = 1""",
+                (assistant_enabled, provider, api_base_url, model, updated_by),
+            )
+        conn.commit()
+        cur.execute(f"SELECT api_key FROM {SCHEMA}.ai_settings WHERE id = 1")
+        current_key = cur.fetchone()[0] or ""
+        conn.close()
+
         return {
-            "statusCode": 500,
+            "statusCode": 200,
             "headers": CORS,
-            "body": json.dumps({"error": "API-ключ Gemini не настроен"}, ensure_ascii=False),
+            "body": json.dumps(
+                {
+                    "assistant_enabled": assistant_enabled,
+                    "provider": provider,
+                    "api_base_url": api_base_url,
+                    "model": model,
+                    "api_key_masked": mask_key(current_key),
+                    "has_api_key": bool(current_key),
+                },
+                ensure_ascii=False,
+            ),
         }
 
-    body = json.loads(event.get("body") or "{}")
-    message = (body.get("message") or "").strip()
-    if not message:
-        return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": "message required"})}
+    if method == "POST":
+        cfg = get_settings()
+        if not cfg["assistant_enabled"]:
+            return {
+                "statusCode": 200,
+                "headers": CORS,
+                "body": json.dumps({"reply": "ИИ-помощник временно отключён администратором."}, ensure_ascii=False),
+            }
+        if not cfg["api_key"]:
+            return {
+                "statusCode": 500,
+                "headers": CORS,
+                "body": json.dumps({"error": "API-ключ ИИ-провайдера не настроен"}, ensure_ascii=False),
+            }
 
-    history = body.get("history") or []
-    user_name = body.get("user_name") or ""
-    user_role = body.get("user_role") or ""
+        body = json.loads(event.get("body") or "{}")
+        message = (body.get("message") or "").strip()
+        if not message:
+            return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": "message required"})}
 
-    data_context = build_data_context()
+        history = body.get("history") or []
+        user_name = body.get("user_name") or ""
+        user_role = body.get("user_role") or ""
+        data_context = build_data_context()
 
-    contents = [
-        {"role": "user", "parts": [{"text": SYSTEM_PROMPT}]},
-        {"role": "model", "parts": [{"text": "Понял, готов помогать."}]},
-        {"role": "user", "parts": [{"text": f"{data_context}\n\nПользователь: {user_name} (роль: {user_role})"}]},
-        {"role": "model", "parts": [{"text": "Учту эти данные при ответах."}]},
-    ]
+        contents = [
+            ("user", SYSTEM_PROMPT),
+            ("model", "Понял, готов помогать."),
+            ("user", f"{data_context}\n\nПользователь: {user_name} (роль: {user_role})"),
+            ("model", "Учту эти данные при ответах."),
+        ]
+        for h in history[-10:]:
+            role = "model" if h.get("role") == "model" else "user"
+            text = (h.get("text") or "").strip()
+            if text:
+                contents.append((role, text))
+        contents.append(("user", message))
 
-    for h in history[-10:]:
-        role = "model" if h.get("role") == "model" else "user"
-        text = (h.get("text") or "").strip()
-        if text:
-            contents.append({"role": role, "parts": [{"text": text}]})
+        try:
+            reply = call_provider(cfg, contents)
+        except requests.HTTPError as e:
+            error_body = e.response.text[:300] if e.response is not None else str(e)
+            safe_error = error_body.replace(cfg["api_key"], "***")
+            return {
+                "statusCode": 502,
+                "headers": CORS,
+                "body": json.dumps({"error": f"Ошибка ИИ-провайдера: {safe_error}"}, ensure_ascii=False),
+            }
+        except Exception as e:
+            safe_error = str(e).replace(cfg["api_key"], "***") if cfg["api_key"] else str(e)
+            return {"statusCode": 502, "headers": CORS, "body": json.dumps({"error": safe_error}, ensure_ascii=False)}
 
-    contents.append({"role": "user", "parts": [{"text": message}]})
+        return {"statusCode": 200, "headers": CORS, "body": json.dumps({"reply": reply}, ensure_ascii=False)}
 
-    try:
-        data = call_gemini(api_key, contents, proxy_cfg)
-    except requests.HTTPError as e:
-        error_body = e.response.text[:300] if e.response is not None else str(e)
-        return {
-            "statusCode": 502,
-            "headers": CORS,
-            "body": json.dumps({"error": f"Ошибка Gemini API: {error_body}"}, ensure_ascii=False),
-        }
-    except Exception as e:
-        safe_error = str(e).replace(api_key, "***")
-        return {
-            "statusCode": 502,
-            "headers": CORS,
-            "body": json.dumps({"error": safe_error}, ensure_ascii=False),
-        }
-
-    candidates = data.get("candidates") or []
-    if not candidates:
-        reply = "Не удалось получить ответ от ИИ. Попробуйте переформулировать вопрос."
-    else:
-        parts = candidates[0].get("content", {}).get("parts", [])
-        reply = "".join(p.get("text", "") for p in parts).strip() or "Пустой ответ от ИИ."
-
-    return {"statusCode": 200, "headers": CORS, "body": json.dumps({"reply": reply}, ensure_ascii=False)}
+    return {"statusCode": 405, "headers": CORS, "body": json.dumps({"error": "method not allowed"})}

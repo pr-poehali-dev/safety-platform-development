@@ -6,7 +6,7 @@ import ContractorsEditor from "./ContractorsEditor";
 import RoutineCategoriesEditor from "./RoutineCategoriesEditor";
 import PrescriptionNumberingEditor from "./PrescriptionNumberingEditor";
 import SuspensionNumberingEditor from "./SuspensionNumberingEditor";
-import ProxySettingsEditor from "./ProxySettingsEditor";
+import AiSettingsEditor from "./AiSettingsEditor";
 
 export function DataTab({ currentAdminLogin }: { currentAdminLogin: string }) {
   const [openEditor, setOpenEditor] = useState(false);
@@ -171,11 +171,11 @@ export function DataTab({ currentAdminLogin }: { currentAdminLogin: string }) {
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
-                <Icon name="Network" size={15} className="text-primary" />
+                <Icon name="Sparkles" size={15} className="text-primary" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-foreground truncate">Настройки ИИ-помощника</p>
-                <p className="text-[10px] text-muted-foreground">Proxmint / платный прокси</p>
+                <p className="text-[10px] text-muted-foreground">Провайдер, ключ и включение</p>
               </div>
             </div>
             <div className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
@@ -183,7 +183,7 @@ export function DataTab({ currentAdminLogin }: { currentAdminLogin: string }) {
             </div>
           </div>
           <div className="text-xs text-muted-foreground border-t border-border pt-3">
-            <p>Переключение между бесплатным и платным прокси для запросов к Gemini</p>
+            <p>Включение/выключение помощника и выбор ИИ-провайдера (Gemini, YandexGPT, GigaChat, DeepSeek и др.)</p>
           </div>
         </button>
       </div>
@@ -194,7 +194,7 @@ export function DataTab({ currentAdminLogin }: { currentAdminLogin: string }) {
       {openRoutine && <RoutineCategoriesEditor onClose={() => setOpenRoutine(false)} />}
       {openNumbering && <PrescriptionNumberingEditor onClose={() => setOpenNumbering(false)} />}
       {openSuspensionNumbering && <SuspensionNumberingEditor onClose={() => setOpenSuspensionNumbering(false)} />}
-      {openProxy && <ProxySettingsEditor onClose={() => setOpenProxy(false)} currentAdminLogin={currentAdminLogin} />}
+      {openProxy && <AiSettingsEditor onClose={() => setOpenProxy(false)} currentAdminLogin={currentAdminLogin} />}
     </>
   );
 }

@@ -7,6 +7,18 @@
       "expectedStatus": 200
     },
     {
+      "name": "GET public status",
+      "method": "GET",
+      "path": "/?public=1",
+      "expectedStatus": 200
+    },
+    {
+      "name": "GET returns settings",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
       "name": "POST without message returns 400",
       "method": "POST",
       "path": "/",

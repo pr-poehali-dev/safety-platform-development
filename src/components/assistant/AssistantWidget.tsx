@@ -3,7 +3,6 @@ import Icon from "@/components/ui/icon";
 import { AppUser, ROLE_LABELS } from "@/lib/auth";
 
 const AI_ASSISTANT_URL = "https://functions.poehali.dev/8baa3992-c91f-45b7-abf8-2a4082e8c671";
-const PROXY_SETTINGS_URL = "https://functions.poehali.dev/618f0e3d-5e12-4e77-9fc8-d29306fcc7a6";
 
 interface ChatMessage {
   role: "user" | "model";
@@ -21,7 +20,7 @@ export default function AssistantWidget({ user }: { user: AppUser }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch(`${PROXY_SETTINGS_URL}?public=1`)
+    fetch(`${AI_ASSISTANT_URL}?public=1`)
       .then(r => r.json())
       .then(data => setEnabled(data.assistant_enabled !== false))
       .catch(() => setEnabled(true))
