@@ -6,7 +6,7 @@ import { PrescriptionListHeader } from "@/components/prescriptions/list/Prescrip
 import { PrescriptionListFilters } from "@/components/prescriptions/list/PrescriptionListFilters";
 import { PrescriptionListTable } from "@/components/prescriptions/list/PrescriptionListTable";
 import { VisibilitySettings } from "@/lib/visibilityTypes";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious,
 } from "@/components/ui/pagination";
@@ -100,7 +100,11 @@ export function PrescriptionList({
     setColFilters(prev => ({ ...prev, [key]: v }));
 
   const isProjectTeam = user.role === "project_team";
-  const myObjectNames = new Set(objects.filter(o => (user.objectIds ?? []).includes(o.id)).map(o => o.name));
+  const objectIdsKey = (user.objectIds ?? []).join(",");
+  const myObjectNames = useMemo(
+    () => new Set(objects.filter(o => (user.objectIds ?? []).includes(o.id)).map(o => o.name)),
+    [objects, objectIdsKey],
+  );
 
   // Сбрасываем на первую страницу при любом изменении фильтров/поиска
   useEffect(() => {
