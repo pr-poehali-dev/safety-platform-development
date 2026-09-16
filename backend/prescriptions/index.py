@@ -229,6 +229,18 @@ def handle_templates(method, body, cur, conn):
     return err("Method not allowed", 405)
 
 
+def handle_meta(cur):
+    cur.execute(f"SELECT DISTINCT object FROM {SCHEMA}.prescriptions WHERE object <> '' ORDER BY object")
+    objects = [r[0] for r in cur.fetchall()]
+    cur.execute(f"SELECT DISTINCT contractor FROM {SCHEMA}.prescriptions WHERE contractor <> '' ORDER BY contractor")
+    contractors = [r[0] for r in cur.fetchall()]
+    cur.execute(f"SELECT DISTINCT inspector FROM {SCHEMA}.prescriptions WHERE inspector <> '' ORDER BY inspector")
+    inspectors = [r[0] for r in cur.fetchall()]
+    cur.execute(f"SELECT DISTINCT deadline FROM {SCHEMA}.remarks WHERE deadline <> '' ORDER BY deadline")
+    deadlines = [r[0] for r in cur.fetchall()]
+    return ok({"objects": objects, "contractors": contractors, "inspectors": inspectors, "deadlines": deadlines})
+
+
 def handler(event: dict, context) -> dict:
     if event.get("httpMethod") == "OPTIONS":
         return {"statusCode": 200, "headers": CORS, "body": ""}
@@ -252,13 +264,95 @@ def handler(event: dict, context) -> dict:
 
         # --- ПРЕДПИСАНИЯ ---
         if method == "GET":
-            cur.execute(
-                f"SELECT id, number, date, object, contractor, inspector, representative, responsible, reply_email, report_deadline, comments, contract_number, created_by, inspector_nominative, import_log "
-                f"FROM {SCHEMA}.prescriptions ORDER BY created_at DESC"
+            if qs.get("type") == "meta":
+                return handle_meta(cur)
+
+            page = max(1, int(qs.get("page") or 1))
+            page_size = max(1, min(200, int(qs.get("page_size") or 50)))
+            full = qs.get("full") == "1"
+
+            where = []
+            args: list = []
+
+            search = (qs.get("search") or "").strip()
+            if search:
+                where.append(
+                    "(p.number ILIKE %s OR p.object ILIKE %s OR p.contractor ILIKE %s OR EXISTS ("
+                    f"SELECT 1 FROM {SCHEMA}.remarks r0 WHERE r0.prescription_id = p.id AND r0.description ILIKE %s))"
+                )
+                like = f"%{search}%"
+                args.extend([like, like, like, like])
+
+            def multi(param, column):
+                values = [v for v in (qs.get(param) or "").split("|") if v]
+                if values:
+                    where.append(f"{column} = ANY(%s)")
+                    args.append(values)
+
+            multi("object", "p.object")
+            multi("contractor", "p.contractor")
+            multi("inspector", "p.inspector")
+
+            if qs.get("created_by"):
+                where.append("p.created_by = %s")
+                args.append(qs["created_by"])
+
+            if qs.get("suspended") == "1":
+                where.append(f"EXISTS (SELECT 1 FROM {SCHEMA}.remarks r1 WHERE r1.prescription_id = p.id AND r1.work_suspended = TRUE)")
+
+            deadline_filter = qs.get("deadline")
+            if deadline_filter and deadline_filter != "Все":
+                where.append(f"(SELECT MIN(r5.deadline) FROM {SCHEMA}.remarks r5 WHERE r5.prescription_id = p.id) = %s")
+                args.append(deadline_filter)
+
+            date_from = qs.get("date_from")
+            date_to = qs.get("date_to")
+            if date_from:
+                where.append("to_date(p.date, 'DD.MM.YYYY') >= %s")
+                args.append(date_from)
+            if date_to:
+                where.append("to_date(p.date, 'DD.MM.YYYY') <= %s")
+                args.append(date_to)
+
+            statuses = [v for v in (qs.get("status") or "").split("|") if v]
+            if statuses:
+                status_clauses = []
+                if "Просрочено" in statuses:
+                    status_clauses.append(
+                        f"EXISTS (SELECT 1 FROM {SCHEMA}.remarks r2 WHERE r2.prescription_id = p.id AND r2.status <> 'Устранено' "
+                        "AND r2.deadline <> '' AND r2.deadline <> 'Незамедлительно' "
+                        "AND to_date(r2.deadline, 'DD.MM.YYYY') < CURRENT_DATE)"
+                    )
+                other_statuses = [s for s in statuses if s != "Просрочено"]
+                if "Черновик" in other_statuses:
+                    status_clauses.append(f"NOT EXISTS (SELECT 1 FROM {SCHEMA}.remarks r3 WHERE r3.prescription_id = p.id)")
+                real_statuses = [s for s in other_statuses if s != "Черновик"]
+                if real_statuses:
+                    status_clauses.append(
+                        f"EXISTS (SELECT 1 FROM {SCHEMA}.remarks r4 WHERE r4.prescription_id = p.id AND r4.status = ANY(%s))"
+                    )
+                    args.append(real_statuses)
+                if status_clauses:
+                    where.append("(" + " OR ".join(status_clauses) + ")")
+
+            where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+
+            cur.execute(f"SELECT COUNT(*) FROM {SCHEMA}.prescriptions p {where_sql}", args)
+            total = cur.fetchone()[0]
+
+            base_query = (
+                f"SELECT p.id, p.number, p.date, p.object, p.contractor, p.inspector, p.representative, p.responsible, "
+                f"p.reply_email, p.report_deadline, p.comments, p.contract_number, p.created_by, p.inspector_nominative, p.import_log "
+                f"FROM {SCHEMA}.prescriptions p {where_sql} ORDER BY p.created_at DESC"
             )
+            if not full:
+                base_query += " LIMIT %s OFFSET %s"
+                args = args + [page_size, (page - 1) * page_size]
+
+            cur.execute(base_query, args)
             rows = cur.fetchall()
             if not rows:
-                return ok([])
+                return ok({"items": [], "total": total, "page": page, "page_size": page_size})
             ids = [row[0] for row in rows]
             ids_list = ",".join(f"'{i}'" for i in ids)
             cur.execute(
@@ -271,7 +365,10 @@ def handler(event: dict, context) -> dict:
                 if isinstance(photos, str):
                     photos = json.loads(photos)
                 remarks_map[r[0]].append({"id": r[1], "place": r[2], "description": r[3], "normRef": r[4], "deadline": r[5], "status": r[6], "photos": photos, "category": r[8] or "", "work_suspended": bool(r[9]), "suspension_act_drawn": bool(r[10]), "suspension_act_number": r[11] or ""})
-            return ok([row_to_prescription(row, remarks_map[row[0]]) for row in rows])
+            items = [row_to_prescription(row, remarks_map[row[0]]) for row in rows]
+            if full:
+                return ok(items)
+            return ok({"items": items, "total": total, "page": page, "page_size": page_size})
 
         if method == "POST":
             p = body

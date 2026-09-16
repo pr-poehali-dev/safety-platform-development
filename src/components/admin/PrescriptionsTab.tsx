@@ -17,12 +17,12 @@ export function PrescriptionsTab({ currentUser }: { currentUser?: AppUser }) {
   // Загружаем при первом монтировании (вкладка активна)
   useState(() => {
     setPLoading(true);
-    fetch(PRESCRIPTIONS_API).then(r => r.json()).then(data => { setPrescriptions(data); }).finally(() => setPLoading(false));
+    fetch(`${PRESCRIPTIONS_API}?full=1`).then(r => r.json()).then(data => { setPrescriptions(Array.isArray(data) ? data : []); }).finally(() => setPLoading(false));
   });
 
   const reloadPrescriptions = () => {
     setPLoading(true);
-    fetch(PRESCRIPTIONS_API).then(r => r.json()).then(data => setPrescriptions(data)).finally(() => setPLoading(false));
+    fetch(`${PRESCRIPTIONS_API}?full=1`).then(r => r.json()).then(data => setPrescriptions(Array.isArray(data) ? data : [])).finally(() => setPLoading(false));
   };
 
   const filteredPrescriptions = prescriptions.filter(p => {

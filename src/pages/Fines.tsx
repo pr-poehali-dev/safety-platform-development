@@ -98,7 +98,7 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
       .then(data => {
         if (Array.isArray(data)) setContractors(data);
       });
-    fetch(PRESCRIPTIONS_API)
+    fetch(`${PRESCRIPTIONS_API}?full=1`)
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data)) {

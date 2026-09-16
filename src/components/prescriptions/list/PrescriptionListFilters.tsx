@@ -1,11 +1,12 @@
 import Icon from "@/components/ui/icon";
-import { Prescription } from "@/lib/prescriptionTypes";
 import FilterDropdown from "@/components/inspections/FilterDropdown";
 import DateRangePicker from "@/components/ui/date-range-picker";
 import { StatusMultiSelect } from "@/components/prescriptions/list/PrescriptionListFilterHelpers";
 
 interface PrescriptionListFiltersProps {
-  prescriptions: Prescription[];
+  objects: string[];
+  contractors: string[];
+  inspectors: string[];
   search: string;
   filterStatus: string[];
   filterMine: boolean;
@@ -30,16 +31,16 @@ interface PrescriptionListFiltersProps {
 }
 
 export function PrescriptionListFilters({
-  prescriptions, search, filterStatus, filterMine, filterSuspended,
+  objects, contractors, inspectors, search, filterStatus, filterMine, filterSuspended,
   filterObject, filterContractor, filterInspector, dateFrom, dateTo,
   isContractor, isProjectTeam,
   onSearchChange, onFilterChange, onFilterMineChange, onFilterSuspendedChange,
   onFilterObjectChange, onFilterContractorChange, onFilterInspectorChange, onDateFromChange, onDateToChange,
   filteredCount,
 }: PrescriptionListFiltersProps) {
-  const uniqueObjects = [...new Set(prescriptions.map(p => p.object))].sort();
-  const uniqueContractors = [...new Set(prescriptions.map(p => p.contractor).filter(Boolean))].sort();
-  const uniqueInspectors = [...new Set(prescriptions.map(p => p.inspector).filter(Boolean))].sort();
+  const uniqueObjects = objects;
+  const uniqueContractors = contractors;
+  const uniqueInspectors = inspectors;
 
   return (
     <>

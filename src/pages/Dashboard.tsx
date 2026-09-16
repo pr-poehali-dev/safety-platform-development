@@ -123,7 +123,7 @@ export default function Dashboard({ user, taskAssignments, visibility, onNavigat
 
   useEffect(() => {
     Promise.all([
-      fetch(PRESCRIPTIONS_API).then(r => r.json()).catch(() => []),
+      fetch(`${PRESCRIPTIONS_API}?full=1`).then(r => r.json()).catch(() => []),
       fetch(INSPECTIONS_API).then(r => r.json()).catch(() => []),
       fetch(INCIDENTS_API).then(r => r.json()).catch(() => []),
       fetch(CATEGORIES_API).then(r => r.json()).catch(() => []),

@@ -43,7 +43,6 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
   const visibility: VisibilitySettings = visibilityOverride ?? resolvedVisibility.settings ?? defaultVisibilitySettings();
   const [tab, setTab] = useState<Tab>("dashboard");
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [editingPrescription, setEditingPrescription] = useState<Prescription | null>(null);
   const [selected, setSelected] = useState<Prescription | null>(null);
@@ -92,11 +91,10 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
   }, [unreadCount]);
 
   useEffect(() => {
-    fetch(API)
+    fetch(`${API}?full=1`)
       .then(r => r.json())
       .then(data => setPrescriptions(Array.isArray(data) ? data : []))
-      .catch(() => setPrescriptions([]))
-      .finally(() => setLoading(false));
+      .catch(() => setPrescriptions([]));
   }, []);
 
   useEffect(() => {
@@ -450,8 +448,6 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
       <PrescriptionList
         user={user}
         onLogout={onLogout}
-        prescriptions={prescriptions}
-        loading={loading}
         search={search}
         filterStatus={filterStatus}
         filterMine={filterMine}
