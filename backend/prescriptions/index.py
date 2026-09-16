@@ -3,6 +3,8 @@ CRUD для предписаний и шаблонов.
 /          — предписания (GET, POST, PUT, DELETE)
 /templates — шаблоны    (GET, POST, PUT, DELETE)
 """
+import base64
+import gzip
 import json
 import os
 import psycopg2
@@ -20,7 +22,16 @@ def get_conn():
 
 
 def ok(data):
-    return {"statusCode": 200, "headers": {**CORS, "Content-Type": "application/json"}, "body": json.dumps(data, ensure_ascii=False)}
+    raw = json.dumps(data, ensure_ascii=False).encode("utf-8")
+    if len(raw) > 200_000:
+        compressed = gzip.compress(raw)
+        return {
+            "statusCode": 200,
+            "headers": {**CORS, "Content-Type": "application/json", "Content-Encoding": "gzip"},
+            "isBase64Encoded": True,
+            "body": base64.b64encode(compressed).decode("ascii"),
+        }
+    return {"statusCode": 200, "headers": {**CORS, "Content-Type": "application/json"}, "body": raw.decode("utf-8")}
 
 
 def err(msg, code=400):

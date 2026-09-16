@@ -94,7 +94,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
   useEffect(() => {
     fetch(API)
       .then(r => r.json())
-      .then(data => setPrescriptions(data))
+      .then(data => setPrescriptions(Array.isArray(data) ? data : []))
       .catch(() => setPrescriptions([]))
       .finally(() => setLoading(false));
   }, []);
