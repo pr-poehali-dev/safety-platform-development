@@ -229,6 +229,29 @@ def handle_templates(method, body, cur, conn):
     return err("Method not allowed", 405)
 
 
+HISTORY_FIELDS = ("place", "category", "description", "status")
+
+
+def handle_remark_history(qs, cur):
+    remark_id = qs.get("remark_id")
+    if not remark_id:
+        return err("remark_id required")
+    cur.execute(
+        f"SELECT field, old_value, new_value, changed_by, changed_by_name, changed_at "
+        f"FROM {SCHEMA}.remark_history WHERE remark_id = %s ORDER BY changed_at DESC",
+        (remark_id,)
+    )
+    rows = [
+        {
+            "field": r[0], "oldValue": r[1], "newValue": r[2],
+            "changedBy": r[3], "changedByName": r[4],
+            "changedAt": r[5].isoformat() if r[5] else None,
+        }
+        for r in cur.fetchall()
+    ]
+    return ok(rows)
+
+
 def handle_meta(cur):
     cur.execute(f"SELECT DISTINCT object FROM {SCHEMA}.prescriptions WHERE object <> '' ORDER BY object")
     objects = [r[0] for r in cur.fetchall()]
@@ -261,6 +284,8 @@ def handler(event: dict, context) -> dict:
             return handle_templates(method, body, cur, conn)
         if qs.get("type") == "numbering" or body.get("_type") == "numbering":
             return handle_numbering(method, body, cur, conn)
+        if qs.get("type") == "remark_history" and method == "GET":
+            return handle_remark_history(qs, cur)
 
         # --- ПРЕДПИСАНИЯ ---
         if method == "GET":
@@ -449,8 +474,9 @@ def handler(event: dict, context) -> dict:
 
             # Точечное обновление замечаний: удаляем только реально убранные пункты,
             # обновляем существующие по id и добавляем только новые — без полной перезаписи списка.
-            cur.execute(f"SELECT id FROM {SCHEMA}.remarks WHERE prescription_id = %s", (pid,))
-            existing_ids = {r[0] for r in cur.fetchall()}
+            cur.execute(f"SELECT id, place, category, description, status FROM {SCHEMA}.remarks WHERE prescription_id = %s", (pid,))
+            existing_rows = {r[0]: {"place": r[1], "category": r[2], "description": r[3], "status": r[4]} for r in cur.fetchall()}
+            existing_ids = set(existing_rows.keys())
 
             remarks = p.get("remarks", [])
             new_ids = {r["id"] for r in remarks}
@@ -459,8 +485,12 @@ def handler(event: dict, context) -> dict:
             if removed_ids:
                 cur.execute(f"DELETE FROM {SCHEMA}.remarks WHERE prescription_id = %s AND id = ANY(%s)", (pid, removed_ids))
 
+            changed_by = p.get("changedBy", "")
+            changed_by_name = p.get("changedByName", "")
+
             to_update = []
             to_insert = []
+            history_rows = []
             for i, r in enumerate(remarks):
                 values = (
                     r.get("place", ""), r.get("category", ""), r.get("description", ""), r.get("normRef", ""),
@@ -471,6 +501,12 @@ def handler(event: dict, context) -> dict:
                 )
                 if r["id"] in existing_ids:
                     to_update.append(values + (r["id"], pid))
+                    old = existing_rows[r["id"]]
+                    for field in HISTORY_FIELDS:
+                        old_value = old.get(field) or ""
+                        new_value = r.get(field, "") or ""
+                        if old_value != new_value:
+                            history_rows.append((r["id"], pid, field, old_value, new_value, changed_by, changed_by_name))
                 else:
                     to_insert.append((r["id"], pid) + values)
 
@@ -486,6 +522,12 @@ def handler(event: dict, context) -> dict:
                     f"INSERT INTO {SCHEMA}.remarks (id, prescription_id, place, category, description, norm_ref, deadline, status, sort_order, photos, work_suspended, suspension_act_drawn, suspension_act_number) "
                     f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                     to_insert
+                )
+            if history_rows:
+                cur.executemany(
+                    f"INSERT INTO {SCHEMA}.remark_history (remark_id, prescription_id, field, old_value, new_value, changed_by, changed_by_name) "
+                    f"VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                    history_rows
                 )
             conn.commit()
             return ok({"ok": True})

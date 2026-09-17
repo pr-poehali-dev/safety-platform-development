@@ -11,6 +11,7 @@ import { PrescriptionDetailHeader } from "@/components/prescriptions/detail/Pres
 import { PrescriptionRemarksTab } from "@/components/prescriptions/detail/PrescriptionRemarksTab";
 import { PrescriptionChatTab } from "@/components/prescriptions/detail/PrescriptionChatTab";
 import { PrescriptionDeleteRemarkDialog } from "@/components/prescriptions/detail/PrescriptionDeleteRemarkDialog";
+import { RemarkHistoryDialog } from "@/components/prescriptions/detail/RemarkHistoryDialog";
 
 const UPLOAD_URL = "https://functions.poehali.dev/b1d2899a-a609-43c1-81e8-34e4c4922136";
 const MAX_PHOTOS = 3;
@@ -58,6 +59,7 @@ export function PrescriptionDetail({
   const [downloading, setDownloading] = useState(false);
   const [lightbox, setLightbox] = useState<{ remarkId: string; photos: string[]; index: number } | null>(null);
   const [deleteRemarkId, setDeleteRemarkId] = useState<string | null>(null);
+  const [historyRemarkId, setHistoryRemarkId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -243,6 +245,7 @@ export function PrescriptionDetail({
               removeRemarkPhoto={removeRemarkPhoto}
               handleRemarkPhotos={handleRemarkPhotos}
               onOpenSuspension={onOpenSuspension}
+              onOpenHistory={setHistoryRemarkId}
             />
           )}
 
@@ -279,6 +282,10 @@ export function PrescriptionDetail({
           setDeleteRemarkId={setDeleteRemarkId}
           deleteRemark={deleteRemark}
         />
+      )}
+
+      {historyRemarkId && (
+        <RemarkHistoryDialog remarkId={historyRemarkId} onClose={() => setHistoryRemarkId(null)} />
       )}
     </div>
   );

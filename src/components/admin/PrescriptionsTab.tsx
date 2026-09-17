@@ -37,7 +37,11 @@ export function PrescriptionsTab({ currentUser }: { currentUser?: AppUser }) {
   };
 
   const handleSavePrescription = async (p: Prescription) => {
-    await fetch(PRESCRIPTIONS_API, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) });
+    await fetch(PRESCRIPTIONS_API, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...p, changedBy: currentUser?.login ?? "", changedByName: currentUser?.name ?? "" }),
+    });
     setPrescriptions(prev => prev.map(x => x.id === p.id ? p : x));
     setEditPrescription(null);
   };

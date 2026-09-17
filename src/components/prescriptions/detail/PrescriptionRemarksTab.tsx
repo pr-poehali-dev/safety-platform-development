@@ -20,12 +20,13 @@ interface PrescriptionRemarksTabProps {
   removeRemarkPhoto: (remarkId: string, photoIdx: number) => void;
   handleRemarkPhotos: (remarkId: string, files: FileList | null) => void;
   onOpenSuspension?: (number: string) => void;
+  onOpenHistory?: (remarkId: string) => void;
 }
 
 export function PrescriptionRemarksTab({
   p, canEdit, canChangeStatus, canDeleteRemark, uploadingRemarkId, photoInputRefs,
   setRemarkStatus, setDeleteRemarkId, setLightbox, removeRemarkPhoto, handleRemarkPhotos,
-  onOpenSuspension,
+  onOpenSuspension, onOpenHistory,
 }: PrescriptionRemarksTabProps) {
   return (
     <div className="px-6 py-4 space-y-4">
@@ -45,6 +46,17 @@ export function PrescriptionRemarksTab({
               )}
             </div>
             <div className="flex items-center gap-2">
+              {onOpenHistory && (
+                <button
+                  type="button"
+                  onClick={() => onOpenHistory(r.id)}
+                  className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground border border-border hover:text-foreground hover:border-foreground/30 rounded px-2 py-0.5 transition-colors whitespace-nowrap"
+                  title="История изменений"
+                >
+                  <Icon name="History" size={11} />
+                  История
+                </button>
+              )}
               <StatusDropdown status={eStatus} editable={canChangeStatus} onChange={s => setRemarkStatus(r.id, s)} align="right" />
               {canDeleteRemark && (
                 <button

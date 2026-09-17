@@ -58,7 +58,11 @@ export function useIndexPrescriptions(user: AppUser) {
   };
 
   const updatePrescription = async (updated: Prescription) => {
-    await fetch(API, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
+    await fetch(API, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...updated, changedBy: user.login, changedByName: user.name }),
+    });
     setPrescriptions(prev => prev.map(p => p.id === updated.id ? updated : p));
     setSelected(updated);
   };
