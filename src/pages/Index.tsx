@@ -1,8 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { AppUser } from "@/lib/auth";
-import { Template, DEFAULT_TEMPLATE } from "@/lib/template";
-import UserMenu from "@/components/UserMenu";
-import { Prescription, Status } from "@/lib/prescriptionTypes";
 import { AddForm } from "@/components/prescriptions/PrescriptionForm";
 import { PrescriptionDetail } from "@/components/prescriptions/PrescriptionDetail";
 import { PrescriptionList } from "@/components/prescriptions/PrescriptionList";
@@ -14,12 +11,9 @@ import Fines from "@/pages/Fines";
 import Suspensions from "@/pages/Suspensions";
 import TasksBlock from "@/components/tasks/TasksBlock";
 import TasksLoginPopup from "@/components/tasks/TasksLoginPopup";
-import { useTasks } from "@/hooks/useTasks";
-import { useInspectionNotifications } from "@/hooks/useInspectionNotifications";
-import { usePrescriptionNotifications } from "@/hooks/usePrescriptionNotifications";
-import { playNotificationSound } from "@/lib/notificationSound";
-import Icon from "@/components/ui/icon";
-import Logo from "@/components/Logo";
+import { useAppNotifications, MergedNotification } from "@/hooks/useAppNotifications";
+import { useIndexPrescriptions } from "@/hooks/useIndexPrescriptions";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { VisibilitySettings, TabKey, defaultVisibilitySettings } from "@/lib/visibilityTypes";
 import { useResolvedVisibility } from "@/hooks/useVisibilitySettings";
 
@@ -32,20 +26,12 @@ interface IndexProps {
   visibilityOverride?: VisibilitySettings | null;
 }
 
-const API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
-const TEMPLATES_API = "https://functions.poehali.dev/41ec60df-3f38-4561-ba9d-ca17ebd71553";
-const USERS_URL = "https://functions.poehali.dev/9f213d27-a6a3-4ce0-b6b1-0d26003c43eb";
-
 type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines" | "suspensions";
 
 export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, onTasksPopupShown, visibilityOverride }: IndexProps) {
   const resolvedVisibility = useResolvedVisibility(user);
   const visibility: VisibilitySettings = visibilityOverride ?? resolvedVisibility.settings ?? defaultVisibilitySettings();
   const [tab, setTab] = useState<Tab>("dashboard");
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [showAdd, setShowAdd] = useState(false);
-  const [editingPrescription, setEditingPrescription] = useState<Prescription | null>(null);
-  const [selected, setSelected] = useState<Prescription | null>(null);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterMine, setFilterMine] = useState(false);
   const [filterSuspended, setFilterSuspended] = useState(false);
@@ -60,49 +46,20 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
   const [taskFilter, setTaskFilter] = useState<string | undefined>(undefined);
   const [taskOpenId, setTaskOpenId] = useState<number | undefined>(undefined);
   const [inspectionOpenId, setInspectionOpenId] = useState<number | undefined>(undefined);
-  const [prescriptionOpenId, setPrescriptionOpenId] = useState<string | undefined>(undefined);
   const [suspensionOpenNumber, setSuspensionOpenNumber] = useState<string | undefined>(undefined);
-  const [activeTemplate, setActiveTemplate] = useState<Template>({ ...DEFAULT_TEMPLATE, id: "default", name: "По умолчанию", isDefault: true });
-  const [availableUsers, setAvailableUsers] = useState<{ login: string; name: string; role: string }[]>([]);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [tasksPopupOpen, setTasksPopupOpen] = useState(false);
-  const notifRef = useRef<HTMLDivElement>(null);
 
-  const { assignments, notifications: taskNotifications, unreadCount: taskUnreadCount, markAllRead: markTaskNotificationsRead, createTask, updateTask, deleteTask, action, sendComment, fetchComments, load: reloadTasks, loading: tasksLoading } = useTasks(user);
-  const { notifications: inspectionNotifications, unreadCount: inspectionUnreadCount, markAllRead: markInspectionNotificationsRead, load: reloadInspectionNotifications } = useInspectionNotifications(user);
-  const { notifications: prescriptionNotifications, unreadCount: prescriptionUnreadCount, markAllRead: markPrescriptionNotificationsRead, load: reloadPrescriptionNotifications } = usePrescriptionNotifications(user);
+  const {
+    assignments, notifications, unreadCount, markAllRead, tasksLoading,
+    createTask, updateTask, deleteTask, action, sendComment, fetchComments,
+  } = useAppNotifications(user);
 
-  type MergedNotification = { id: string; kind: "task" | "inspection" | "prescription"; refId: number | string | null; message: string; is_read: boolean; created_at: string };
-  const notifications: MergedNotification[] = [
-    ...taskNotifications.map(n => ({ id: `t${n.id}`, kind: "task" as const, refId: n.assignment_id, message: n.message, is_read: n.is_read, created_at: n.created_at })),
-    ...inspectionNotifications.map(n => ({ id: `i${n.id}`, kind: "inspection" as const, refId: n.inspection_id, message: n.message, is_read: n.is_read, created_at: n.created_at })),
-    ...prescriptionNotifications.map(n => ({ id: `p${n.id}`, kind: "prescription" as const, refId: n.prescription_id, message: n.message, is_read: n.is_read, created_at: n.created_at })),
-  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  const unreadCount = taskUnreadCount + inspectionUnreadCount + prescriptionUnreadCount;
-  const markAllRead = () => { markTaskNotificationsRead(); markInspectionNotificationsRead(); markPrescriptionNotificationsRead(); };
-
-  // Звуковой сигнал при появлении нового непрочитанного уведомления (не при первой загрузке страницы)
-  const prevUnreadCount = useRef<number | null>(null);
-  useEffect(() => {
-    if (prevUnreadCount.current !== null && unreadCount > prevUnreadCount.current) {
-      playNotificationSound();
-    }
-    prevUnreadCount.current = unreadCount;
-  }, [unreadCount]);
-
-  useEffect(() => {
-    fetch(`${API}?full=1`)
-      .then(r => r.json())
-      .then(data => setPrescriptions(Array.isArray(data) ? data : []))
-      .catch(() => setPrescriptions([]));
-  }, []);
-
-  useEffect(() => {
-    if (prescriptionOpenId && prescriptions.length > 0) {
-      const found = prescriptions.find(p => p.id === prescriptionOpenId);
-      if (found) setSelected(found);
-    }
-  }, [prescriptionOpenId, prescriptions]);
+  const {
+    prescriptions, showAdd, setShowAdd, editingPrescription, setEditingPrescription,
+    selected, setSelected, activeTemplate, availableUsers,
+    setPrescriptionOpenId,
+    addPrescription, updatePrescription, changePrescriptionStatus,
+  } = useIndexPrescriptions(user);
 
   // Показываем попап с задачами при каждом входе в систему
   useEffect(() => {
@@ -111,50 +68,6 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
       onTasksPopupShown?.();
     }
   }, [showTasksPopup, tasksLoading]);
-
-  useEffect(() => {
-    fetch(`${TEMPLATES_API}?type=prescription`)
-      .then(r => r.json())
-      .then((data: Template[]) => {
-        const parsed = typeof data === "string" ? JSON.parse(data) : data;
-        const def = parsed.find((t: Template) => t.isDefault) ?? parsed[0];
-        if (def) setActiveTemplate(def);
-      })
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    fetch(USERS_URL)
-      .then(r => r.json())
-      .then((data: { login: string; name: string; role: string }[]) => {
-        setAvailableUsers(data.filter(u => u.login !== user.login));
-      })
-      .catch(() => {});
-  }, [user.login]);
-
-  // Обновляем задачи и уведомления при возврате в браузерную вкладку
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === "visible") {
-        reloadTasks();
-        reloadInspectionNotifications();
-        reloadPrescriptionNotifications();
-      }
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [reloadTasks, reloadInspectionNotifications, reloadPrescriptionNotifications]);
-
-  // Закрытие панели уведомлений при клике вне
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
-        setShowNotifications(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
 
   // Если текущая вкладка скрыта настройками видимости — переключаемся на Главную
   useEffect(() => {
@@ -165,28 +78,6 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
 
   const isContractor = user.role === "contractor";
   const canEdit = user.role === "admin" || user.role === "specialist" || user.role === "manager";
-
-  const addPrescription = async (p: Prescription) => {
-    const res = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) });
-    const data = await res.json();
-    const saved = { ...p, number: data.number ?? p.number };
-    setPrescriptions(prev => [saved, ...prev]);
-  };
-
-  const updatePrescription = async (updated: Prescription) => {
-    await fetch(API, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
-    setPrescriptions(prev => prev.map(p => p.id === updated.id ? updated : p));
-    setSelected(updated);
-  };
-
-  const changePrescriptionStatus = (p: Prescription, status: Status) => {
-    if (status === "Черновик") {
-      setEditingPrescription(p);
-      return;
-    }
-    const updated = { ...p, remarks: p.remarks.map(r => ({ ...r, status })) };
-    updatePrescription(updated);
-  };
 
   const canViewHeadcount = visibility.tabs.headcount;
   const canViewFines = visibility.tabs.fines;
@@ -205,102 +96,26 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
     ...(canViewSuspensions ? [{ id: "suspensions" as Tab, label: "Приостановки", icon: "OctagonPause" }] : []),
   ];
 
-  const NotificationBell = () => (
-    <div className="relative" ref={notifRef}>
-      <button
-        onClick={() => {
-          setShowNotifications(v => !v);
-          if (!showNotifications && unreadCount > 0) markAllRead();
-        }}
-        className="relative p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-      >
-        <Icon name="Bell" size={17} />
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </button>
-
-      {showNotifications && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-background border border-border rounded-xl shadow-2xl z-50 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-            <span className="text-sm font-semibold">Уведомления</span>
-            {notifications.some(n => !n.is_read) && (
-              <button onClick={markAllRead} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Прочитать все
-              </button>
-            )}
-          </div>
-          <div className="max-h-72 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">Нет уведомлений</div>
-            ) : (
-              notifications.slice(0, 20).map(n => (
-                <div
-                  key={n.id}
-                  onClick={() => {
-                    if (!n.refId) return;
-                    if (n.kind === "task") { setTaskFilter(undefined); setTaskOpenId(n.refId as number); setTab("tasks"); }
-                    else if (n.kind === "inspection") { setInspectionOpenId(n.refId as number); setTab("inspections"); }
-                    else { setPrescriptionOpenId(n.refId as string); setTab("prescriptions"); }
-                    setShowNotifications(false);
-                  }}
-                  className={`px-4 py-3 border-b border-border last:border-0 text-xs transition-colors ${!n.is_read ? "bg-primary/5" : ""} ${n.refId ? "cursor-pointer hover:bg-muted/40" : ""}`}
-                >
-                  <div className="flex items-start gap-2">
-                    {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1 flex-shrink-0" />}
-                    <div className={!n.is_read ? "" : "pl-3.5"}>
-                      <p className="text-foreground leading-snug">{n.message}</p>
-                      <p className="text-muted-foreground mt-0.5">
-                        {new Date(n.created_at).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderNav = () => (
-    <div className="border-b border-border bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-1 pt-2 overflow-x-auto">
-        {NAV_TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
-              tab === t.id
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Icon name={t.icon as never} size={14} />
-            <span className="hidden sm:inline">{t.label}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+  const handleNotificationClick = (n: MergedNotification) => {
+    if (!n.refId) return;
+    if (n.kind === "task") { setTaskFilter(undefined); setTaskOpenId(n.refId as number); setTab("tasks"); }
+    else if (n.kind === "inspection") { setInspectionOpenId(n.refId as number); setTab("inspections"); }
+    else { setPrescriptionOpenId(n.refId as string); setTab("prescriptions"); }
+  };
 
   const renderHeader = () => (
-    <header className="border-b border-border px-6 py-4 flex items-center justify-between bg-background sticky top-0 z-30">
-      <button
-        onClick={() => setTab("dashboard")}
-        className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-      >
-        <Logo size={28} />
-        <span className="text-sm font-semibold tracking-tight">SafeWork</span>
-      </button>
-      <div className="flex items-center gap-2">
-        <NotificationBell />
-        <UserMenu user={user} onLogout={onLogout} onUserUpdate={onUserUpdate} />
-      </div>
-    </header>
+    <AppHeader
+      user={user}
+      onLogout={onLogout}
+      onUserUpdate={onUserUpdate}
+      tab={tab}
+      setTab={setTab}
+      navTabs={NAV_TABS}
+      notifications={notifications}
+      unreadCount={unreadCount}
+      markAllRead={markAllRead}
+      onNotificationClick={handleNotificationClick}
+    />
   );
 
   if (tab === "incidents" && tabVisible("incidents")) {
@@ -372,7 +187,6 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
     return (
       <div className="min-h-screen bg-background" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
         {renderHeader()}
-        {renderNav()}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <TasksBlock
             user={user}
@@ -397,7 +211,6 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
     return (
       <div className="min-h-screen bg-background" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
         {renderHeader()}
-        {renderNav()}
         <Dashboard
           user={user}
           taskAssignments={assignments}
