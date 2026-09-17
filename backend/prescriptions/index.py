@@ -447,15 +447,45 @@ def handler(event: dict, context) -> dict:
                         notify_values
                     )
 
-            cur.execute(f"DELETE FROM {SCHEMA}.remarks WHERE prescription_id = %s", (pid,))
+            # Точечное обновление замечаний: удаляем только реально убранные пункты,
+            # обновляем существующие по id и добавляем только новые — без полной перезаписи списка.
+            cur.execute(f"SELECT id FROM {SCHEMA}.remarks WHERE prescription_id = %s", (pid,))
+            existing_ids = {r[0] for r in cur.fetchall()}
+
             remarks = p.get("remarks", [])
-            if remarks:
+            new_ids = {r["id"] for r in remarks}
+
+            removed_ids = list(existing_ids - new_ids)
+            if removed_ids:
+                cur.execute(f"DELETE FROM {SCHEMA}.remarks WHERE prescription_id = %s AND id = ANY(%s)", (pid, removed_ids))
+
+            to_update = []
+            to_insert = []
+            for i, r in enumerate(remarks):
+                values = (
+                    r.get("place", ""), r.get("category", ""), r.get("description", ""), r.get("normRef", ""),
+                    r.get("deadline", ""), r.get("status", "В работе"), i,
+                    json.dumps(r.get("photos", []), ensure_ascii=False),
+                    bool(r.get("work_suspended", False)), bool(r.get("suspension_act_drawn", False)),
+                    r.get("suspension_act_number", ""),
+                )
+                if r["id"] in existing_ids:
+                    to_update.append(values + (r["id"], pid))
+                else:
+                    to_insert.append((r["id"], pid) + values)
+
+            if to_update:
+                cur.executemany(
+                    f"UPDATE {SCHEMA}.remarks SET place=%s, category=%s, description=%s, norm_ref=%s, deadline=%s, "
+                    f"status=%s, sort_order=%s, photos=%s, work_suspended=%s, suspension_act_drawn=%s, suspension_act_number=%s "
+                    f"WHERE id=%s AND prescription_id=%s",
+                    to_update
+                )
+            if to_insert:
                 cur.executemany(
                     f"INSERT INTO {SCHEMA}.remarks (id, prescription_id, place, category, description, norm_ref, deadline, status, sort_order, photos, work_suspended, suspension_act_drawn, suspension_act_number) "
                     f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                    [(r["id"], pid, r.get("place", ""), r.get("category", ""), r.get("description", ""), r.get("normRef", ""), r.get("deadline", ""), r.get("status", "В работе"), i,
-                      json.dumps(r.get("photos", []), ensure_ascii=False), bool(r.get("work_suspended", False)), bool(r.get("suspension_act_drawn", False)), r.get("suspension_act_number", ""))
-                     for i, r in enumerate(remarks)]
+                    to_insert
                 )
             conn.commit()
             return ok({"ok": True})
