@@ -29,10 +29,13 @@ export function PrescriptionListHeader({
   return (
     <>
       <header className="border-b border-border px-6 py-4 flex items-center justify-between bg-background sticky top-0 z-30">
-        <div className="flex items-center gap-3">
+        <button
+          onClick={onDashboardClick}
+          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+        >
           <Logo size={28} />
           <span className="text-sm font-semibold tracking-tight">SafeWork</span>
-        </div>
+        </button>
         <UserMenu user={user} onLogout={onLogout} />
       </header>
 
