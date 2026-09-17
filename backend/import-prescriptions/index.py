@@ -29,11 +29,12 @@ COL_RESPONSIBLE = 6
 COL_STATUS = 7
 COL_REMARK_NO = 8
 COL_PLACE = 9
-COL_DESCRIPTION = 10
-COL_NORM_REF = 11
-COL_DEADLINE = 12
-COL_REMARK_STATUS = 13
-COL_PHOTO = 14  # 0-based индекс столбца "Фото"
+COL_CATEGORY = 10
+COL_DESCRIPTION = 11
+COL_NORM_REF = 12
+COL_DEADLINE = 13
+COL_REMARK_STATUS = 14
+COL_PHOTO = 15  # 0-based индекс столбца "Фото"
 
 VALID_STATUSES = {"Черновик", "В работе", "Устранено", "Просрочено"}
 
@@ -153,6 +154,7 @@ def parse_workbook(xlsx_bytes: bytes):
             photos_bytes = images_by_row.get(row_idx, [])
             current["remarks"].append({
                 "place": norm(row[COL_PLACE]),
+                "category": norm(row[COL_CATEGORY]) if len(row) > COL_CATEGORY else "",
                 "description": description,
                 "normRef": norm(row[COL_NORM_REF]),
                 "deadline": norm(row[COL_DEADLINE]),
@@ -327,7 +329,7 @@ def handler(event: dict, context) -> dict:
                         f"INSERT INTO {SCHEMA}.remarks "
                         f"(id, prescription_id, place, category, description, norm_ref, deadline, status, sort_order, photos) "
                         f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                        (r["_rid"], pid, r["place"], "", r["description"], r["normRef"], r["deadline"], r["status"], i,
+                        (r["_rid"], pid, r["place"], r.get("category", ""), r["description"], r["normRef"], r["deadline"], r["status"], i,
                          json.dumps(photo_urls, ensure_ascii=False))
                     )
                     remarks_count += 1

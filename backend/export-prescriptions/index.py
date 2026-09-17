@@ -21,10 +21,10 @@ CORS = {
 
 COLUMNS = [
     "Номер", "Дата", "Объект", "Подрядчик", "Инспектор", "В присутствии", "Ответственный",
-    "Статус предписания", "Замечание №", "Место нарушения", "Описание нарушения", "НПА/ЛНА",
+    "Статус предписания", "Замечание №", "Место нарушения", "Вид нарушения", "Описание нарушения", "НПА/ЛНА",
     "Срок устранения", "Статус замечания", "Фото",
 ]
-COL_WIDTHS = [10, 12, 24, 24, 22, 22, 22, 16, 10, 20, 40, 22, 14, 14, 42]
+COL_WIDTHS = [10, 12, 24, 24, 22, 22, 22, 16, 10, 20, 22, 40, 22, 14, 14, 42]
 
 THUMB_SIZE = 90
 ROW_HEIGHT_WITH_PHOTOS = 74
@@ -125,7 +125,7 @@ def handler(event: dict, context) -> dict:
             values = [
                 p.get("number", ""), p.get("date", ""), p.get("object", ""), p.get("contractor", ""),
                 p.get("inspector", ""), p.get("representative", ""), p.get("responsible", ""),
-                status, "", "", "", "", "", "", "",
+                status, "", "", "", "", "", "", "", "",
             ]
             data_rows.append((values, []))
             continue
@@ -142,6 +142,7 @@ def handler(event: dict, context) -> dict:
                 status if idx == 0 else "",
                 idx + 1,
                 r.get("place", ""),
+                r.get("category", ""),
                 r.get("description", ""),
                 r.get("normRef", ""),
                 r.get("deadline", ""),
