@@ -20,11 +20,12 @@ CORS = {
 }
 
 COLUMNS = [
-    "Номер", "Дата", "Объект", "Подрядчик", "Инспектор", "В присутствии", "Ответственный",
-    "Статус предписания", "Замечание №", "Место нарушения", "Вид нарушения", "Описание нарушения", "НПА/ЛНА",
-    "Срок устранения", "Статус замечания", "Фото",
+    "Номер", "Дата", "Объект", "Подрядчик", "№ контракта", "Инспектор", "В присутствии", "Ответственный",
+    "Срок отчёта", "Email для ответа", "Статус предписания",
+    "Замечание №", "Место нарушения", "Вид нарушения", "Описание нарушения", "НПА/ЛНА",
+    "Срок устранения", "Статус замечания", "Работы приостановлены", "Акт о приостановке", "№ акта", "Фото",
 ]
-COL_WIDTHS = [10, 12, 24, 24, 22, 22, 22, 16, 10, 20, 22, 40, 22, 14, 14, 42]
+COL_WIDTHS = [10, 12, 24, 24, 14, 22, 22, 22, 12, 22, 16, 10, 20, 22, 40, 22, 14, 14, 16, 16, 14, 42]
 
 THUMB_SIZE = 90
 ROW_HEIGHT_WITH_PHOTOS = 74
@@ -124,8 +125,9 @@ def handler(event: dict, context) -> dict:
         if not remarks:
             values = [
                 p.get("number", ""), p.get("date", ""), p.get("object", ""), p.get("contractor", ""),
-                p.get("inspector", ""), p.get("representative", ""), p.get("responsible", ""),
-                status, "", "", "", "", "", "", "", "",
+                p.get("contractNumber", ""), p.get("inspector", ""), p.get("representative", ""), p.get("responsible", ""),
+                p.get("reportDeadline", ""), p.get("replyEmail", ""),
+                status, "", "", "", "", "", "", "", "", "", "", "",
             ]
             data_rows.append((values, []))
             continue
@@ -136,9 +138,12 @@ def handler(event: dict, context) -> dict:
                 p.get("date", "") if idx == 0 else "",
                 p.get("object", "") if idx == 0 else "",
                 p.get("contractor", "") if idx == 0 else "",
+                p.get("contractNumber", "") if idx == 0 else "",
                 p.get("inspector", "") if idx == 0 else "",
                 p.get("representative", "") if idx == 0 else "",
                 p.get("responsible", "") if idx == 0 else "",
+                p.get("reportDeadline", "") if idx == 0 else "",
+                p.get("replyEmail", "") if idx == 0 else "",
                 status if idx == 0 else "",
                 idx + 1,
                 r.get("place", ""),
@@ -147,6 +152,9 @@ def handler(event: dict, context) -> dict:
                 r.get("normRef", ""),
                 r.get("deadline", ""),
                 r.get("status", ""),
+                "Да" if r.get("work_suspended") else "Нет",
+                "Да" if r.get("suspension_act_drawn") else "Нет",
+                r.get("suspension_act_number", ""),
                 "",
             ]
             data_rows.append((values, r.get("photos") or []))

@@ -23,18 +23,24 @@ COL_NUMBER = 0
 COL_DATE = 1
 COL_OBJECT = 2
 COL_CONTRACTOR = 3
-COL_INSPECTOR = 4
-COL_REPRESENTATIVE = 5
-COL_RESPONSIBLE = 6
-COL_STATUS = 7
-COL_REMARK_NO = 8
-COL_PLACE = 9
-COL_CATEGORY = 10
-COL_DESCRIPTION = 11
-COL_NORM_REF = 12
-COL_DEADLINE = 13
-COL_REMARK_STATUS = 14
-COL_PHOTO = 15  # 0-based индекс столбца "Фото"
+COL_CONTRACT_NUMBER = 4
+COL_INSPECTOR = 5
+COL_REPRESENTATIVE = 6
+COL_RESPONSIBLE = 7
+COL_REPORT_DEADLINE = 8
+COL_REPLY_EMAIL = 9
+COL_STATUS = 10
+COL_REMARK_NO = 11
+COL_PLACE = 12
+COL_CATEGORY = 13
+COL_DESCRIPTION = 14
+COL_NORM_REF = 15
+COL_DEADLINE = 16
+COL_REMARK_STATUS = 17
+COL_WORK_SUSPENDED = 18
+COL_SUSPENSION_ACT_DRAWN = 19
+COL_SUSPENSION_ACT_NUMBER = 20
+COL_PHOTO = 21  # 0-based индекс столбца "Фото"
 
 VALID_STATUSES = {"Черновик", "В работе", "Устранено", "Просрочено"}
 
@@ -92,6 +98,10 @@ def norm(v):
     return str(v).strip()
 
 
+def norm_bool(v):
+    return norm(v).strip().lower() in ("да", "yes", "true", "1")
+
+
 def parse_workbook(xlsx_bytes: bytes):
     """Парсит xlsx (формат экспорта предписаний) и возвращает список предписаний с замечаниями.
     Каждое изображение из столбца "Фото" привязывается к строке-замечанию по номеру строки листа."""
@@ -136,9 +146,12 @@ def parse_workbook(xlsx_bytes: bytes):
                 "date": norm(row[COL_DATE]),
                 "object": norm(row[COL_OBJECT]),
                 "contractor": norm(row[COL_CONTRACTOR]),
+                "contractNumber": norm(row[COL_CONTRACT_NUMBER]) if len(row) > COL_CONTRACT_NUMBER else "",
                 "inspector": norm(row[COL_INSPECTOR]),
                 "representative": norm(row[COL_REPRESENTATIVE]),
                 "responsible": norm(row[COL_RESPONSIBLE]),
+                "reportDeadline": norm(row[COL_REPORT_DEADLINE]) if len(row) > COL_REPORT_DEADLINE else "",
+                "replyEmail": norm(row[COL_REPLY_EMAIL]) if len(row) > COL_REPLY_EMAIL else "",
                 "status": norm(row[COL_STATUS]),
                 "remarks": [],
             }
@@ -159,6 +172,9 @@ def parse_workbook(xlsx_bytes: bytes):
                 "normRef": norm(row[COL_NORM_REF]),
                 "deadline": norm(row[COL_DEADLINE]),
                 "status": status,
+                "work_suspended": norm_bool(row[COL_WORK_SUSPENDED]) if len(row) > COL_WORK_SUSPENDED else False,
+                "suspension_act_drawn": norm_bool(row[COL_SUSPENSION_ACT_DRAWN]) if len(row) > COL_SUSPENSION_ACT_DRAWN else False,
+                "suspension_act_number": norm(row[COL_SUSPENSION_ACT_NUMBER]) if len(row) > COL_SUSPENSION_ACT_NUMBER else "",
                 "_photos_bytes": photos_bytes,
             })
 
@@ -307,30 +323,31 @@ def handler(event: dict, context) -> dict:
                         "adminName": created_by_name,
                     }], ensure_ascii=False)
                     cur.execute(
-                        f"UPDATE {SCHEMA}.prescriptions SET date=%s, object=%s, contractor=%s, inspector=%s, "
-                        f"representative=%s, responsible=%s, import_log = import_log || %s::jsonb WHERE id=%s",
-                        (p["date"], p["object"], p["contractor"], p["inspector"],
-                         p["representative"], p["responsible"], log_entry, pid)
+                        f"UPDATE {SCHEMA}.prescriptions SET date=%s, object=%s, contractor=%s, contract_number=%s, inspector=%s, "
+                        f"representative=%s, responsible=%s, report_deadline=%s, reply_email=%s, import_log = import_log || %s::jsonb WHERE id=%s",
+                        (p["date"], p["object"], p["contractor"], p.get("contractNumber") or None, p["inspector"],
+                         p["representative"], p["responsible"], p.get("reportDeadline", ""), p.get("replyEmail", ""), log_entry, pid)
                     )
                     cur.execute(f"DELETE FROM {SCHEMA}.remarks WHERE prescription_id = %s", (pid,))
                     updated_count += 1
                 else:
                     cur.execute(
                         f"INSERT INTO {SCHEMA}.prescriptions "
-                        f"(id, number, date, object, contractor, inspector, representative, responsible, reply_email, report_deadline, comments, created_by) "
-                        f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                        (pid, p["number"] or f"IMPORT-{pid}", p["date"], p["object"], p["contractor"],
-                         p["inspector"], p["representative"], p["responsible"], "", "", "[]", created_by)
+                        f"(id, number, date, object, contractor, contract_number, inspector, representative, responsible, reply_email, report_deadline, comments, created_by) "
+                        f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                        (pid, p["number"] or f"IMPORT-{pid}", p["date"], p["object"], p["contractor"], p.get("contractNumber") or None,
+                         p["inspector"], p["representative"], p["responsible"], p.get("replyEmail", ""), p.get("reportDeadline", ""), "[]", created_by)
                     )
                     imported_count += 1
                 for i, r in enumerate(p["remarks"]):
                     photo_urls = [uploaded[(r["_rid"], idx)] for idx in range(len(r["_photos_bytes"])) if (r["_rid"], idx) in uploaded]
                     cur.execute(
                         f"INSERT INTO {SCHEMA}.remarks "
-                        f"(id, prescription_id, place, category, description, norm_ref, deadline, status, sort_order, photos) "
-                        f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                        f"(id, prescription_id, place, category, description, norm_ref, deadline, status, sort_order, photos, work_suspended, suspension_act_drawn, suspension_act_number) "
+                        f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                         (r["_rid"], pid, r["place"], r.get("category", ""), r["description"], r["normRef"], r["deadline"], r["status"], i,
-                         json.dumps(photo_urls, ensure_ascii=False))
+                         json.dumps(photo_urls, ensure_ascii=False),
+                         r.get("work_suspended", False), r.get("suspension_act_drawn", False), r.get("suspension_act_number", ""))
                     )
                     remarks_count += 1
             conn.commit()

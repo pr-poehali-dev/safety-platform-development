@@ -1,7 +1,7 @@
 export type Status = "Черновик" | "В работе" | "Устранено" | "Просрочено";
-export interface Remark { id: string; place: string; description: string; normRef: string; deadline: string; status: Status; photos?: string[]; }
+export interface Remark { id: string; place: string; category: string; description: string; normRef: string; deadline: string; status: Status; work_suspended?: boolean; suspension_act_drawn?: boolean; suspension_act_number?: string; photos?: string[]; }
 export interface ImportLogEntry { date: string; adminLogin: string; adminName: string; }
-export interface Prescription { id: string; number: string; date: string; object: string; contractor: string; inspector: string; inspectorNominative?: string; representative: string; responsible: string; replyEmail: string; reportDeadline: string; remarks: Remark[]; comments: unknown[]; importLog?: ImportLogEntry[]; }
+export interface Prescription { id: string; number: string; date: string; object: string; contractor: string; contractNumber?: string; inspector: string; inspectorNominative?: string; representative: string; responsible: string; replyEmail: string; reportDeadline: string; remarks: Remark[]; comments: unknown[]; importLog?: ImportLogEntry[]; }
 export interface ImportPreview {
   fileKey: string;
   prescriptionsCount: number;
