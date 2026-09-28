@@ -1,9 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AppUser } from "@/lib/auth";
 import Icon from "@/components/ui/icon";
 import Logo from "@/components/Logo";
 import UserMenu from "@/components/UserMenu";
 import { VisibilitySettings, defaultVisibilitySettings } from "@/lib/visibilityTypes";
+import { useHeadcount } from "@/hooks/useHeadcount";
+import { useHeadcountSettings } from "@/hooks/useHeadcountSettings";
+import { buildTotalHoursInRange } from "@/lib/headcountTypes";
+import IncidentRatesCard from "@/components/incidents/IncidentRatesCard";
 
 const INCIDENTS_API = "https://functions.poehali.dev/4aedfdd0-d096-43ad-b4e7-b7b2aec3f753";
 const CONTRACTORS_API = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
@@ -83,6 +87,31 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
   const [form, setForm] = useState(emptyForm());
 
   const canAdd = user.role === "admin" || user.role === "specialist" || user.role === "manager";
+
+  const [ratesDateFrom, setRatesDateFrom] = useState("");
+  const [ratesDateTo, setRatesDateTo] = useState("");
+  const { days: headcountDays, loading: headcountLoading } = useHeadcount();
+  const { settings: headcountSettings } = useHeadcountSettings();
+
+  const filteredForRates = useMemo(() => {
+    return rows.filter(r => {
+      if (!ratesDateFrom && !ratesDateTo) return true;
+      if (!r.incident_date) return false;
+      if (ratesDateFrom && r.incident_date < ratesDateFrom) return false;
+      if (ratesDateTo && r.incident_date > ratesDateTo) return false;
+      return true;
+    });
+  }, [rows, ratesDateFrom, ratesDateTo]);
+
+  const ratesFatalCount = useMemo(() => filteredForRates.reduce((s, r) => s + (r.fatal || 0), 0), [filteredForRates]);
+  const ratesLtiCount = useMemo(
+    () => filteredForRates.reduce((s, r) => s + (r.light_injury || 0) + (r.severe_injury || 0), 0),
+    [filteredForRates]
+  );
+  const ratesTotalHours = useMemo(
+    () => buildTotalHoursInRange(headcountDays, ratesDateFrom, ratesDateTo, headcountSettings.po_rate, headcountSettings.sbd_rate),
+    [headcountDays, ratesDateFrom, ratesDateTo, headcountSettings]
+  );
 
   const load = () => {
     setLoading(true);
@@ -190,6 +219,17 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
             </button>
           )}
         </div>
+
+        <IncidentRatesCard
+          dateFrom={ratesDateFrom}
+          dateTo={ratesDateTo}
+          onFromChange={setRatesDateFrom}
+          onToChange={setRatesDateTo}
+          fatalCount={ratesFatalCount}
+          ltiCount={ratesLtiCount}
+          totalHours={ratesTotalHours}
+          loading={headcountLoading}
+        />
 
         {loading ? (
           <div className="flex items-center justify-center py-20">

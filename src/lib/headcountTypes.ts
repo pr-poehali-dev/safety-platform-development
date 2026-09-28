@@ -48,6 +48,21 @@ export function buildTotalHours(days: HeadcountDay[], poRate = DEFAULT_PO_RATE, 
   }, 0);
 }
 
+// Суммарные человеко-часы за выбранный период (даты в формате YYYY-MM-DD, границы включительно).
+// Пустые dateFrom/dateTo означают отсутствие ограничения с этой стороны.
+export function buildTotalHoursInRange(
+  days: HeadcountDay[], dateFrom: string, dateTo: string,
+  poRate = DEFAULT_PO_RATE, sbdRate = DEFAULT_SBD_RATE
+): number {
+  return days.reduce((sum, d) => {
+    if (dateFrom && d.date < dateFrom) return sum;
+    if (dateTo && d.date > dateTo) return sum;
+    const po = d.po ?? 0;
+    const sbd = d.sbd ?? 0;
+    return sum + po * poRate + sbd * sbdRate;
+  }, 0);
+}
+
 export function buildYtdStats(days: HeadcountDay[], poRate = DEFAULT_PO_RATE, sbdRate = DEFAULT_SBD_RATE): YtdStats {
   const today = new Date();
   const year = today.getFullYear();
