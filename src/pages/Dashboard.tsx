@@ -276,6 +276,21 @@ export default function Dashboard({ user, taskAssignments, visibility, onNavigat
     };
   }, [filteredIncidents, filteredPrescriptions, inspRemarks, totalSuspended, totalSuspendedActs]);
 
+  const { daysWithoutIncidents, lastIncidentDate } = useMemo(() => {
+    const dates = incidents
+      .filter(i => (i.fatal || 0) > 0 || (i.severe_injury || 0) > 0 || (i.light_injury || 0) > 0)
+      .map(i => i.incident_date)
+      .filter(Boolean)
+      .sort();
+    const last = dates.length > 0 ? dates[dates.length - 1] : null;
+    if (!last) return { daysWithoutIncidents: null, lastIncidentDate: null };
+    const lastDate = new Date(last + "T00:00:00");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+    return { daysWithoutIncidents: Math.max(0, diffDays), lastIncidentDate: last };
+  }, [incidents]);
+
   const spbStats = useMemo(() => {
     return spbCategories.map(cat => {
       const fromInspections = filteredInspections
@@ -485,6 +500,8 @@ export default function Dashboard({ user, taskAssignments, visibility, onNavigat
               ltiCount={pyramidData.severe_injury + pyramidData.light_injury}
               totalHours={totalWorkedHours}
               loading={allHeadcountLoading}
+              daysWithoutIncidents={daysWithoutIncidents}
+              lastIncidentDate={lastIncidentDate}
             />
           )}
         </div>

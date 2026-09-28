@@ -5,6 +5,8 @@ interface Props {
   ltiCount: number;
   totalHours: number;
   loading?: boolean;
+  daysWithoutIncidents: number | null;
+  lastIncidentDate?: string | null;
 }
 
 const RATE_MULTIPLIER = 1_000_000;
@@ -14,7 +16,7 @@ function fmtRate(n: number): string {
   return n.toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function InjuryRateBadge({ fatalCount, ltiCount, totalHours, loading }: Props) {
+export default function InjuryRateBadge({ fatalCount, ltiCount, totalHours, loading, daysWithoutIncidents, lastIncidentDate }: Props) {
   if (loading) {
     return (
       <div className="bg-card border border-border rounded-xl px-4 py-3 flex items-center gap-2 text-xs text-muted-foreground">
@@ -33,7 +35,7 @@ export default function InjuryRateBadge({ fatalCount, ltiCount, totalHours, load
         <Icon name="Activity" size={15} className="text-primary" />
         <span className="text-sm font-semibold text-foreground">Показатели травматизма</span>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <div>
           <p className="text-[11px] text-muted-foreground mb-1" title="Коэффициент частоты несчастных случаев со смертельным исходом">FIFR</p>
           <p className="text-lg font-semibold text-foreground">{totalHours > 0 ? fmtRate(fifr) : "—"}</p>
@@ -43,6 +45,16 @@ export default function InjuryRateBadge({ fatalCount, ltiCount, totalHours, load
           <p className="text-[11px] text-muted-foreground mb-1" title="Коэффициент частоты травм с временной потерей трудоспособности">LTIFR</p>
           <p className="text-lg font-semibold text-foreground">{totalHours > 0 ? fmtRate(ltifr) : "—"}</p>
           <p className="text-[10px] text-muted-foreground mt-0.5">Лёгкий + Тяжёлый НС: {ltiCount}</p>
+        </div>
+        <div className="border-l border-border pl-3">
+          <p className="text-[11px] text-muted-foreground mb-1 flex items-center gap-1">
+            <Icon name="ShieldCheck" size={11} className="text-green-500" />
+            Дней без происшествий
+          </p>
+          <p className="text-lg font-semibold text-green-500">{daysWithoutIncidents !== null ? daysWithoutIncidents : "—"}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            {lastIncidentDate ? `с ${new Date(lastIncidentDate).toLocaleDateString("ru-RU")}` : "происшествий не было"}
+          </p>
         </div>
       </div>
       {totalHours === 0 && (
