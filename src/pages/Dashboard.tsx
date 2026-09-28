@@ -12,11 +12,12 @@ import DashboardTasksWidget from "@/components/dashboard/DashboardTasksWidget";
 import DashboardSpbPanel from "@/components/dashboard/DashboardSpbPanel";
 import HeadcountBadge from "@/components/dashboard/HeadcountBadge";
 import FinesBadge from "@/components/dashboard/FinesBadge";
+import InjuryRateBadge from "@/components/dashboard/InjuryRateBadge";
 import { type PivotRow } from "@/components/dashboard/PivotTable";
 import { TaskAssignment } from "@/lib/taskTypes";
 import { useHeadcount } from "@/hooks/useHeadcount";
 import { useHeadcountSettings } from "@/hooks/useHeadcountSettings";
-import { buildYtdStats } from "@/lib/headcountTypes";
+import { buildYtdStats, buildTotalHours } from "@/lib/headcountTypes";
 import { VisibilitySettings, defaultVisibilitySettings } from "@/lib/visibilityTypes";
 
 const PRESCRIPTIONS_API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
@@ -92,8 +93,10 @@ export default function Dashboard({ user, taskAssignments, visibility, onNavigat
 
   const currentYear = new Date().getFullYear();
   const { days: headcountDays, loading: headcountLoading } = useHeadcount(currentYear);
+  const { days: allHeadcountDays, loading: allHeadcountLoading } = useHeadcount();
   const { settings: headcountSettings } = useHeadcountSettings();
   const ytdStats = useMemo(() => buildYtdStats(headcountDays, headcountSettings.po_rate, headcountSettings.sbd_rate), [headcountDays, headcountSettings]);
+  const totalWorkedHours = useMemo(() => buildTotalHours(allHeadcountDays, headcountSettings.po_rate, headcountSettings.sbd_rate), [allHeadcountDays, headcountSettings]);
 
   useEffect(() => {
     fetch(FINES_API)
@@ -475,6 +478,15 @@ export default function Dashboard({ user, taskAssignments, visibility, onNavigat
             showSpb={blocks.spb}
             showPyramid={blocks.pyramid}
           />
+
+          {blocks.injuryRates && (
+            <InjuryRateBadge
+              fatalCount={pyramidData.fatal}
+              ltiCount={pyramidData.severe_injury + pyramidData.light_injury}
+              totalHours={totalWorkedHours}
+              loading={allHeadcountLoading}
+            />
+          )}
         </div>
       </div>
 

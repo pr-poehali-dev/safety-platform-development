@@ -3,14 +3,15 @@ import { HeadcountDay } from "@/lib/headcountTypes";
 
 const HEADCOUNT_URL = "https://functions.poehali.dev/524b275c-ad3f-4a44-bd48-10b14045a7bd";
 
-export function useHeadcount(year: number) {
+export function useHeadcount(year?: number) {
   const [days, setDays] = useState<HeadcountDay[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${HEADCOUNT_URL}?year=${year}`);
+      const url = year ? `${HEADCOUNT_URL}?year=${year}` : HEADCOUNT_URL;
+      const res = await fetch(url);
       const data = await res.json();
       setDays(Array.isArray(data) ? data : []);
     } catch {

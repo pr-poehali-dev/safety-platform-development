@@ -39,6 +39,15 @@ export interface YtdStats {
   sbdHours: number;
 }
 
+// Суммарные человеко-часы за всё время (по всем загруженным дням), используется для расчёта LTIFR/FIFR
+export function buildTotalHours(days: HeadcountDay[], poRate = DEFAULT_PO_RATE, sbdRate = DEFAULT_SBD_RATE): number {
+  return days.reduce((sum, d) => {
+    const po = d.po ?? 0;
+    const sbd = d.sbd ?? 0;
+    return sum + po * poRate + sbd * sbdRate;
+  }, 0);
+}
+
 export function buildYtdStats(days: HeadcountDay[], poRate = DEFAULT_PO_RATE, sbdRate = DEFAULT_SBD_RATE): YtdStats {
   const today = new Date();
   const year = today.getFullYear();

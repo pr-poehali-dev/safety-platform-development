@@ -14,7 +14,7 @@ CORS = {
 TAB_KEYS = ["prescriptions", "inspections", "incidents", "tasks", "headcount", "fines", "suspensions"]
 BLOCK_KEYS = [
     "presCards", "inspCards", "tasksWidget", "headcountWidget", "finesWidget",
-    "spb", "pyramid", "topContractors", "pivotTable", "remarksChart",
+    "spb", "pyramid", "injuryRates", "topContractors", "pivotTable", "remarksChart",
 ]
 
 DEFAULT_SETTINGS = {
