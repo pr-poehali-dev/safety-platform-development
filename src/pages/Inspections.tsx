@@ -33,6 +33,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
   const [contractors, setContractors] = useState<ContractorItem[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [selected, setSelected] = useState<Inspection | null>(null);
 
@@ -100,20 +101,27 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
 
   const handleSave = async (form: InspectionFormData) => {
     setSaving(true);
-    await fetch(API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, inspector_name: inspectorName, created_by: user.id }),
-    });
-    setSaving(false);
-    setShowForm(false);
-    load();
+    setSaveError(null);
+    try {
+      const res = await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, inspector_name: inspectorName, created_by: user.id }),
+      });
+      if (!res.ok) throw new Error("save failed");
+      setShowForm(false);
+      load();
+    } catch {
+      setSaveError("Не удалось сохранить запись. Проверьте соединение и попробуйте ещё раз.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id: number) => {
-    await fetch(API, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    const res = await fetch(API, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
     setDeleteConfirm(null);
-    load();
+    if (res.ok) load();
   };
 
   const uniqueContractors = [...new Set(rows.map(r => r.contractor))].filter(Boolean);
@@ -271,8 +279,9 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
           objects={objects}
           contractors={contractors}
           onSave={handleSave}
-          onCancel={() => setShowForm(false)}
+          onCancel={() => { setShowForm(false); setSaveError(null); }}
           saving={saving}
+          saveError={saveError}
         />
       )}
     </div>

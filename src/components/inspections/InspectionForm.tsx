@@ -41,10 +41,11 @@ interface Props {
   onSave: (data: InspectionFormData) => void;
   onCancel: () => void;
   saving: boolean;
+  saveError?: string | null;
 }
 
 export default function InspectionForm({
-  initial, inspectorName, categories, objects, contractors, onSave, onCancel, saving,
+  initial, inspectorName, categories, objects, contractors, onSave, onCancel, saving, saveError,
 }: Props) {
   const [form, setForm] = useState<InspectionFormData>(initial);
   const [calOpen, setCalOpen] = useState(false);
@@ -274,6 +275,12 @@ export default function InspectionForm({
         </div>
 
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border flex-shrink-0">
+          {saveError && (
+            <p className="text-sm text-red-400 mr-auto flex items-center gap-1.5">
+              <Icon name="AlertTriangle" size={15} />
+              {saveError}
+            </p>
+          )}
           <button onClick={onCancel} className="text-sm px-5 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
             Отмена
           </button>
