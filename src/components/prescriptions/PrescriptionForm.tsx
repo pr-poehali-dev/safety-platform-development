@@ -67,14 +67,14 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
       ...(key === "object" ? { remarks: prev.remarks.map(r => ({ ...r, place: "" })) } : {}),
     }));
 
-  const updateRemark = (index: number, r: Remark) =>
-    setForm(prev => ({ ...prev, remarks: prev.remarks.map((x, i) => i === index ? r : x) }));
+  const updateRemark = (id: string, r: Remark) =>
+    setForm(prev => ({ ...prev, remarks: prev.remarks.map(x => x.id === id ? r : x) }));
 
   const addRemark = () =>
     setForm(prev => ({ ...prev, remarks: [...prev.remarks, newRemark()] }));
 
-  const removeRemark = (index: number) =>
-    setForm(prev => ({ ...prev, remarks: prev.remarks.filter((_, i) => i !== index) }));
+  const removeRemark = (id: string) =>
+    setForm(prev => ({ ...prev, remarks: prev.remarks.filter(x => x.id !== id) }));
 
   const isValid =
     form.object.trim() &&
@@ -90,6 +90,7 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
 
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const buildPrescription = (asDraft: boolean): Prescription => {
     const now = new Date();
@@ -115,9 +116,12 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
   const handleSave = async () => {
     if (!isValid || isSaving) return;
     setIsSaving(true);
+    setSaveError(null);
     try {
       await onSave(buildPrescription(false));
       onClose();
+    } catch {
+      setSaveError("Не удалось сохранить предписание. Проверьте соединение и попробуйте ещё раз.");
     } finally {
       setIsSaving(false);
     }
@@ -126,9 +130,12 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
   const handleSaveDraft = async () => {
     if (isSaving) return;
     setIsSaving(true);
+    setSaveError(null);
     try {
       await onSave(buildPrescription(true));
       onClose();
+    } catch {
+      setSaveError("Не удалось сохранить черновик. Проверьте соединение и попробуйте ещё раз.");
     } finally {
       setIsSaving(false);
     }
@@ -162,8 +169,8 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
             {form.remarks.map((r, i) => (
               <RemarkRow
                 key={r.id} remark={r} index={i}
-                onChange={updated => updateRemark(i, updated)}
-                onRemove={() => removeRemark(i)}
+                onChange={updated => updateRemark(r.id, updated)}
+                onRemove={() => removeRemark(r.id)}
                 canRemove={form.remarks.length > 1}
                 categories={categories}
                 places={availablePlaces}
@@ -190,6 +197,12 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
           </div>
         </div>
         <div className="flex items-center justify-end gap-4 px-12 py-6 border-t border-border flex-shrink-0">
+          {saveError && (
+            <p className="text-sm text-red-400 mr-auto flex items-center gap-1.5">
+              <Icon name="AlertTriangle" size={15} />
+              {saveError}
+            </p>
+          )}
           <button onClick={() => setShowCloseConfirm(true)} className="text-base px-8 py-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">
             Отмена
           </button>

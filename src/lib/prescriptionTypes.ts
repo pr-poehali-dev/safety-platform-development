@@ -190,6 +190,10 @@ export function overallStatus(remarks: Remark[]): Status {
   return "Черновик";
 }
 
+let remarkIdCounter = 0;
+
 export function newRemark(): Remark {
-  return { id: Date.now().toString() + Math.random(), place: "", category: "", work_suspended: false, suspension_act_drawn: false, suspension_act_number: "", description: "", normRef: "", deadline: "", status: "В работе" };
+  remarkIdCounter += 1;
+  const id = `${Date.now()}${remarkIdCounter}${Math.random().toString(36).slice(2, 8)}`;
+  return { id, place: "", category: "", work_suspended: false, suspension_act_drawn: false, suspension_act_number: "", description: "", normRef: "", deadline: "", status: "В работе" };
 }

@@ -52,17 +52,23 @@ export function useIndexPrescriptions(user: AppUser) {
 
   const addPrescription = async (p: Prescription) => {
     const res = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) });
+    if (!res.ok) {
+      throw new Error("Не удалось сохранить предписание. Попробуйте ещё раз.");
+    }
     const data = await res.json();
     const saved = { ...p, number: data.number ?? p.number };
     setPrescriptions(prev => [saved, ...prev]);
   };
 
   const updatePrescription = async (updated: Prescription) => {
-    await fetch(API, {
+    const res = await fetch(API, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...updated, changedBy: user.login, changedByName: user.name }),
     });
+    if (!res.ok) {
+      throw new Error("Не удалось сохранить изменения. Попробуйте ещё раз.");
+    }
     setPrescriptions(prev => prev.map(p => p.id === updated.id ? updated : p));
     setSelected(updated);
   };
