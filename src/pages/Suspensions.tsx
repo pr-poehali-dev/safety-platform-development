@@ -10,6 +10,7 @@ import { Suspension, SuspensionStatus, SUSPENSION_STATUS_STYLE, ALL_SUSPENSION_S
 import { SuspensionForm } from "@/components/suspensions/SuspensionForm";
 import { printSuspension } from "@/lib/printSuspension";
 import { Template, DEFAULT_TEMPLATE } from "@/lib/template";
+import { fetchWithRetry } from "@/lib/fetchWithRetry";
 
 const SUSPENSIONS_API = "https://functions.poehali.dev/bcc14bec-45e7-4857-867d-95233fa38b64";
 const TEMPLATES_API = "https://functions.poehali.dev/41ec60df-3f38-4561-ba9d-ca17ebd71553";
@@ -30,6 +31,7 @@ export default function Suspensions({ user, onLogout, onTabChange, activeTab = "
   const [rows, setRows] = useState<Suspension[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingSuspension, setEditingSuspension] = useState<Suspension | null>(null);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterObject, setFilterObject] = useState<string[]>([]);
@@ -41,6 +43,7 @@ export default function Suspensions({ user, onLogout, onTabChange, activeTab = "
   const [highlightNumber, setHighlightNumber] = useState<string | undefined>(initialOpenNumber);
 
   const canEdit = user.role === "admin" || user.role === "specialist" || user.role === "manager";
+  const isAdmin = user.role === "admin";
 
   const load = () => {
     setLoading(true);
@@ -84,11 +87,17 @@ export default function Suspensions({ user, onLogout, onTabChange, activeTab = "
   }, []);
 
   const addSuspension = async (s: Suspension) => {
-    const res = await fetch(SUSPENSIONS_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(s) });
+    const res = await fetchWithRetry(SUSPENSIONS_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(s) });
     if (!res.ok) throw new Error("create suspension failed");
     const data = await res.json();
     const saved = { ...s, number: data.number ?? s.number };
     setRows(prev => [saved, ...prev]);
+  };
+
+  const updateSuspension = async (s: Suspension) => {
+    const res = await fetchWithRetry(SUSPENSIONS_API, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(s) });
+    if (!res.ok) throw new Error("update suspension failed");
+    setRows(prev => prev.map(r => r.id === s.id ? s : r));
   };
 
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -99,7 +108,7 @@ export default function Suspensions({ user, onLogout, onTabChange, activeTab = "
     setRows(prev => prev.map(r => r.id === row.id ? updated : r));
     setStatusError(null);
     try {
-      const res = await fetch(SUSPENSIONS_API, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
+      const res = await fetchWithRetry(SUSPENSIONS_API, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
       if (!res.ok) throw new Error("update suspension status failed");
     } catch {
       setRows(prev => prev.map(r => r.id === row.id ? previous : r));
@@ -295,14 +304,25 @@ export default function Suspensions({ user, onLogout, onTabChange, activeTab = "
                         )}
                       </td>
                       <td className="px-5 py-4">
-                        <button
-                          onClick={() => printSuspension(r, activeTemplate)}
-                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors whitespace-nowrap opacity-0 group-hover:opacity-100"
-                          title="Распечатать акт"
-                        >
-                          <Icon name="Printer" size={13} />
-                          Печать
-                        </button>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100">
+                          {isAdmin && (
+                            <button
+                              onClick={() => setEditingSuspension(r)}
+                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors whitespace-nowrap"
+                              title="Редактировать акт"
+                            >
+                              <Icon name="Pencil" size={13} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => printSuspension(r, activeTemplate)}
+                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors whitespace-nowrap"
+                            title="Распечатать акт"
+                          >
+                            <Icon name="Printer" size={13} />
+                            Печать
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -318,6 +338,15 @@ export default function Suspensions({ user, onLogout, onTabChange, activeTab = "
           onClose={() => setShowForm(false)}
           onSave={addSuspension}
           user={user}
+        />
+      )}
+
+      {editingSuspension && (
+        <SuspensionForm
+          onClose={() => setEditingSuspension(null)}
+          onSave={async (s) => { await updateSuspension(s); setEditingSuspension(null); }}
+          user={user}
+          editSuspension={editingSuspension}
         />
       )}
     </div>

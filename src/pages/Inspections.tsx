@@ -9,6 +9,7 @@ import FilterDropdown from "@/components/inspections/FilterDropdown";
 import InspectionsTable from "@/components/inspections/InspectionsTable";
 import InspectionDetail from "@/components/inspections/InspectionDetail";
 import { VisibilitySettings, defaultVisibilitySettings } from "@/lib/visibilityTypes";
+import { fetchWithRetry } from "@/lib/fetchWithRetry";
 
 type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks" | "headcount" | "fines" | "suspensions";
 
@@ -103,7 +104,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
     setSaving(true);
     setSaveError(null);
     try {
-      const res = await fetch(API, {
+      const res = await fetchWithRetry(API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, inspector_name: inspectorName, created_by: user.id }),
@@ -119,7 +120,7 @@ export default function Inspections({ user, onLogout, onBack, onTabChange, activ
   };
 
   const handleDelete = async (id: number) => {
-    const res = await fetch(API, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    const res = await fetchWithRetry(API, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
     setDeleteConfirm(null);
     if (res.ok) load();
   };

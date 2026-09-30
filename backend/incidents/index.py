@@ -6,7 +6,7 @@ SCHEMA = "t_p5901577_safety_platform_deve"
 
 CORS = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, X-User-Id, X-Auth-Token",
 }
 
@@ -84,5 +84,37 @@ def handler(event: dict, context) -> dict:
         conn.commit()
         conn.close()
         return {"statusCode": 200, "headers": CORS, "body": json.dumps({"id": row[0]}, ensure_ascii=False)}
+
+    if method == "PUT":
+        body = json.loads(event.get("body") or "{}")
+        incident_id = body.get("id")
+        if not incident_id:
+            return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": "id required"})}
+        if not body.get("incident_date"):
+            return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": "incident_date required"})}
+
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute(
+            f"""UPDATE {SCHEMA}.incidents
+                SET description=%s, incident_date=%s, location=%s, contractor=%s,
+                    microtrauma=%s, light_injury=%s, severe_injury=%s, fatal=%s, no_consequences=%s
+                WHERE id=%s""",
+            (
+                body.get("description") or "",
+                body["incident_date"],
+                body.get("location") or None,
+                body.get("contractor") or None,
+                int(body.get("microtrauma", 0)),
+                int(body.get("light_injury", 0)),
+                int(body.get("severe_injury", 0)),
+                int(body.get("fatal", 0)),
+                int(body.get("no_consequences", 0)),
+                incident_id,
+            )
+        )
+        conn.commit()
+        conn.close()
+        return {"statusCode": 200, "headers": CORS, "body": json.dumps({"ok": True})}
 
     return {"statusCode": 405, "headers": CORS, "body": json.dumps({"error": "method not allowed"})}

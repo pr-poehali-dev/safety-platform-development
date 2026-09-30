@@ -8,6 +8,7 @@ import { useHeadcount } from "@/hooks/useHeadcount";
 import { useHeadcountSettings } from "@/hooks/useHeadcountSettings";
 import { buildTotalHoursInRange } from "@/lib/headcountTypes";
 import IncidentRatesCard from "@/components/incidents/IncidentRatesCard";
+import { fetchWithRetry } from "@/lib/fetchWithRetry";
 
 const INCIDENTS_API = "https://functions.poehali.dev/4aedfdd0-d096-43ad-b4e7-b7b2aec3f753";
 const CONTRACTORS_API = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
@@ -62,6 +63,14 @@ const typeToField: Record<IncidentType, keyof ReturnType<typeof emptyForm>> = {
   "Смертельный НС": "fatal",
 };
 
+const fieldToType: Record<string, IncidentType> = {
+  microtrauma: "Микротравма",
+  no_consequences: "Происшествие без последствий",
+  light_injury: "Лёгкий НС",
+  severe_injury: "Тяжёлый НС",
+  fatal: "Смертельный НС",
+};
+
 function emptyForm() {
   return {
     description: "",
@@ -84,9 +93,12 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
   const [contractors, setContractors] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm());
 
   const canAdd = user.role === "admin" || user.role === "specialist" || user.role === "manager";
+  const isAdmin = user.role === "admin";
 
   const [ratesDateFrom, setRatesDateFrom] = useState("");
   const [ratesDateTo, setRatesDateTo] = useState("");
@@ -134,28 +146,82 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
   const handleSave = async () => {
     if (!form.incident_date || !form.incident_type) return;
     setSaving(true);
+    setSaveError(null);
     const counts = { microtrauma: 0, light_injury: 0, severe_injury: 0, fatal: 0, no_consequences: 0 };
     if (form.incident_type) {
       const field = typeToField[form.incident_type as IncidentType];
       (counts as Record<string, number>)[field] = 1;
     }
-    await fetch(INCIDENTS_API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        description: form.description,
-        incident_date: form.incident_date,
-        location: form.location,
-        contractor: form.contractor,
-        ...counts,
-        created_by: user.id,
-        created_by_name: user.name,
-      }),
-    });
-    setSaving(false);
-    setShowForm(false);
+    try {
+      const res = editingId
+        ? await fetchWithRetry(INCIDENTS_API, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: editingId,
+              description: form.description,
+              incident_date: form.incident_date,
+              location: form.location,
+              contractor: form.contractor,
+              ...counts,
+            }),
+          })
+        : await fetchWithRetry(INCIDENTS_API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              description: form.description,
+              incident_date: form.incident_date,
+              location: form.location,
+              contractor: form.contractor,
+              ...counts,
+              created_by: user.id,
+              created_by_name: user.name,
+            }),
+          });
+      if (!res.ok) throw new Error("save failed");
+      setShowForm(false);
+      setEditingId(null);
+      setForm(emptyForm());
+      load();
+    } catch {
+      setSaveError("Не удалось сохранить запись. Проверьте соединение и попробуйте ещё раз.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openAdd = () => {
+    setEditingId(null);
     setForm(emptyForm());
-    load();
+    setSaveError(null);
+    setShowForm(true);
+  };
+
+  const openEdit = (row: Incident) => {
+    const countFields = ["microtrauma", "light_injury", "severe_injury", "fatal", "no_consequences"] as const;
+    const activeField = countFields.find(f => row[f] > 0);
+    setEditingId(row.id);
+    setForm({
+      description: row.description || "",
+      incident_date: row.incident_date ? row.incident_date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      location: row.location || "",
+      contractor: row.contractor || "",
+      incident_type: activeField ? fieldToType[activeField] : "",
+      microtrauma: row.microtrauma || 0,
+      light_injury: row.light_injury || 0,
+      severe_injury: row.severe_injury || 0,
+      fatal: row.fatal || 0,
+      no_consequences: row.no_consequences || 0,
+    });
+    setSaveError(null);
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setSaveError(null);
   };
 
   const set = (field: string, value: unknown) => setForm(prev => ({ ...prev, [field]: value }));
@@ -211,7 +277,7 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
           </div>
           {canAdd && (
             <button
-              onClick={() => setShowForm(true)}
+              onClick={openAdd}
               className="flex items-center gap-2 bg-primary text-primary-foreground text-sm px-4 py-2.5 rounded-lg hover:bg-primary/90 transition-colors font-medium"
             >
               <Icon name="Plus" size={15} />
@@ -240,7 +306,7 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
             <Icon name="TriangleAlert" size={40} className="opacity-20" />
             <p className="text-sm">Происшествий не зафиксировано</p>
             {canAdd && (
-              <button onClick={() => setShowForm(true)} className="text-sm text-primary hover:underline">
+              <button onClick={openAdd} className="text-sm text-primary hover:underline">
                 Добавить первое
               </button>
             )}
@@ -260,11 +326,12 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
                     <th className="text-center px-3 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">Тяжёлый<br />НС</th>
                     <th className="text-center px-3 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">Смерт.<br />НС</th>
                     <th className="text-center px-3 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">Без<br />послед.</th>
+                    {isAdmin && <th className="w-12" />}
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row, i) => (
-                    <tr key={row.id} className={`border-b border-border last:border-0 hover:bg-muted/20 transition-colors ${i % 2 === 0 ? "" : "bg-muted/10"}`}>
+                    <tr key={row.id} className={`group border-b border-border last:border-0 hover:bg-muted/20 transition-colors ${i % 2 === 0 ? "" : "bg-muted/10"}`}>
                       <td className="px-4 py-3 text-foreground align-top">{row.description}</td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap align-top">
                         {row.incident_date ? new Date(row.incident_date).toLocaleDateString("ru-RU") : "—"}
@@ -276,6 +343,17 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
                       <td className="px-3 py-3 text-center align-top">{row.severe_injury > 0 ? <span className="font-medium text-red-400">{row.severe_injury}</span> : <span className="text-muted-foreground/40">—</span>}</td>
                       <td className="px-3 py-3 text-center align-top">{row.fatal > 0 ? <span className="font-bold text-red-600">{row.fatal}</span> : <span className="text-muted-foreground/40">—</span>}</td>
                       <td className="px-3 py-3 text-center align-top">{row.no_consequences > 0 ? <span className="font-medium text-green-400">{row.no_consequences}</span> : <span className="text-muted-foreground/40">—</span>}</td>
+                      {isAdmin && (
+                        <td className="px-2 py-3 align-top">
+                          <button
+                            onClick={() => openEdit(row)}
+                            className="text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                            title="Редактировать"
+                          >
+                            <Icon name="Pencil" size={14} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -286,11 +364,11 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
       </main>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setShowForm(false); }}>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) closeForm(); }}>
           <div className="bg-card border border-border rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <h2 className="text-base font-semibold">Новое происшествие</h2>
-              <button onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+              <h2 className="text-base font-semibold">{editingId ? "Редактирование происшествия" : "Новое происшествие"}</h2>
+              <button onClick={closeForm} className="text-muted-foreground hover:text-foreground transition-colors">
                 <Icon name="X" size={18} />
               </button>
             </div>
@@ -339,8 +417,14 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-border flex gap-3 justify-end">
-              <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg transition-colors">
+            <div className="px-6 py-4 border-t border-border flex items-center gap-3 justify-end">
+              {saveError && (
+                <p className="text-sm text-red-400 mr-auto flex items-center gap-1.5">
+                  <Icon name="AlertTriangle" size={14} />
+                  {saveError}
+                </p>
+              )}
+              <button onClick={closeForm} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg transition-colors">
                 Отмена
               </button>
               <button
@@ -349,7 +433,7 @@ export default function Incidents({ user, onLogout, onTabChange, activeTab = "in
                 className="flex items-center gap-2 bg-primary text-primary-foreground text-sm px-5 py-2 rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {saving ? <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" /> : <Icon name="Save" size={14} />}
-                Сохранить
+                {editingId ? "Сохранить изменения" : "Сохранить"}
               </button>
             </div>
           </div>

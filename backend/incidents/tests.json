@@ -6,6 +6,13 @@
       "path": "/",
       "expectedStatus": 200,
       "bodyMatcher": "any"
+    },
+    {
+      "name": "PUT without id returns 400",
+      "method": "PUT",
+      "path": "/",
+      "body": {"incident_date": "2026-01-01"},
+      "expectedStatus": 400
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { TaskAssignment, TaskNotification } from "@/lib/taskTypes";
 import { AppUser } from "@/lib/auth";
+import { fetchWithRetry } from "@/lib/fetchWithRetry";
 
 const TASKS_URL = "https://functions.poehali.dev/3cd2f397-c85b-47cf-88b9-f1d303552101";
 const ACTIONS_URL = "https://functions.poehali.dev/570e5413-e4df-4335-9a01-f1ae1c598955";
@@ -34,7 +35,7 @@ export function useTasks(user: AppUser) {
   useEffect(() => { load(); }, [load]);
 
   const createTask = async (description: string, assignees: { login: string; name: string; role: string; due_date: string }[]) => {
-    const res = await fetch(TASKS_URL, {
+    const res = await fetchWithRetry(TASKS_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ description, assignees, created_by: user.login, created_by_name: user.name }),
@@ -44,7 +45,7 @@ export function useTasks(user: AppUser) {
   };
 
   const updateTask = async (task_id: number, description: string, assignees: { login: string; name: string; assignment_id?: number; due_date: string }[]) => {
-    const res = await fetch(TASKS_URL, {
+    const res = await fetchWithRetry(TASKS_URL, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ task_id, description, assignees }),
@@ -54,13 +55,13 @@ export function useTasks(user: AppUser) {
   };
 
   const deleteTask = async (task_id: number) => {
-    const res = await fetch(`${TASKS_URL}?task_id=${task_id}`, { method: "DELETE" });
+    const res = await fetchWithRetry(`${TASKS_URL}?task_id=${task_id}`, { method: "DELETE" });
     if (!res.ok) throw new Error("delete task failed");
     await load();
   };
 
   const action = async (payload: Record<string, unknown>) => {
-    const res = await fetch(ACTIONS_URL, {
+    const res = await fetchWithRetry(ACTIONS_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -70,7 +71,7 @@ export function useTasks(user: AppUser) {
   };
 
   const sendComment = async (assignment_id: number, message: string) => {
-    const res = await fetch(COMMENTS_URL, {
+    const res = await fetchWithRetry(COMMENTS_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ assignment_id, message, author_login: user.login, author_name: user.name, author_role: user.role }),

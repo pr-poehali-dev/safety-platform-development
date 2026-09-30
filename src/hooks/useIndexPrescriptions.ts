@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { AppUser } from "@/lib/auth";
 import { Template, DEFAULT_TEMPLATE } from "@/lib/template";
 import { Prescription, Status } from "@/lib/prescriptionTypes";
+import { fetchWithRetry } from "@/lib/fetchWithRetry";
 
 const API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
 const TEMPLATES_API = "https://functions.poehali.dev/41ec60df-3f38-4561-ba9d-ca17ebd71553";
@@ -51,7 +52,7 @@ export function useIndexPrescriptions(user: AppUser) {
   }, [user.login]);
 
   const addPrescription = async (p: Prescription) => {
-    const res = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) });
+    const res = await fetchWithRetry(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) });
     if (!res.ok) {
       throw new Error("Не удалось сохранить предписание. Попробуйте ещё раз.");
     }
@@ -61,7 +62,7 @@ export function useIndexPrescriptions(user: AppUser) {
   };
 
   const updatePrescription = async (updated: Prescription) => {
-    const res = await fetch(API, {
+    const res = await fetchWithRetry(API, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...updated, changedBy: user.login, changedByName: user.name }),

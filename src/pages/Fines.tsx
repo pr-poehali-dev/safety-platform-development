@@ -7,6 +7,7 @@ import { IsoDatePicker, MultiSelectField } from "@/components/fines/FineFormCont
 import DateRangePicker from "@/components/ui/date-range-picker";
 import FilterDropdown from "@/components/inspections/FilterDropdown";
 import { VisibilitySettings, defaultVisibilitySettings } from "@/lib/visibilityTypes";
+import { fetchWithRetry } from "@/lib/fetchWithRetry";
 
 const FINES_API = "https://functions.poehali.dev/05dd11e6-f624-4a7b-a0b7-604951125a9b";
 const CONTRACTORS_API = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
@@ -154,12 +155,12 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
     };
     try {
       const res = editingId
-        ? await fetch(FINES_API, {
+        ? await fetchWithRetry(FINES_API, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id: editingId, ...payload }),
           })
-        : await fetch(FINES_API, {
+        : await fetchWithRetry(FINES_API, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
@@ -177,7 +178,7 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
   };
 
   const handleDelete = async (id: number) => {
-    const res = await fetch(FINES_API, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    const res = await fetchWithRetry(FINES_API, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
     setDeleteConfirm(null);
     if (res.ok) load();
   };

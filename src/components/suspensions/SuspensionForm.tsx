@@ -9,26 +9,30 @@ const CONTRACTORS_URL = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-e
 
 const MAX_REASON_LENGTH = 1000;
 
-function nowLocalDatetime(): string {
-  const d = new Date();
+function toLocalDatetime(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function SuspensionForm({ onClose, onSave, user }: {
+function nowLocalDatetime(): string {
+  return toLocalDatetime(new Date());
+}
+
+export function SuspensionForm({ onClose, onSave, user, editSuspension }: {
   onClose: () => void;
   onSave: (s: Suspension) => Promise<void>;
   user: AppUser;
+  editSuspension?: Suspension | null;
 }) {
-  const issuedBy = [user.position, user.name].filter(Boolean).join(", ");
+  const issuedBy = editSuspension ? editSuspension.issuedBy : [user.position, user.name].filter(Boolean).join(", ");
 
   const [objectsList, setObjectsList] = useState<{ id: number; name: string; places: { id: number; name: string }[] }[]>([]);
   const [contractorsList, setContractorsList] = useState<{ name: string }[]>([]);
-  const [issuedAtLocal, setIssuedAtLocal] = useState(nowLocalDatetime());
-  const [object, setObject] = useState("");
-  const [place, setPlace] = useState("");
-  const [contractor, setContractor] = useState("");
-  const [reason, setReason] = useState("");
+  const [issuedAtLocal, setIssuedAtLocal] = useState(editSuspension ? toLocalDatetime(new Date(editSuspension.issuedAt)) : nowLocalDatetime());
+  const [object, setObject] = useState(editSuspension?.object ?? "");
+  const [place, setPlace] = useState(editSuspension?.place ?? "");
+  const [contractor, setContractor] = useState(editSuspension?.contractor ?? "");
+  const [reason, setReason] = useState(editSuspension?.reason ?? "");
   const [saving, setSaving] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -44,16 +48,16 @@ export function SuspensionForm({ onClose, onSave, user }: {
   const isValid = object.trim() && place.trim() && contractor.trim() && reason.trim();
 
   const build = (): Suspension => ({
-    id: newSuspensionId(),
-    number: "",
+    id: editSuspension?.id ?? newSuspensionId(),
+    number: editSuspension?.number ?? "",
     issuedAt: new Date(issuedAtLocal).toISOString(),
     object,
     place,
     contractor,
     issuedBy,
     reason,
-    status: "Приостановлено",
-    createdBy: user.login,
+    status: editSuspension?.status ?? "Приостановлено",
+    createdBy: editSuspension?.createdBy ?? user.login,
   });
 
   const handleSave = async () => {
@@ -75,7 +79,7 @@ export function SuspensionForm({ onClose, onSave, user }: {
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div className="relative bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-fade-in flex flex-col max-h-[92vh]">
         <div className="flex items-center justify-between px-8 py-6 border-b border-border flex-shrink-0">
-          <h2 className="text-xl font-semibold">Выдать акт о приостановке</h2>
+          <h2 className="text-xl font-semibold">{editSuspension ? "Редактирование акта о приостановке" : "Выдать акт о приостановке"}</h2>
           <button onClick={() => (isValid ? setShowCloseConfirm(true) : onClose())} className="text-muted-foreground hover:text-foreground transition-colors">
             <Icon name="X" size={22} />
           </button>
@@ -139,7 +143,7 @@ export function SuspensionForm({ onClose, onSave, user }: {
             disabled={!isValid || saving}
             className="text-base px-10 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            {saving ? "Сохранение..." : "Выдать акт"}
+            {saving ? "Сохранение..." : editSuspension ? "Сохранить изменения" : "Выдать акт"}
           </button>
         </div>
       </div>
