@@ -15,6 +15,7 @@ export default function RoutineWeekPanel({ user }: RoutineWeekPanelProps) {
   const [openDay, setOpenDay] = useState<WeekDayInfo | null>(null);
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [entryDefaultDate, setEntryDefaultDate] = useState<string>(weekDays[0]?.iso ?? "");
+  const [deleteError, setDeleteError] = useState("");
 
   const entriesForDate = (iso: string) => entries.filter(e => e.entry_date === iso);
 
@@ -118,9 +119,17 @@ export default function RoutineWeekPanel({ user }: RoutineWeekPanelProps) {
         <RoutineDayModal
           day={openDay}
           entries={entriesForDate(openDay.iso)}
-          onClose={() => setOpenDay(null)}
+          onClose={() => { setOpenDay(null); setDeleteError(""); }}
           onAdd={() => { openAddModal(openDay.iso); }}
-          onDelete={async (id) => { await deleteEntry(id); }}
+          onDelete={async (id) => {
+            setDeleteError("");
+            try {
+              await deleteEntry(id);
+            } catch {
+              setDeleteError("Не удалось удалить запись. Попробуйте ещё раз.");
+            }
+          }}
+          deleteError={deleteError}
         />
       )}
 

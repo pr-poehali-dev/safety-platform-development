@@ -79,6 +79,7 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
   const [filterContractors, setFilterContractors] = useState<string[]>([]);
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const canManage = user.role === "admin" || tabs.fines;
 
@@ -116,6 +117,7 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
   const openAdd = () => {
     setEditingId(null);
     setForm(emptyForm());
+    setSaveError(null);
     setShowForm(true);
   };
 
@@ -131,12 +133,14 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
       amount_proactive: row.amount_proactive !== null && row.amount_proactive !== undefined ? String(row.amount_proactive) : "",
       status: row.status ?? "",
     });
+    setSaveError(null);
     setShowForm(true);
   };
 
   const handleSave = async () => {
     if (!form.period_date || !form.contractor) return;
     setSaving(true);
+    setSaveError(null);
     const payload = {
       period_date: form.period_date,
       contractor: form.contractor,
@@ -148,30 +152,34 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
       status: form.status || null,
       created_by_name: user.name,
     };
-    if (editingId) {
-      await fetch(FINES_API, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: editingId, ...payload }),
-      });
-    } else {
-      await fetch(FINES_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    try {
+      const res = editingId
+        ? await fetch(FINES_API, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: editingId, ...payload }),
+          })
+        : await fetch(FINES_API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+      if (!res.ok) throw new Error("save failed");
+      setShowForm(false);
+      setEditingId(null);
+      setForm(emptyForm());
+      load();
+    } catch {
+      setSaveError("Не удалось сохранить запись. Проверьте соединение и попробуйте ещё раз.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    setShowForm(false);
-    setEditingId(null);
-    setForm(emptyForm());
-    load();
   };
 
   const handleDelete = async (id: number) => {
-    await fetch(FINES_API, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    const res = await fetch(FINES_API, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
     setDeleteConfirm(null);
-    load();
+    if (res.ok) load();
   };
 
   const filteredRows = useMemo(() => {
@@ -472,7 +480,13 @@ export default function Fines({ user, onLogout, onTabChange, activeTab = "fines"
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-border flex gap-3 justify-end">
+            <div className="px-6 py-4 border-t border-border flex items-center gap-3 justify-end">
+              {saveError && (
+                <p className="text-sm text-red-400 mr-auto flex items-center gap-1.5">
+                  <Icon name="AlertTriangle" size={15} />
+                  {saveError}
+                </p>
+              )}
               <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg transition-colors">
                 Отмена
               </button>

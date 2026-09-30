@@ -36,25 +36,28 @@ export function useRoutine(user: AppUser) {
   useEffect(() => { load(); }, [load]);
 
   const createEntry = async (payload: { category_id: number | null; category_name: string; entry_date: string; hours: number; comment: string }) => {
-    await fetch(ENTRIES_URL, {
+    const res = await fetch(ENTRIES_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...payload, user_login: user.login, user_name: user.name }),
     });
+    if (!res.ok) throw new Error("create routine entry failed");
     await load();
   };
 
   const updateEntry = async (id: number, payload: { category_id: number | null; category_name: string; entry_date: string; hours: number; comment: string }) => {
-    await fetch(ENTRIES_URL, {
+    const res = await fetch(ENTRIES_URL, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, ...payload }),
     });
+    if (!res.ok) throw new Error("update routine entry failed");
     await load();
   };
 
   const deleteEntry = async (id: number) => {
-    await fetch(`${ENTRIES_URL}?id=${id}`, { method: "DELETE" });
+    const res = await fetch(`${ENTRIES_URL}?id=${id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("delete routine entry failed");
     await load();
   };
 

@@ -51,6 +51,7 @@ export default function TaskCard({ assignment, user, onClose, onAction, onSendCo
   const [reassignLogin, setReassignLogin] = useState("");
 
   const [saving, setSaving] = useState(false);
+  const [actionError, setActionError] = useState("");
   const chatRef = useRef<HTMLDivElement>(null);
 
   const isManager = user.role === "manager";
@@ -63,8 +64,14 @@ export default function TaskCard({ assignment, user, onClose, onAction, onSendCo
   const [completingSelf, setCompletingSelf] = useState(false);
   const handleCompleteSelf = async () => {
     setCompletingSelf(true);
-    await onAction({ action: "complete_self", assignment_id: assignment.id });
-    setCompletingSelf(false);
+    setActionError("");
+    try {
+      await onAction({ action: "complete_self", assignment_id: assignment.id });
+    } catch {
+      setActionError("Не удалось сохранить. Попробуйте ещё раз.");
+    } finally {
+      setCompletingSelf(false);
+    }
   };
 
   useEffect(() => {
@@ -79,60 +86,102 @@ export default function TaskCard({ assignment, user, onClose, onAction, onSendCo
   const handleSendComment = async () => {
     if (!commentText.trim()) return;
     setSendingComment(true);
-    await onSendComment(assignment.id, commentText.trim());
-    setCommentText("");
-    const updated = await fetchComments(assignment.id);
-    setComments(updated);
-    setSendingComment(false);
+    setActionError("");
+    try {
+      await onSendComment(assignment.id, commentText.trim());
+      setCommentText("");
+      const updated = await fetchComments(assignment.id);
+      setComments(updated);
+    } catch {
+      setActionError("Не удалось отправить сообщение. Попробуйте ещё раз.");
+    } finally {
+      setSendingComment(false);
+    }
   };
 
   const handleSubmitReport = async () => {
     if (!reportText.trim()) return;
     setSubmittingReport(true);
-    await onAction({ action: "submit_report", assignment_id: assignment.id, report_text: reportText });
-    setSubmittingReport(false);
-    setShowReport(false);
-    setReportText("");
+    setActionError("");
+    try {
+      await onAction({ action: "submit_report", assignment_id: assignment.id, report_text: reportText });
+      setShowReport(false);
+      setReportText("");
+    } catch {
+      setActionError("Не удалось отправить отчёт. Попробуйте ещё раз.");
+    } finally {
+      setSubmittingReport(false);
+    }
   };
 
   const handleRequestExtension = async () => {
     if (!extensionDate) return;
     setSaving(true);
-    await onAction({ action: "request_extension", assignment_id: assignment.id, new_date: extensionDate, comment: extensionComment });
-    setSaving(false);
-    setShowExtension(false);
-    setExtensionDate("");
-    setExtensionComment("");
+    setActionError("");
+    try {
+      await onAction({ action: "request_extension", assignment_id: assignment.id, new_date: extensionDate, comment: extensionComment });
+      setShowExtension(false);
+      setExtensionDate("");
+      setExtensionComment("");
+    } catch {
+      setActionError("Не удалось отправить запрос. Попробуйте ещё раз.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleAcceptReport = async () => {
     setSaving(true);
-    await onAction({ action: "accept_report", assignment_id: assignment.id });
-    setSaving(false);
+    setActionError("");
+    try {
+      await onAction({ action: "accept_report", assignment_id: assignment.id });
+    } catch {
+      setActionError("Не удалось сохранить решение. Попробуйте ещё раз.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleRejectReport = async () => {
     if (!rejectComment.trim()) return;
     setSaving(true);
-    await onAction({ action: "reject_report", assignment_id: assignment.id, comment: rejectComment });
-    setSaving(false);
-    setShowRejectComment(false);
-    setRejectComment("");
+    setActionError("");
+    try {
+      await onAction({ action: "reject_report", assignment_id: assignment.id, comment: rejectComment });
+      setShowRejectComment(false);
+      setRejectComment("");
+    } catch {
+      setActionError("Не удалось сохранить решение. Попробуйте ещё раз.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleAcceptExtension = async () => {
     setSaving(true);
-    await onAction({ action: "accept_extension", assignment_id: assignment.id });
-    setSaving(false);
+    setActionError("");
+    try {
+      await onAction({ action: "accept_extension", assignment_id: assignment.id });
+    } catch {
+      setActionError("Не удалось сохранить решение. Попробуйте ещё раз.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleRejectExtension = async () => {
     if (!extRejectComment.trim()) return;
     setSaving(true);
-    await onAction({ action: "reject_extension", assignment_id: assignment.id, comment: extRejectComment });
-    setSaving(false);
-    setShowExtRejectComment(false);
-    setExtRejectComment("");
+    setActionError("");
+    try {
+      await onAction({ action: "reject_extension", assignment_id: assignment.id, comment: extRejectComment });
+      setShowExtRejectComment(false);
+      setExtRejectComment("");
+    } catch {
+      setActionError("Не удалось сохранить решение. Попробуйте ещё раз.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleReassign = async () => {
@@ -140,9 +189,15 @@ export default function TaskCard({ assignment, user, onClose, onAction, onSendCo
     const u = allUsers.find(u => u.login === reassignLogin);
     if (!u) return;
     setSaving(true);
-    await onAction({ action: "reassign", assignment_id: assignment.id, new_login: u.login, new_name: u.name, new_role: u.role });
-    setSaving(false);
-    setShowReassign(false);
+    setActionError("");
+    try {
+      await onAction({ action: "reassign", assignment_id: assignment.id, new_login: u.login, new_name: u.name, new_role: u.role });
+      setShowReassign(false);
+    } catch {
+      setActionError("Не удалось передать задачу. Попробуйте ещё раз.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const statusLabel = TASK_STATUS_LABELS[assignment.status] ?? assignment.status;
@@ -184,6 +239,13 @@ export default function TaskCard({ assignment, user, onClose, onAction, onSendCo
         </div>
 
         <div className="flex-1 overflow-y-auto">
+
+          {actionError && (
+            <div className="mx-5 mt-4 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2 flex items-center gap-2">
+              <Icon name="AlertTriangle" size={14} />
+              {actionError}
+            </div>
+          )}
 
           {/* История событий */}
           <div className="px-5 py-4 border-b border-border">

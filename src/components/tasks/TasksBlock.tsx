@@ -69,6 +69,8 @@ export default function TasksBlock({ user, availableUsers, assignments, loading,
   const [bulkSaving, setBulkSaving] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState<TaskAssignment | null>(null);
+  const [bulkError, setBulkError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
 
   const isManager = user.role === "manager";
   const isAdmin = user.role === "admin";
@@ -107,25 +109,42 @@ export default function TasksBlock({ user, availableUsers, assignments, loading,
 
   const handleBulkClose = async () => {
     setBulkSaving(true);
-    await onAction({ action: "bulk_close", assignment_ids: Array.from(checkedIds) });
-    setCheckedIds(new Set());
-    setBulkSaving(false);
+    setBulkError("");
+    try {
+      await onAction({ action: "bulk_close", assignment_ids: Array.from(checkedIds) });
+      setCheckedIds(new Set());
+    } catch {
+      setBulkError("Не удалось закрыть выбранные задачи. Попробуйте ещё раз.");
+    } finally {
+      setBulkSaving(false);
+    }
   };
 
   const handleBulkExtend = async () => {
     if (!bulkDate) return;
     setBulkSaving(true);
-    await onAction({ action: "bulk_extend", assignment_ids: Array.from(checkedIds), new_date: bulkDate });
-    setCheckedIds(new Set());
-    setShowBulkDate(false);
-    setBulkDate("");
-    setBulkSaving(false);
+    setBulkError("");
+    try {
+      await onAction({ action: "bulk_extend", assignment_ids: Array.from(checkedIds), new_date: bulkDate });
+      setCheckedIds(new Set());
+      setShowBulkDate(false);
+      setBulkDate("");
+    } catch {
+      setBulkError("Не удалось продлить выбранные задачи. Попробуйте ещё раз.");
+    } finally {
+      setBulkSaving(false);
+    }
   };
 
   const handleDelete = async (a: TaskAssignment) => {
-    await onDeleteTask(a.task_id);
-    setConfirmDelete(null);
-    if (selected?.task_id === a.task_id) setSelected(null);
+    setDeleteError("");
+    try {
+      await onDeleteTask(a.task_id);
+      setConfirmDelete(null);
+      if (selected?.task_id === a.task_id) setSelected(null);
+    } catch {
+      setDeleteError("Не удалось удалить задачу. Попробуйте ещё раз.");
+    }
   };
 
   const pendingCount = assignments.filter(a => (FILTER_STATUSES.pending ?? []).includes(a.status)).length;
@@ -198,6 +217,11 @@ export default function TasksBlock({ user, availableUsers, assignments, loading,
       {/* Массовые действия (только руководитель/admin) */}
       {(isManager || isAdmin) && checkedIds.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 bg-primary/5 border border-primary/20 rounded-lg px-4 py-2">
+          {bulkError && (
+            <span className="w-full text-xs text-red-400 flex items-center gap-1.5">
+              <Icon name="AlertTriangle" size={12} /> {bulkError}
+            </span>
+          )}
           <span className="text-sm text-muted-foreground">Выбрано: {checkedIds.size}</span>
           <button
             disabled={bulkSaving}
@@ -461,9 +485,14 @@ export default function TasksBlock({ user, availableUsers, assignments, loading,
                 <p className="text-xs text-muted-foreground mt-0.5">Это действие нельзя отменить</p>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground mb-5 line-clamp-2">{confirmDelete.description}</p>
+            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{confirmDelete.description}</p>
+            {deleteError && (
+              <p className="text-xs text-red-400 mb-3 flex items-center gap-1.5">
+                <Icon name="AlertTriangle" size={12} /> {deleteError}
+              </p>
+            )}
             <div className="flex gap-2">
-              <button onClick={() => setConfirmDelete(null)} className="flex-1 text-sm py-2 rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors">
+              <button onClick={() => { setConfirmDelete(null); setDeleteError(""); }} className="flex-1 text-sm py-2 rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors">
                 Отмена
               </button>
               <button onClick={() => handleDelete(confirmDelete)} className="flex-1 text-sm py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors">

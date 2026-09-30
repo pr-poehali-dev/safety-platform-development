@@ -60,6 +60,8 @@ export default function TaskForm({ user, onClose, onSave, editing, onUpdate, ava
         await onSave(description.trim(), assignees);
       }
       onClose();
+    } catch {
+      setError("Не удалось сохранить задачу. Проверьте соединение и попробуйте ещё раз.");
     } finally {
       setSaving(false);
     }

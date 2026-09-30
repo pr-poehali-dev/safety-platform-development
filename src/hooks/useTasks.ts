@@ -34,47 +34,53 @@ export function useTasks(user: AppUser) {
   useEffect(() => { load(); }, [load]);
 
   const createTask = async (description: string, assignees: { login: string; name: string; role: string; due_date: string }[]) => {
-    await fetch(TASKS_URL, {
+    const res = await fetch(TASKS_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ description, assignees, created_by: user.login, created_by_name: user.name }),
     });
+    if (!res.ok) throw new Error("create task failed");
     await load();
   };
 
   const updateTask = async (task_id: number, description: string, assignees: { login: string; name: string; assignment_id?: number; due_date: string }[]) => {
-    await fetch(TASKS_URL, {
+    const res = await fetch(TASKS_URL, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ task_id, description, assignees }),
     });
+    if (!res.ok) throw new Error("update task failed");
     await load();
   };
 
   const deleteTask = async (task_id: number) => {
-    await fetch(`${TASKS_URL}?task_id=${task_id}`, { method: "DELETE" });
+    const res = await fetch(`${TASKS_URL}?task_id=${task_id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("delete task failed");
     await load();
   };
 
   const action = async (payload: Record<string, unknown>) => {
-    await fetch(ACTIONS_URL, {
+    const res = await fetch(ACTIONS_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    if (!res.ok) throw new Error("task action failed");
     await load();
   };
 
   const sendComment = async (assignment_id: number, message: string) => {
-    await fetch(COMMENTS_URL, {
+    const res = await fetch(COMMENTS_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ assignment_id, message, author_login: user.login, author_name: user.name, author_role: user.role }),
     });
+    if (!res.ok) throw new Error("send comment failed");
   };
 
   const fetchComments = async (assignment_id: number) => {
     const res = await fetch(`${COMMENTS_URL}?assignment_id=${assignment_id}`);
+    if (!res.ok) throw new Error("fetch comments failed");
     return res.json();
   };
 

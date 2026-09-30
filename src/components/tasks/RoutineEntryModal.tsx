@@ -35,6 +35,8 @@ export default function RoutineEntryModal({ categories, defaultDate, onClose, on
         comment: comment.trim(),
       });
       onClose();
+    } catch {
+      setError("Не удалось сохранить запись. Проверьте соединение и попробуйте ещё раз.");
     } finally {
       setSaving(false);
     }
