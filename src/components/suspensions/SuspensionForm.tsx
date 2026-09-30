@@ -31,6 +31,7 @@ export function SuspensionForm({ onClose, onSave, user }: {
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(OBJECTS_URL).then(r => r.json()).then(data => setObjectsList(Array.isArray(data) ? data : []));
@@ -58,9 +59,12 @@ export function SuspensionForm({ onClose, onSave, user }: {
   const handleSave = async () => {
     if (!isValid || saving) return;
     setSaving(true);
+    setSaveError(null);
     try {
       await onSave(build());
       onClose();
+    } catch {
+      setSaveError("Не удалось сохранить акт. Проверьте соединение и попробуйте ещё раз.");
     } finally {
       setSaving(false);
     }
@@ -121,6 +125,12 @@ export function SuspensionForm({ onClose, onSave, user }: {
           </Field>
         </div>
         <div className="flex items-center justify-end gap-4 px-8 py-6 border-t border-border flex-shrink-0">
+          {saveError && (
+            <p className="text-sm text-red-400 mr-auto flex items-center gap-1.5">
+              <Icon name="AlertTriangle" size={15} />
+              {saveError}
+            </p>
+          )}
           <button onClick={() => (isValid ? setShowCloseConfirm(true) : onClose())} className="text-base px-8 py-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">
             Отмена
           </button>

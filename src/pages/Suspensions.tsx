@@ -85,15 +85,26 @@ export default function Suspensions({ user, onLogout, onTabChange, activeTab = "
 
   const addSuspension = async (s: Suspension) => {
     const res = await fetch(SUSPENSIONS_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(s) });
+    if (!res.ok) throw new Error("create suspension failed");
     const data = await res.json();
     const saved = { ...s, number: data.number ?? s.number };
     setRows(prev => [saved, ...prev]);
   };
 
+  const [statusError, setStatusError] = useState<string | null>(null);
+
   const changeStatus = async (row: Suspension, status: SuspensionStatus) => {
+    const previous = row;
     const updated = { ...row, status };
     setRows(prev => prev.map(r => r.id === row.id ? updated : r));
-    await fetch(SUSPENSIONS_API, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
+    setStatusError(null);
+    try {
+      const res = await fetch(SUSPENSIONS_API, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
+      if (!res.ok) throw new Error("update suspension status failed");
+    } catch {
+      setRows(prev => prev.map(r => r.id === row.id ? previous : r));
+      setStatusError("Не удалось изменить статус. Проверьте соединение и попробуйте ещё раз.");
+    }
   };
 
   const filteredRows = useMemo(() => {
@@ -174,6 +185,12 @@ export default function Suspensions({ user, onLogout, onTabChange, activeTab = "
             <p className="text-sm text-muted-foreground mt-0.5">
               Всего: {rows.length} · Приостановлено: {rows.filter(r => r.status === "Приостановлено").length}
             </p>
+            {statusError && (
+              <p className="text-xs text-red-400 mt-1 flex items-center gap-1.5">
+                <Icon name="AlertTriangle" size={12} />
+                {statusError}
+              </p>
+            )}
           </div>
           {canEdit && (
             <button

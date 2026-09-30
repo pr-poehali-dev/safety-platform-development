@@ -15,10 +15,21 @@ function SuspensionEditModal({ suspension: initial, onClose, onSave }: {
 }) {
   const [form, setForm] = useState<Suspension>({ ...initial });
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const set = (key: keyof Suspension, val: string) => setForm(prev => ({ ...prev, [key]: val }));
 
-  const handleSave = async () => { setSaving(true); await onSave(form); setSaving(false); };
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await onSave(form);
+    } catch {
+      setSaveError("Не удалось сохранить изменения. Попробуйте ещё раз.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const issuedAtLocal = (() => {
     const d = new Date(form.issuedAt);
@@ -81,6 +92,12 @@ function SuspensionEditModal({ suspension: initial, onClose, onSave }: {
           </div>
         </div>
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border flex-shrink-0">
+          {saveError && (
+            <p className="text-sm text-red-400 mr-auto flex items-center gap-1.5">
+              <Icon name="AlertTriangle" size={14} />
+              {saveError}
+            </p>
+          )}
           <button onClick={onClose} className="text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">Отмена</button>
           <button onClick={handleSave} disabled={saving} className="text-sm px-5 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
             {saving ? "Сохранение..." : "Сохранить изменения"}
@@ -98,6 +115,7 @@ export function SuspensionsTab() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [editSuspension, setEditSuspension] = useState<Suspension | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -121,14 +139,21 @@ export function SuspensionsTab() {
 
   const handleDelete = async (id: string) => {
     setDeleting(true);
-    await fetch(SUSPENSIONS_API, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    setRows(prev => prev.filter(r => r.id !== id));
-    setDeleteConfirm(null);
-    setDeleting(false);
+    setDeleteError(null);
+    try {
+      const res = await fetch(SUSPENSIONS_API, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) throw new Error("delete suspension failed");
+      setRows(prev => prev.filter(r => r.id !== id));
+      setDeleteConfirm(null);
+    } catch {
+      setDeleteError("Не удалось удалить запись. Попробуйте ещё раз.");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleExport = () => {
@@ -151,11 +176,12 @@ export function SuspensionsTab() {
   };
 
   const handleSave = async (updated: Suspension) => {
-    await fetch(SUSPENSIONS_API, {
+    const res = await fetch(SUSPENSIONS_API, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updated),
     });
+    if (!res.ok) throw new Error("update suspension failed");
     setRows(prev => prev.map(r => r.id === updated.id ? updated : r));
     setEditSuspension(null);
   };
@@ -174,6 +200,12 @@ export function SuspensionsTab() {
           />
         </div>
         <span className="text-sm text-muted-foreground">{filtered.length} приостановок</span>
+        {deleteError && (
+          <span className="text-xs text-red-400 flex items-center gap-1.5">
+            <Icon name="AlertTriangle" size={12} />
+            {deleteError}
+          </span>
+        )}
         <button
           onClick={handleExport}
           disabled={filtered.length === 0}
