@@ -44,6 +44,15 @@ COL_PHOTO = 21  # 0-based индекс столбца "Фото"
 
 VALID_STATUSES = {"Черновик", "В работе", "Устранено", "Просрочено"}
 
+MAX_REMARKS = 100
+
+
+def over_limit_error(prescriptions):
+    bad = [p["number"] or "без номера" for p in prescriptions if len(p["remarks"]) > MAX_REMARKS]
+    if not bad:
+        return None
+    return err(f"В одном предписании не может быть более {MAX_REMARKS} замечаний. Превышение в предписаниях: {', '.join(bad)}")
+
 
 def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"])
@@ -211,6 +220,10 @@ def handler(event: dict, context) -> dict:
         if not prescriptions:
             return err("В файле не найдено ни одного предписания. Проверьте, что структура файла соответствует формату экспорта.")
 
+        limit_err = over_limit_error(prescriptions)
+        if limit_err:
+            return limit_err
+
         # Проверяем номера предписаний из файла на совпадение с уже существующими в системе
         file_numbers = {p["number"] for p in prescriptions if p["number"]}
         duplicate_numbers = set()
@@ -272,6 +285,10 @@ def handler(event: dict, context) -> dict:
             prescriptions = parse_workbook(xlsx_bytes)
         except Exception as e:
             return err(f"Не удалось прочитать файл: {e}")
+
+        limit_err = over_limit_error(prescriptions)
+        if limit_err:
+            return limit_err
 
         # Если выбрано обновление — находим id существующих предписаний по номеру
         existing_id_by_number = {}

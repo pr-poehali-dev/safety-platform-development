@@ -10,6 +10,7 @@ import os
 import psycopg2
 
 SCHEMA = "t_p5901577_safety_platform_deve"
+MAX_REMARKS = 100
 CORS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -286,6 +287,9 @@ def handler(event: dict, context) -> dict:
             return handle_numbering(method, body, cur, conn)
         if qs.get("type") == "remark_history" and method == "GET":
             return handle_remark_history(qs, cur)
+
+        if method in ("POST", "PUT") and len(body.get("remarks") or []) > MAX_REMARKS:
+            return err(f"В одном предписании не может быть более {MAX_REMARKS} замечаний")
 
         # --- ПРЕДПИСАНИЯ ---
         if method == "GET":
