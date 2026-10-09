@@ -14,6 +14,7 @@ export { Field, InputBase, TextareaBase, SelectBase, DatePicker };
 const CATEGORIES_URL = "https://functions.poehali.dev/ea358d23-fa1e-4907-88c0-87cd78732293";
 const OBJECTS_URL = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
 const CONTRACTORS_URL = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
+const MAX_REMARKS = 100;
 const SUSPENSIONS_URL = "https://functions.poehali.dev/bcc14bec-45e7-4857-867d-95233fa38b64";
 
 // --- Форма добавления / редактирования ---
@@ -70,8 +71,10 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
   const updateRemark = (id: string, r: Remark) =>
     setForm(prev => ({ ...prev, remarks: prev.remarks.map(x => x.id === id ? r : x) }));
 
+  const limitReached = form.remarks.length >= MAX_REMARKS;
+
   const addRemark = () =>
-    setForm(prev => ({ ...prev, remarks: [...prev.remarks, newRemark()] }));
+    setForm(prev => prev.remarks.length >= MAX_REMARKS ? prev : ({ ...prev, remarks: [...prev.remarks, newRemark()] }));
 
   const removeRemark = (id: string) =>
     setForm(prev => ({ ...prev, remarks: prev.remarks.filter(x => x.id !== id) }));
@@ -163,7 +166,7 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                Замечания <span className="text-primary ml-1">{form.remarks.length}</span>
+                Замечания <span className="text-primary ml-1">{form.remarks.length}</span><span className="ml-1 normal-case font-normal">из {MAX_REMARKS}</span>
               </p>
             </div>
             {form.remarks.map((r, i) => (
@@ -179,10 +182,11 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
             ))}
             <button
               onClick={addRemark}
-              className="w-full flex items-center justify-center gap-2 border border-dashed border-border rounded-xl py-5 text-sm text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors"
+              disabled={limitReached}
+              className="w-full flex items-center justify-center gap-2 border border-dashed border-border rounded-xl py-5 text-sm text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-muted-foreground disabled:hover:border-border"
             >
               <Icon name="Plus" size={16} />
-              Добавить замечание
+              {limitReached ? `Достигнут лимит: ${MAX_REMARKS} замечаний в одном предписании` : "Добавить замечание"}
             </button>
           </div>
           <div className="border-t border-border pt-8 space-y-6">
