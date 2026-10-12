@@ -33,6 +33,17 @@ interface Backup {
   size_bytes: number;
 }
 
+const SECTION_TABLES: Record<string, string[]> = {
+  prescriptions: ["prescriptions", "remarks", "remark_history"],
+  inspections: ["inspections"],
+  headcount: ["headcount_entries"],
+  fines: ["fines"],
+  suspensions: ["suspensions"],
+  incidents: ["incidents"],
+};
+
+const CHUNK_SIZE = 300;
+
 type BackupData = {
   sections: string[];
   data: Record<string, Record<string, Record<string, unknown>[]>>;
@@ -64,6 +75,8 @@ export function BackupsTab({ currentUserId }: { currentUserId: string }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
   const [restoreFor, setRestoreFor] = useState<Backup | null>(null);
+  const [fileBackup, setFileBackup] = useState<{ meta: Backup; data: BackupData } | null>(null);
+  const [fileProgress, setFileProgress] = useState<string | null>(null);
 
   const headers = { "Content-Type": "application/json", "X-User-Id": currentUserId };
 
@@ -169,6 +182,56 @@ export function BackupsTab({ currentUserId }: { currentUserId: string }) {
     }
   };
 
+  const pickFile = async (file: File | undefined) => {
+    if (!file) return;
+    setMessage(null);
+    try {
+      const parsed = JSON.parse(await file.text());
+      const secs: string[] = Array.isArray(parsed?.sections) ? parsed.sections.filter((x: string) => x in SECTION_TABLES) : [];
+      if (!parsed?.data || secs.length === 0) throw new Error();
+      const counts: Record<string, number> = {};
+      secs.forEach(sec => { counts[sec] = parsed.data?.[sec]?.[SECTION_TABLES[sec][0]]?.length ?? 0; });
+      setFileBackup({
+        meta: { id: 0, created_at: parsed.created_at ?? new Date().toISOString(), created_by_name: parsed.created_by ?? "", sections: secs, counts, size_bytes: file.size },
+        data: { sections: secs, data: parsed.data },
+      });
+    } catch {
+      setMessage({ type: "error", text: "Файл не подходит: загрузите JSON-бэкап, скачанный из этого раздела" });
+    }
+  };
+
+  const restoreFromFile = async (sections: string[]) => {
+    if (!fileBackup) return;
+    setBusy("restore-0");
+    setMessage(null);
+    let total = 0;
+    try {
+      for (const sec of sections) {
+        for (const table of SECTION_TABLES[sec]) {
+          const rows = fileBackup.data.data[sec]?.[table] ?? [];
+          for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+            setFileProgress(`${TABLE_LABELS[table]}: ${Math.min(i + CHUNK_SIZE, rows.length)} из ${rows.length}`);
+            const res = await fetch(BACKUPS_API, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({ action: "restore_rows", table, rows: rows.slice(i, i + CHUNK_SIZE) }),
+            });
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            if (table === SECTION_TABLES[sec][0]) total += data.added ?? 0;
+          }
+        }
+      }
+      setMessage({ type: "ok", text: total > 0 ? `Восстановлено записей: ${total}` : "Все записи из файла уже есть в системе, добавлять нечего" });
+      setFileBackup(null);
+    } catch {
+      setMessage({ type: "error", text: "Не удалось восстановить данные из файла. Часть записей могла уже вернуться, повторное восстановление безопасно" });
+    } finally {
+      setFileProgress(null);
+      setBusy(null);
+    }
+  };
+
   const btn = "flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-50";
 
   return (
@@ -201,6 +264,20 @@ export function BackupsTab({ currentUserId }: { currentUserId: string }) {
           <Icon name={busy === "create" ? "Loader" : "DatabaseBackup"} size={15} className={busy === "create" ? "animate-spin" : ""} />
           Создать бэкап
         </button>
+        <div className="border-t border-border pt-4 space-y-2">
+          <p className="text-sm font-medium text-foreground">Восстановить из файла на компьютере</p>
+          <p className="text-xs text-muted-foreground">Выберите JSON-файл, скачанный ранее. Вернутся только отсутствующие записи. Excel-файлы для восстановления не подходят.</p>
+          <label className={`${btn} w-fit cursor-pointer`}>
+            <Icon name="Upload" size={13} />
+            Загрузить файл бэкапа
+            <input
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={e => { pickFile(e.target.files?.[0]); e.target.value = ""; }}
+            />
+          </label>
+        </div>
         {message && (
           <p className={`text-sm ${message.type === "ok" ? "text-green-400" : "text-red-400"}`}>{message.text}</p>
         )}
@@ -262,13 +339,26 @@ export function BackupsTab({ currentUserId }: { currentUserId: string }) {
           onConfirm={sections => restore(restoreFor, sections)}
         />
       )}
+
+      {fileBackup && (
+        <RestoreDialog
+          backup={fileBackup.meta}
+          busy={busy === "restore-0"}
+          progress={fileProgress}
+          fromFile
+          onClose={() => { if (busy === null) setFileBackup(null); }}
+          onConfirm={restoreFromFile}
+        />
+      )}
     </>
   );
 }
 
-function RestoreDialog({ backup, busy, onClose, onConfirm }: {
+function RestoreDialog({ backup, busy, progress, fromFile, onClose, onConfirm }: {
   backup: Backup;
   busy: boolean;
+  progress?: string | null;
+  fromFile?: boolean;
   onClose: () => void;
   onConfirm: (sections: string[]) => void;
 }) {
@@ -281,7 +371,7 @@ function RestoreDialog({ backup, busy, onClose, onConfirm }: {
         <div>
           <p className="text-base font-semibold text-foreground">Восстановление из бэкапа</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Бэкап от {formatDate(backup.created_at)}. В систему вернутся только отсутствующие записи. Существующие и новые записи не изменятся.
+            {fromFile ? "Файл от" : "Бэкап от"} {formatDate(backup.created_at)}. В систему вернутся только отсутствующие записи. Существующие и новые записи не изменятся.
           </p>
         </div>
         <div className="space-y-2">
@@ -293,6 +383,7 @@ function RestoreDialog({ backup, busy, onClose, onConfirm }: {
             </label>
           ))}
         </div>
+        {progress && <p className="text-xs text-muted-foreground">{progress}</p>}
         <div className="flex justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground">Отмена</button>
           <button

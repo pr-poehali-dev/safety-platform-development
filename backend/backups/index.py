@@ -197,6 +197,18 @@ def handler(event: dict, context) -> dict:
             new_id = create_backup(cur, conn, admin, sections)
             return resp(200, {"id": new_id, "backups": list_backups(cur)})
 
+        if action == "restore_rows":
+            table = body.get("table")
+            allowed_tables = [t for tables in SECTIONS.values() for t in tables]
+            if table not in allowed_tables:
+                return resp(400, {"error": "unknown table"})
+            rows = body.get("rows") or []
+            if not isinstance(rows, list) or not all(isinstance(r, dict) for r in rows):
+                return resp(400, {"error": "bad rows"})
+            added = restore_table(cur, table, rows)
+            conn.commit()
+            return resp(200, {"added": added})
+
         if action == "restore":
             data = load_backup(cur, int(body.get("id") or 0))
             if data is None:
