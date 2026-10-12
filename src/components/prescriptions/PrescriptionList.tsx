@@ -240,6 +240,7 @@ export function PrescriptionList({
           loading={loading}
           filtered={items}
           search={search}
+          showOverdueRemarks={filterStatus.includes("Просрочено")}
           uniqueDeadlines={meta.deadlines}
           colFilterDeadline={colFilters.deadline}
           onColFilterDeadlineChange={setColFilter("deadline")}

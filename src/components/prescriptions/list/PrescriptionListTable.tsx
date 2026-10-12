@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import Icon from "@/components/ui/icon";
-import { RemarkMatches, matchingRemarks, searchWords } from "@/components/prescriptions/list/RemarkMatches";
+import { RemarkMatches, OverdueRemarks, matchingRemarks, overdueRemarks, searchWords } from "@/components/prescriptions/list/RemarkMatches";
 import { AppUser } from "@/lib/auth";
 import { Template } from "@/lib/template";
 import { printPrescription } from "@/lib/printPrescription";
@@ -16,6 +16,7 @@ interface PrescriptionListTableProps {
   loading: boolean;
   filtered: Prescription[];
   search: string;
+  showOverdueRemarks?: boolean;
   uniqueDeadlines: string[];
   colFilterDeadline: string;
   onColFilterDeadlineChange: (v: string) => void;
@@ -25,7 +26,7 @@ interface PrescriptionListTableProps {
 }
 
 export function PrescriptionListTable({
-  user, loading, filtered, search, uniqueDeadlines, colFilterDeadline, onColFilterDeadlineChange,
+  user, loading, filtered, search, showOverdueRemarks, uniqueDeadlines, colFilterDeadline, onColFilterDeadlineChange,
   activeTemplate, onSelect, onStatusChange,
 }: PrescriptionListTableProps) {
   const words = searchWords(search);
@@ -64,6 +65,7 @@ export function PrescriptionListTable({
                 const status = overallStatus(p.remarks);
                 const nearestDeadline = p.remarks.map(r => r.deadline).sort()[0];
                 const matches = matchingRemarks(p.remarks, words);
+                const overdue = showOverdueRemarks ? overdueRemarks(p.remarks) : [];
                 return (
                   <Fragment key={p.id}>
                   <tr
@@ -140,10 +142,14 @@ export function PrescriptionListTable({
                       </div>
                     </td>
                   </tr>
-                  {matches.length > 0 && (
+                  {(matches.length > 0 || overdue.length > 0) && (
                     <tr onClick={() => onSelect(p)} className="cursor-pointer bg-secondary/10">
-                      <td colSpan={8} className="px-5 pb-4 pt-0">
-                        <RemarkMatches remarks={p.remarks} words={words} />
+                      <td colSpan={8} className="px-5 pb-4 pt-0 space-y-3">
+                        {overdue.length > 0 && <OverdueRemarks remarks={p.remarks} words={words} />}
+                        {matches.length > 0 && !showOverdueRemarks && <RemarkMatches remarks={p.remarks} words={words} />}
+                        {matches.length > 0 && showOverdueRemarks && matches.some(m => !overdue.some(o => o.id === m.id)) && (
+                          <RemarkMatches remarks={p.remarks.filter(r => !overdue.some(o => o.id === r.id))} words={words} />
+                        )}
                       </td>
                     </tr>
                   )}
