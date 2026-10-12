@@ -141,6 +141,14 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
       </div>
       <div className="bg-card border border-border rounded-xl p-4">
         {chartType === "bar" ? (
+          <div className="overflow-x-auto -mx-2 px-2">
+            {isMobile && (
+              <p className="text-[11px] text-muted-foreground mb-2 flex items-center gap-1">
+                <Icon name="MoveHorizontal" size={12} />
+                Проведите по диаграмме влево и вправо
+              </p>
+            )}
+            <div style={{ minWidth: isMobile ? Math.max(chartData.length * 64, 320) : undefined }}>
           <ResponsiveContainer width="100%" height={500}>
             <BarChart data={chartData} margin={{ top: 8, right: 20, left: 0, bottom: 140 }}>
               <XAxis
@@ -187,7 +195,7 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
                         const total = contractors.reduce((sum, co) => sum + (Number(row[co]) || 0), 0);
                         if (!total) return null;
                         return (
-                          <text x={x + width / 2} y={y - 6} textAnchor="middle" fontSize={11} fontWeight={600} fill="#d0d8e8">
+                          <text x={x + width / 2} y={y - 6} textAnchor="middle" fontSize={isMobile ? 12 : 11} fontWeight={700} fill="#ffffff">
                             {total}
                           </text>
                         );
@@ -198,6 +206,8 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
               ))}
             </BarChart>
           </ResponsiveContainer>
+            </div>
+          </div>
         ) : (
           <ResponsiveContainer width="100%" height={isMobile ? 380 : 420}>
             <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
