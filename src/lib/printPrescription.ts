@@ -405,16 +405,17 @@ export async function downloadPrescriptionWord(p: PrescriptionData, tmpl?: Templ
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
-/** Формирует и скачивает документ предписания в формате PDF */
+/** Формирует и скачивает документ предписания в формате PDF (та же вёрстка, что и при печати) */
 export async function downloadPrescriptionPdf(p: PrescriptionData, tmpl?: Template): Promise<void> {
-  const { t, pw, ph, bodyHtml } = buildDocParts(p, tmpl);
+  const { t, pw, ph, maxImgH, bodyHtml } = buildDocParts(p, tmpl);
   const bodyWithInlineImages = await inlineImages(bodyHtml);
-  const { jsPDF } = await import("jspdf");
+  const [{ jsPDF }, { default: html2canvas }] = await Promise.all([import("jspdf"), import("html2canvas")]);
 
   const mmToPx = 96 / 25.4;
   const contentWmm = pw - t.marginLeft - t.marginRight;
   const contentHmm = ph - t.marginTop - t.marginBottom;
   const widthPx = Math.round(contentWmm * mmToPx);
+  const pageHpx = contentHmm * mmToPx;
 
   const host = document.createElement("div");
   host.style.cssText = `position:fixed;left:-10000px;top:0;width:${widthPx}px;background:#fff;color:#000;`;
@@ -429,7 +430,7 @@ export async function downloadPrescriptionPdf(p: PrescriptionData, tmpl?: Templa
     .rx-pdf ul, .rx-pdf ol { padding-left: 20px; margin: 4px 0; }
     .rx-pdf li { margin: 2px 0; }
     .rx-pdf table { border-collapse: collapse; width: 100%; margin: 8px 0; table-layout: fixed; }
-    .rx-pdf td, .rx-pdf th { border: 1px solid #000; padding: 4px 6px; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; }
+    .rx-pdf td, .rx-pdf th { border: 1px solid #000; padding: 4px 6px; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; }
     .rx-pdf th { font-weight: bold; background: #f5f5f5; }
     .rx-pdf img { max-width: 100%; height: auto; }
     .rx-pdf hr { border: none; border-top: 1px solid #999; margin: 8px 0; }
@@ -437,24 +438,71 @@ export async function downloadPrescriptionPdf(p: PrescriptionData, tmpl?: Templa
   document.body.appendChild(host);
 
   try {
-    const imgs = Array.from(host.querySelectorAll("img"));
+    const target = host.querySelector(".rx-pdf") as HTMLElement;
+    const imgs = Array.from(target.querySelectorAll("img"));
     await Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise<void>(res => {
       img.onload = () => res();
       img.onerror = () => res();
     })));
+    if (document.fonts?.ready) await document.fonts.ready;
+
+    const maxImgHpx = maxImgH * mmToPx;
+    imgs.filter(i => i.hasAttribute("data-photo")).forEach(img => {
+      if (!img.naturalWidth || !img.naturalHeight) return;
+      const ratio = img.naturalHeight / img.naturalWidth;
+      const containerW = img.parentElement ? img.parentElement.offsetWidth : img.offsetWidth;
+      if (containerW * ratio > maxImgHpx) img.style.width = `${Math.floor(maxImgHpx / ratio)}px`;
+      else img.style.width = "100%";
+      img.style.height = "auto";
+    });
+
+    const scale = 2;
+    const canvas = await html2canvas(target, { scale, useCORS: true, backgroundColor: "#ffffff", logging: false });
+    const totalPx = target.offsetHeight;
+    const topAbs = target.getBoundingClientRect().top;
+
+    const cands = new Set<number>();
+    target.querySelectorAll("tr, p, h1, h2, h3, li, hr, img, table, div").forEach(el => {
+      const r = (el as HTMLElement).getBoundingClientRect();
+      cands.add(Math.round(r.bottom - topAbs));
+      if (el.tagName === "IMG" || el.tagName === "TR") cands.add(Math.round(r.top - topAbs));
+    });
+    const points = Array.from(cands).filter(v => v > 0 && v <= totalPx).sort((a, b) => a - b);
+
+    const breaks: number[] = [0];
+    let start = 0;
+    while (start + pageHpx < totalPx - 1) {
+      const limit = start + pageHpx;
+      let best = -1;
+      for (const c of points) {
+        if (c > limit) break;
+        if (c > start + pageHpx * 0.35) best = c;
+      }
+      const end = best > 0 ? best : limit;
+      breaks.push(end);
+      start = end;
+    }
+    breaks.push(totalPx);
 
     const doc = new jsPDF({ unit: "mm", format: [pw, ph], orientation: pw > ph ? "landscape" : "portrait" });
-    const target = host.querySelector(".rx-pdf") as HTMLElement;
-    await doc.html(target, {
-      x: t.marginLeft,
-      y: 0,
-      width: contentWmm,
-      windowWidth: widthPx,
-      autoPaging: "text",
-      margin: [t.marginTop, t.marginRight, t.marginBottom, t.marginLeft],
-      html2canvas: { scale: 0.264583 * 2, useCORS: true, backgroundColor: "#ffffff" },
-    });
-    void contentHmm;
+    const pxToMm = contentWmm / widthPx;
+
+    for (let i = 0; i < breaks.length - 1; i++) {
+      const y0 = breaks[i];
+      const y1 = breaks[i + 1];
+      const hPx = y1 - y0;
+      if (hPx <= 0) continue;
+      const slice = document.createElement("canvas");
+      slice.width = canvas.width;
+      slice.height = Math.max(1, Math.round(hPx * scale));
+      const ctx = slice.getContext("2d")!;
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, slice.width, slice.height);
+      ctx.drawImage(canvas, 0, Math.round(y0 * scale), canvas.width, slice.height, 0, 0, slice.width, slice.height);
+      if (i > 0) doc.addPage([pw, ph], pw > ph ? "landscape" : "portrait");
+      doc.addImage(slice.toDataURL("image/jpeg", 0.92), "JPEG", t.marginLeft, t.marginTop, contentWmm, hPx * pxToMm);
+    }
+
     doc.save(`Предписание №${p.number}.pdf`);
   } finally {
     document.body.removeChild(host);
