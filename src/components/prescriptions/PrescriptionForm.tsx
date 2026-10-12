@@ -18,6 +18,98 @@ const CONTRACTORS_URL = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-e
 const MAX_REMARKS = 100;
 const SUSPENSIONS_URL = "https://functions.poehali.dev/bcc14bec-45e7-4857-867d-95233fa38b64";
 
+const REMARK_FIELDS: (keyof Remark)[] = [
+  "place", "category", "description", "normRef", "deadline", "status", "photos",
+  "work_suspended", "suspension_act_drawn", "suspension_act_number",
+];
+const FORM_FIELDS = ["object", "contractor", "contractNumber", "representative", "replyEmail", "reportDeadline"] as const;
+const FORM_FIELD_LABELS: Record<string, string> = {
+  object: "Объект", contractor: "Подрядчик", contractNumber: "Номер договора",
+  representative: "Представитель", replyEmail: "Почта для ответа", reportDeadline: "Срок отчёта",
+};
+
+const sameVal = (a: unknown, b: unknown) => JSON.stringify(a ?? "") === JSON.stringify(b ?? "");
+
+const toFormState = (p: Prescription): FormState => ({
+  object: p.object,
+  contractor: p.contractor,
+  contractNumber: p.contractNumber || "",
+  representative: p.representative || "",
+  representativeEnabled: !!p.representative,
+  replyEmail: p.replyEmail,
+  reportDeadline: p.reportDeadline,
+  remarks: p.remarks.map(r => ({ ...r })),
+});
+
+type Highlight = { kind: "changed" | "added" | "conflict" | "removed"; fields: string[] };
+
+function mergeWithServer(base: FormState, mine: FormState, fresh: FormState) {
+  const highlights: Record<string, Highlight> = {};
+  const generalNotes: string[] = [];
+  const merged: FormState = { ...mine };
+
+  for (const key of FORM_FIELDS) {
+    const serverChanged = !sameVal(base[key], fresh[key]);
+    const iChanged = !sameVal(base[key], mine[key]);
+    if (serverChanged && !iChanged) {
+      merged[key] = fresh[key];
+      generalNotes.push(`${FORM_FIELD_LABELS[key]}: обновлено с сервера`);
+    } else if (serverChanged && iChanged && !sameVal(mine[key], fresh[key])) {
+      generalNotes.push(`${FORM_FIELD_LABELS[key]}: оставлена ваша версия (на сервере другое значение: «${fresh[key] || "—"}»)`);
+    }
+  }
+  merged.representativeEnabled = !!merged.representative || mine.representativeEnabled;
+
+  const baseById = new Map(base.remarks.map(r => [r.id, r]));
+  const mineById = new Map(mine.remarks.map(r => [r.id, r]));
+  const freshById = new Map(fresh.remarks.map(r => [r.id, r]));
+  const result: Remark[] = [];
+
+  for (const mr of mine.remarks) {
+    const br = baseById.get(mr.id);
+    const fr = freshById.get(mr.id);
+    if (!br) { result.push(mr); continue; }
+    if (!fr) {
+      const iEdited = REMARK_FIELDS.some(f => !sameVal(br[f], mr[f]));
+      if (iEdited) {
+        highlights[mr.id] = { kind: "removed", fields: [] };
+        result.push(mr);
+      } else {
+        highlights[mr.id] = { kind: "removed", fields: [] };
+      }
+      continue;
+    }
+    const out: Remark = { ...mr };
+    const serverFields: string[] = [];
+    const conflictFields: string[] = [];
+    for (const f of REMARK_FIELDS) {
+      const sc = !sameVal(br[f], fr[f]);
+      if (!sc) continue;
+      const ic = !sameVal(br[f], mr[f]);
+      if (!ic) {
+        (out as unknown as Record<string, unknown>)[f] = fr[f];
+        serverFields.push(f);
+      } else if (!sameVal(mr[f], fr[f])) {
+        conflictFields.push(f);
+      }
+    }
+    if (conflictFields.length) highlights[mr.id] = { kind: "conflict", fields: [...serverFields, ...conflictFields] };
+    else if (serverFields.length) highlights[mr.id] = { kind: "changed", fields: serverFields };
+    result.push(out);
+  }
+
+  for (const fr of fresh.remarks) {
+    if (!baseById.has(fr.id) && !mineById.has(fr.id)) {
+      result.push({ ...fr });
+      highlights[fr.id] = { kind: "added", fields: [] };
+    }
+  }
+
+  const removedNotes = base.remarks.filter(r => !freshById.has(r.id) && mineById.has(r.id) === false).length;
+  merged.remarks = result.length ? result : mine.remarks;
+  return { merged, highlights, generalNotes, removedByServer: removedNotes };
+}
+
 // --- Форма добавления / редактирования ---
 export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: () => void; onSave: (p: Prescription) => Promise<void>; user: AppUser; editPrescription?: Prescription | null }) {
   const isMale = user.name ? detectGenderFromName(user.name) : true;
@@ -118,6 +210,9 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
   };
 
   const editId = editPrescription?.id;
+  const baseSnapshot = useRef<FormState | null>(editPrescription ? toFormState(editPrescription) : null);
+  const [highlights, setHighlights] = useState<Record<string, Highlight>>({});
+  const [mergeNotes, setMergeNotes] = useState<string[]>([]);
   const baseVersion = useRef<string | null>(null);
   const [stale, setStale] = useState(false);
   const [conflict, setConflict] = useState<null | "save" | "draft">(null);
@@ -153,16 +248,20 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
       const data: Prescription[] = await r.json();
       const fresh = data.find(x => x.id === editId);
       if (!fresh) throw new Error("not found");
-      setForm({
-        object: fresh.object,
-        contractor: fresh.contractor,
-        contractNumber: fresh.contractNumber || "",
-        representative: fresh.representative || "",
-        representativeEnabled: !!fresh.representative,
-        replyEmail: fresh.replyEmail,
-        reportDeadline: fresh.reportDeadline,
-        remarks: fresh.remarks.map(x => ({ ...x })),
-      });
+      const freshForm = toFormState(fresh);
+      const base = baseSnapshot.current ?? freshForm;
+      const { merged, highlights: hl, generalNotes, removedByServer } = mergeWithServer(base, form, freshForm);
+      setForm(merged);
+      setHighlights(hl);
+      const notes = [...generalNotes];
+      const nChanged = Object.values(hl).filter(h => h.kind === "changed" || h.kind === "conflict").length;
+      const nAdded = Object.values(hl).filter(h => h.kind === "added").length;
+      const nRemoved = Object.values(hl).filter(h => h.kind === "removed").length;
+      if (nChanged) notes.push(`Изменены на сервере пункты: ${nChanged}`);
+      if (nAdded) notes.push(`Добавлены на сервере пункты: ${nAdded}`);
+      if (nRemoved || removedByServer) notes.push(`Удалены на сервере пункты: ${nRemoved || removedByServer} (ваши правки в них сохранены, проверьте)`);
+      setMergeNotes(notes);
+      baseSnapshot.current = freshForm;
       baseVersion.current = await fetchVersion();
       setStale(false);
       setConflict(null);
@@ -213,8 +312,18 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
         {stale && (
           <div className="flex items-center gap-3 px-12 py-3 bg-amber-500/15 border-b border-amber-500/40 text-sm flex-shrink-0">
             <Icon name="TriangleAlert" size={16} />
-            <span className="flex-1">Это предписание изменили на другом компьютере. Обновите данные, чтобы не потерять чужие правки (ваши несохранённые правки в форме будут заменены).</span>
+            <span className="flex-1">Это предписание изменили на другом компьютере. Обновите данные, чтобы не потерять чужие правки ваши несохранённые правки сохранятся, а изменённые на сервере пункты будут подсвечены.</span>
             <button onClick={reloadFromServer} className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium">Обновить</button>
+          </div>
+        )}
+        {mergeNotes.length > 0 && (
+          <div className="px-12 py-3 bg-sky-500/10 border-b border-sky-500/30 text-sm flex-shrink-0 flex items-start gap-3">
+            <Icon name="Info" size={16} className="mt-0.5" />
+            <div className="flex-1 space-y-0.5">
+              <p className="font-medium">Данные обновлены, ваши правки сохранены</p>
+              {mergeNotes.map((n, i) => <p key={i} className="text-xs text-muted-foreground">{n}</p>)}
+            </div>
+            <button onClick={() => { setMergeNotes([]); setHighlights({}); }} className="text-xs text-muted-foreground hover:text-foreground">Скрыть</button>
           </div>
         )}
         <div className="overflow-y-auto flex-1 px-12 py-10 space-y-10">
@@ -241,6 +350,7 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
                 categories={categories}
                 places={availablePlaces}
                 suspensionNumbers={suspensionNumbers}
+                highlight={highlights[r.id]}
               />
             ))}
             <button
@@ -289,7 +399,7 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
           <div className="relative bg-card border border-border rounded-xl w-full max-w-md shadow-2xl p-6 animate-fade-in space-y-4">
             <h3 className="text-lg font-semibold">Предписание уже изменено</h3>
             <p className="text-sm text-muted-foreground">
-              Пока вы его редактировали, его изменили с другого компьютера. Рекомендуем обновить данные и внести свои правки заново, иначе чужие изменения могут быть перезаписаны.
+              Пока вы его редактировали, его изменили с другого компьютера. Рекомендуем обновить данные: ваши правки сохранятся, а изменённые на сервере пункты будут подсвечены. Если сохранить без обновления, чужие изменения могут быть перезаписаны.
             </p>
             <div className="flex gap-2 justify-end">
               <button onClick={() => setConflict(null)} className="px-4 py-2 rounded-md border border-border text-sm text-muted-foreground hover:text-foreground">Назад</button>

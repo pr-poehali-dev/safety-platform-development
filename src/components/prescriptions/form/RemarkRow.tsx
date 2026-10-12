@@ -30,11 +30,17 @@ function resizeImage(file: File): Promise<string> {
   });
 }
 
+const REMARK_FIELD_LABELS: Record<string, string> = {
+  place: "место", category: "вид нарушения", description: "описание", normRef: "пункт НПА",
+  deadline: "срок устранения", status: "статус", photos: "фото", work_suspended: "приостановка работ",
+  suspension_act_drawn: "акт приостановки", suspension_act_number: "номер акта",
+};
+
 // --- Строка замечания ---
 export function RemarkRow({
-  remark, index, onChange, onRemove, canRemove, categories, places, suspensionNumbers,
+  remark, index, onChange, onRemove, canRemove, categories, places, suspensionNumbers, highlight,
 }: {
-  remark: Remark; index: number; onChange: (r: Remark) => void; onRemove: () => void; canRemove: boolean; categories: string[]; places: string[]; suspensionNumbers: string[];
+  remark: Remark; index: number; onChange: (r: Remark) => void; onRemove: () => void; canRemove: boolean; categories: string[]; places: string[]; suspensionNumbers: string[]; highlight?: { kind: "changed" | "added" | "conflict" | "removed"; fields: string[] };
 }) {
   const set = (key: keyof Remark, val: string | boolean) => onChange({ ...remark, [key]: val });
   const [uploading, setUploading] = useState(false);
@@ -89,7 +95,18 @@ export function RemarkRow({
   };
 
   return (
-    <div className="border border-border rounded-xl p-4 sm:p-8 space-y-6 bg-secondary/20 relative">
+    <div className={`border rounded-xl p-4 sm:p-8 space-y-6 bg-secondary/20 relative ${highlight ? "border-amber-500 ring-2 ring-amber-500/40" : "border-border"}`}>
+      {highlight && (
+        <div className="flex items-start gap-2 text-xs text-amber-500 bg-amber-500/10 rounded-lg px-3 py-2">
+          <Icon name="TriangleAlert" size={14} className="mt-0.5 flex-shrink-0" />
+          <span>
+            {highlight.kind === "added" && "Новый пункт: добавлен на сервере другим пользователем."}
+            {highlight.kind === "changed" && `Изменено на сервере: ${highlight.fields.map(f => REMARK_FIELD_LABELS[f] ?? f).join(", ")}.`}
+            {highlight.kind === "conflict" && `Изменено на сервере и у вас: ${highlight.fields.map(f => REMARK_FIELD_LABELS[f] ?? f).join(", ")}. Оставлена ваша версия, проверьте.`}
+            {highlight.kind === "removed" && "Пункт удалён на сервере. Ваши правки сохранены: при сохранении пункт останется в предписании."}
+          </span>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-1">
         <span className="text-sm font-semibold text-primary uppercase tracking-wider">Замечание #{index + 1}</span>
         {canRemove && (
