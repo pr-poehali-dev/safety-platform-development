@@ -40,7 +40,7 @@ type BackupData = {
 
 const formatSize = (b: number) => (b > 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} МБ` : `${Math.max(1, Math.round(b / 1024))} КБ`);
 const formatDate = (iso: string) => new Date(iso).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" });
-const fileStamp = (iso: string) => iso.slice(0, 19).replace(/[-:T]/g, "");
+const fileStamp = (iso: string) => iso.slice(0, 19).split("-").join("").split(":").join("").split("T").join("_");
 
 function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
