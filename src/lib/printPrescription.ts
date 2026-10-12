@@ -405,3 +405,58 @@ export async function downloadPrescriptionWord(p: PrescriptionData, tmpl?: Templ
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
+/** Формирует и скачивает документ предписания в формате PDF */
+export async function downloadPrescriptionPdf(p: PrescriptionData, tmpl?: Template): Promise<void> {
+  const { t, pw, ph, bodyHtml } = buildDocParts(p, tmpl);
+  const bodyWithInlineImages = await inlineImages(bodyHtml);
+  const { jsPDF } = await import("jspdf");
+
+  const mmToPx = 96 / 25.4;
+  const contentWmm = pw - t.marginLeft - t.marginRight;
+  const contentHmm = ph - t.marginTop - t.marginBottom;
+  const widthPx = Math.round(contentWmm * mmToPx);
+
+  const host = document.createElement("div");
+  host.style.cssText = `position:fixed;left:-10000px;top:0;width:${widthPx}px;background:#fff;color:#000;`;
+  host.innerHTML = `<style>
+    .rx-pdf * { box-sizing: border-box; margin: 0; padding: 0; }
+    .rx-pdf { font-family: '${t.fontFamily || "Times New Roman"}', Times, serif; font-size: ${t.fontSize || 11}pt; line-height: 1.5; width: ${widthPx}px; background: #fff; color: #000; }
+    .rx-pdf p, .rx-pdf li, .rx-pdf td, .rx-pdf th { white-space: pre-wrap; }
+    .rx-pdf p { margin: 0 0 4px; min-height: 1.5em; }
+    .rx-pdf h1 { font-size: 20pt; font-weight: bold; margin: 12px 0 6px; }
+    .rx-pdf h2 { font-size: 16pt; font-weight: bold; margin: 10px 0 5px; }
+    .rx-pdf h3 { font-size: 13pt; font-weight: bold; margin: 8px 0 4px; }
+    .rx-pdf ul, .rx-pdf ol { padding-left: 20px; margin: 4px 0; }
+    .rx-pdf li { margin: 2px 0; }
+    .rx-pdf table { border-collapse: collapse; width: 100%; margin: 8px 0; table-layout: fixed; }
+    .rx-pdf td, .rx-pdf th { border: 1px solid #000; padding: 4px 6px; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; }
+    .rx-pdf th { font-weight: bold; background: #f5f5f5; }
+    .rx-pdf img { max-width: 100%; height: auto; }
+    .rx-pdf hr { border: none; border-top: 1px solid #999; margin: 8px 0; }
+  </style><div class="rx-pdf">${bodyWithInlineImages}</div>`;
+  document.body.appendChild(host);
+
+  try {
+    const imgs = Array.from(host.querySelectorAll("img"));
+    await Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise<void>(res => {
+      img.onload = () => res();
+      img.onerror = () => res();
+    })));
+
+    const doc = new jsPDF({ unit: "mm", format: [pw, ph], orientation: pw > ph ? "landscape" : "portrait" });
+    const target = host.querySelector(".rx-pdf") as HTMLElement;
+    await doc.html(target, {
+      x: t.marginLeft,
+      y: 0,
+      width: contentWmm,
+      windowWidth: widthPx,
+      autoPaging: "text",
+      margin: [t.marginTop, t.marginRight, t.marginBottom, t.marginLeft],
+      html2canvas: { scale: 0.264583 * 2, useCORS: true, backgroundColor: "#ffffff" },
+    });
+    void contentHmm;
+    doc.save(`Предписание №${p.number}.pdf`);
+  } finally {
+    document.body.removeChild(host);
+  }
+}

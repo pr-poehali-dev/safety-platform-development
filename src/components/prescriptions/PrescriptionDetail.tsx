@@ -2,7 +2,6 @@ import { useState, useRef } from "react";
 import { EditablePhotoLightbox } from "@/components/ui/ImageAnnotator";
 import { AppUser } from "@/lib/auth";
 import { Template } from "@/lib/template";
-import { downloadPrescriptionWord } from "@/lib/printPrescription";
 import {
   Prescription, Comment, Attachment, Status,
   overallStatus, effectiveStatus,
@@ -56,21 +55,11 @@ export function PrescriptionDetail({
   const [activeTab, setActiveTab] = useState<"remarks" | "chat">("remarks");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploadingRemarkId, setUploadingRemarkId] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
   const [lightbox, setLightbox] = useState<{ remarkId: string; photos: string[]; index: number } | null>(null);
   const [deleteRemarkId, setDeleteRemarkId] = useState<string | null>(null);
   const [historyRemarkId, setHistoryRemarkId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-
-  const handleDownloadWord = async () => {
-    setDownloading(true);
-    try {
-      await downloadPrescriptionWord(p, template);
-    } finally {
-      setDownloading(false);
-    }
-  };
 
   const handleRemarkPhotos = async (remarkId: string, files: FileList | null) => {
     if (!files || !files.length) return;
@@ -221,8 +210,6 @@ export function PrescriptionDetail({
           canChangeStatus={canChangeStatus}
           setAllRemarksStatus={setAllRemarksStatus}
           template={template}
-          downloading={downloading}
-          handleDownloadWord={handleDownloadWord}
           onClose={onClose}
           activeTab={activeTab}
           setActiveTab={setActiveTab}

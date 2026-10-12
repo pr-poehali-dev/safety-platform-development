@@ -1,6 +1,7 @@
 import Icon from "@/components/ui/icon";
 import { Template } from "@/lib/template";
 import { printPrescription } from "@/lib/printPrescription";
+import { DownloadFormatMenu } from "@/components/prescriptions/DownloadFormatMenu";
 import { Prescription, Status } from "@/lib/prescriptionTypes";
 import { StatusDropdown } from "@/components/prescriptions/StatusDropdown";
 
@@ -22,15 +23,13 @@ interface PrescriptionDetailHeaderProps {
   canChangeStatus: boolean;
   setAllRemarksStatus: (status: Status) => void;
   template: Template;
-  downloading: boolean;
-  handleDownloadWord: () => void;
   onClose: () => void;
   activeTab: "remarks" | "chat";
   setActiveTab: (t: "remarks" | "chat") => void;
 }
 
 export function PrescriptionDetailHeader({
-  p, status, canChangeStatus, setAllRemarksStatus, template, downloading, handleDownloadWord,
+  p, status, canChangeStatus, setAllRemarksStatus, template,
   onClose, activeTab, setActiveTab,
 }: PrescriptionDetailHeaderProps) {
   return (
@@ -53,15 +52,11 @@ export function PrescriptionDetailHeader({
             <Icon name="Printer" size={13} />
             Распечатать
           </button>
-          <button
-            onClick={handleDownloadWord}
-            disabled={downloading}
-            className="flex items-center gap-1.5 text-xs border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
-            title="Скачать в формате Word"
-          >
-            {downloading ? <Icon name="Loader2" size={13} className="animate-spin" /> : <Icon name="Download" size={13} />}
-            Скачать
-          </button>
+          <DownloadFormatMenu
+            p={p}
+            template={template}
+            className="flex items-center gap-1.5 text-xs border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 rounded-lg px-3 py-1.5 transition-colors"
+          />
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <Icon name="X" size={18} />
           </button>

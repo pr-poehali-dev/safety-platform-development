@@ -3,7 +3,8 @@ import Icon from "@/components/ui/icon";
 import { RemarkMatches, matchingRemarks, searchWords } from "@/components/prescriptions/list/RemarkMatches";
 import { AppUser } from "@/lib/auth";
 import { Template } from "@/lib/template";
-import { printPrescription, downloadPrescriptionWord } from "@/lib/printPrescription";
+import { printPrescription } from "@/lib/printPrescription";
+import { DownloadFormatMenu } from "@/components/prescriptions/DownloadFormatMenu";
 import {
   Prescription, Status, effectiveStatus, overallStatus,
 } from "@/lib/prescriptionTypes";
@@ -128,14 +129,12 @@ export function PrescriptionListTable({
                             <Icon name="Printer" size={13} />
                             Печать
                           </button>
-                          <button
-                            onClick={e => { e.stopPropagation(); downloadPrescriptionWord(p, activeTemplate); }}
+                          <DownloadFormatMenu
+                            p={p}
+                            template={activeTemplate}
+                            stopPropagation
                             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors whitespace-nowrap"
-                            title="Скачать в формате Word"
-                          >
-                            <Icon name="Download" size={13} />
-                            Скачать
-                          </button>
+                          />
                         </div>
                         <Icon name="ChevronRight" size={15} className="text-muted-foreground group-hover:text-foreground transition-colors" />
                       </div>
