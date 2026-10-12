@@ -285,6 +285,13 @@ def handler(event: dict, context) -> dict:
             return handle_templates(method, body, cur, conn)
         if qs.get("type") == "numbering" or body.get("_type") == "numbering":
             return handle_numbering(method, body, cur, conn)
+        if qs.get("type") == "version" and method == "GET":
+            cur.execute(
+                f"SELECT md5(COALESCE((SELECT x::text FROM {SCHEMA}.prescriptions x WHERE x.id = %s), '') || "
+                f"COALESCE((SELECT string_agg(r::text, '|' ORDER BY r.id) FROM {SCHEMA}.remarks r WHERE r.prescription_id = %s), ''))",
+                (qs.get("id", ""), qs.get("id", "")),
+            )
+            return ok({"version": cur.fetchone()[0]})
         if qs.get("type") == "remark_history" and method == "GET":
             return handle_remark_history(qs, cur)
 
