@@ -73,7 +73,6 @@ export default function UserMenu({ user, onLogout, onUserUpdate }: Props) {
               <Switch
                 checked={isLight}
                 onCheckedChange={checked => setTheme(checked ? "light" : "dark")}
-                className="border-muted-foreground/60 data-[state=unchecked]:bg-secondary data-[state=checked]:border-primary [&>span]:bg-foreground data-[state=checked]:[&>span]:bg-primary-foreground"
               />
             </div>
 
