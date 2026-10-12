@@ -5,6 +5,7 @@ import {
   ALL_STATUSES, Status, StatusBadge, Prescription, ImportPreview,
   overallStatus, effectiveStatus, parsePrescriptionDate,
 } from "./types";
+import { ExportMultiFilter } from "./ExportMultiFilter";
 
 const EXPORT_API = "https://functions.poehali.dev/9f42e2d1-919f-4261-b985-93a720521cd8";
 const IMPORT_API = "https://functions.poehali.dev/0cfc6b7f-a3e8-4102-8f59-2aa3510cf806";
@@ -27,6 +28,11 @@ export function ExportImportToolbar({
   const [exportStatuses, setExportStatuses] = useState<Status[]>(ALL_STATUSES);
   const [exportDateFrom, setExportDateFrom] = useState("");
   const [exportDateTo, setExportDateTo] = useState("");
+  const [exportObjects, setExportObjects] = useState<string[]>([]);
+  const [exportContractors, setExportContractors] = useState<string[]>([]);
+
+  const objectOptions = Array.from(new Set(filteredPrescriptions.map(p => p.object).filter(Boolean))).sort((a, b) => a.localeCompare(b, "ru"));
+  const contractorOptions = Array.from(new Set(filteredPrescriptions.map(p => p.contractor).filter(Boolean))).sort((a, b) => a.localeCompare(b, "ru"));
 
   const toggleExportStatus = (s: Status) => {
     setExportStatuses(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
@@ -37,6 +43,8 @@ export function ExportImportToolbar({
 
   const exportPreviewCount = filteredPrescriptions.filter(p => {
     if (!exportStatuses.includes(overallStatus(p.remarks))) return false;
+    if (exportObjects.length > 0 && !exportObjects.includes(p.object)) return false;
+    if (exportContractors.length > 0 && !exportContractors.includes(p.contractor)) return false;
     if (exportDateFromObj || exportDateToObj) {
       const d = parsePrescriptionDate(p.date);
       if (!d) return false;
@@ -51,6 +59,8 @@ export function ExportImportToolbar({
 
     const prescriptionsToExport = filteredPrescriptions.filter(p => {
       if (!exportStatuses.includes(overallStatus(p.remarks))) return false;
+      if (exportObjects.length > 0 && !exportObjects.includes(p.object)) return false;
+      if (exportContractors.length > 0 && !exportContractors.includes(p.contractor)) return false;
       if (exportDateFromObj || exportDateToObj) {
         const d = parsePrescriptionDate(p.date);
         if (!d) return false;
@@ -270,7 +280,7 @@ export function ExportImportToolbar({
       {showExportDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowExportDialog(false)} />
-          <div className="relative bg-card border border-border rounded-xl w-full max-w-sm shadow-2xl p-6 animate-fade-in">
+          <div className="relative bg-card border border-border rounded-xl w-full max-w-sm shadow-2xl p-6 animate-fade-in max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold">Экспорт в Excel</h2>
               <button onClick={() => setShowExportDialog(false)} className="text-muted-foreground hover:text-foreground transition-colors"><Icon name="X" size={18} /></button>
@@ -291,6 +301,9 @@ export function ExportImportToolbar({
                 );
               })}
             </div>
+
+            <ExportMultiFilter label="Объект" options={objectOptions} value={exportObjects} onChange={setExportObjects} />
+            <ExportMultiFilter label="Подрядчик" options={contractorOptions} value={exportContractors} onChange={setExportContractors} />
 
             <p className="text-xs text-muted-foreground mb-2">Период составления предписаний</p>
             <div className="grid grid-cols-2 gap-2 mb-2">
