@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import Icon from "@/components/ui/icon";
 import { RemarkMatches, OverdueRemarks, matchingRemarks, overdueRemarks, searchWords } from "@/components/prescriptions/list/RemarkMatches";
 import { AppUser } from "@/lib/auth";
@@ -30,8 +30,29 @@ export function PrescriptionListTable({
   activeTemplate, onSelect, onStatusChange,
 }: PrescriptionListTableProps) {
   const words = searchWords(search);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const withOverdue = showOverdueRemarks ? filtered.filter(p => overdueRemarks(p.remarks).length > 0) : [];
+  const allCollapsed = withOverdue.length > 0 && withOverdue.every(p => collapsed.has(p.id));
+  const toggleOne = (id: string) => setCollapsed(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const toggleAll = () => setCollapsed(allCollapsed ? new Set() : new Set(withOverdue.map(p => p.id)));
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
+      {!loading && withOverdue.length > 0 && (
+        <div className="flex justify-end px-5 py-2.5 border-b border-border bg-secondary/10">
+          <button
+            type="button"
+            onClick={toggleAll}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 rounded-lg px-2.5 py-1.5 transition-colors"
+          >
+            <Icon name={allCollapsed ? "ChevronsUpDown" : "ChevronsDownUp"} size={13} />
+            {allCollapsed ? "Развернуть все пункты" : "Свернуть все пункты"}
+          </button>
+        </div>
+      )}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Icon name="Loader" size={28} className="text-primary animate-spin mb-3" />
@@ -145,7 +166,7 @@ export function PrescriptionListTable({
                   {(matches.length > 0 || overdue.length > 0) && (
                     <tr onClick={() => onSelect(p)} className="cursor-pointer bg-secondary/10">
                       <td colSpan={8} className="px-5 pb-4 pt-0 space-y-3">
-                        {overdue.length > 0 && <OverdueRemarks remarks={p.remarks} words={words} />}
+                        {overdue.length > 0 && <OverdueRemarks remarks={p.remarks} words={words} collapsed={collapsed.has(p.id)} onToggle={() => toggleOne(p.id)} />}
                         {matches.length > 0 && !showOverdueRemarks && <RemarkMatches remarks={p.remarks} words={words} />}
                         {matches.length > 0 && showOverdueRemarks && matches.some(m => !overdue.some(o => o.id === m.id)) && (
                           <RemarkMatches remarks={p.remarks.filter(r => !overdue.some(o => o.id === r.id))} words={words} />

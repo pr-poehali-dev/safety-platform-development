@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import Icon from "@/components/ui/icon";
 import { Remark, effectiveStatus } from "@/lib/prescriptionTypes";
 
 export function searchWords(search: string): string[] {
@@ -74,15 +75,28 @@ export function overdueRemarks(remarks: Remark[]): Remark[] {
   return remarks.filter(r => effectiveStatus(r) === "Просрочено");
 }
 
-export function OverdueRemarks({ remarks, words }: RemarkMatchesProps) {
+interface OverdueRemarksProps extends RemarkMatchesProps {
+  collapsed?: boolean;
+  onToggle?: () => void;
+}
+
+export function OverdueRemarks({ remarks, words, collapsed = false, onToggle }: OverdueRemarksProps) {
   const found = overdueRemarks(remarks);
   if (!found.length) return null;
   return (
     <div className="space-y-2">
-      <p className="text-[11px] text-red-400 uppercase tracking-wider">
+      <button
+        type="button"
+        onClick={e => { e.stopPropagation(); onToggle?.(); }}
+        className="flex items-center gap-1.5 text-[11px] text-red-400 uppercase tracking-wider hover:text-red-300 transition-colors"
+      >
+        <Icon name={collapsed ? "ChevronRight" : "ChevronDown"} size={13} />
         Просроченные пункты: {found.length}
-      </p>
-      {found.map(r => {
+        <span className="normal-case tracking-normal text-muted-foreground">
+          · {collapsed ? "развернуть" : "свернуть"}
+        </span>
+      </button>
+      {!collapsed && found.map(r => {
         const idx = remarks.findIndex(x => x.id === r.id) + 1;
         return (
           <div key={r.id} className="bg-red-500/5 border border-red-400/20 rounded-lg px-3 py-2 text-sm text-foreground">
