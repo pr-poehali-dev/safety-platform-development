@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import Icon from "@/components/ui/icon";
+import { PrescriptionHistoryTab } from "@/components/prescriptions/detail/PrescriptionHistoryTab";
 import { EditablePhotoLightbox } from "@/components/ui/ImageAnnotator";
 import { AppUser } from "@/lib/auth";
 import { Template } from "@/lib/template";
@@ -54,7 +55,7 @@ export function PrescriptionDetail({
 }) {
   const [p, setP] = useState(prescription);
   const [newComment, setNewComment] = useState("");
-  const [activeTab, setActiveTab] = useState<"remarks" | "chat">("remarks");
+  const [activeTab, setActiveTab] = useState<"remarks" | "chat" | "history">("remarks");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploadingRemarkId, setUploadingRemarkId] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<{ remarkId: string; photos: string[]; index: number } | null>(null);
@@ -307,6 +308,10 @@ export function PrescriptionDetail({
               onOpenSuspension={onOpenSuspension}
               onOpenHistory={setHistoryRemarkId}
             />
+          )}
+
+          {activeTab === "history" && (
+            <PrescriptionHistoryTab prescriptionId={p.id} comments={p.comments} refreshKey={baseVersion.current} />
           )}
 
           {/* Чат */}

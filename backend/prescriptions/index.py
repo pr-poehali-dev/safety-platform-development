@@ -230,7 +230,7 @@ def handle_templates(method, body, cur, conn):
     return err("Method not allowed", 405)
 
 
-HISTORY_FIELDS = ("place", "category", "description", "status")
+HISTORY_FIELDS = ("place", "category", "description", "status", "normRef", "deadline")
 
 
 def handle_remark_history(qs, cur):
@@ -247,6 +247,28 @@ def handle_remark_history(qs, cur):
             "field": r[0], "oldValue": r[1], "newValue": r[2],
             "changedBy": r[3], "changedByName": r[4],
             "changedAt": r[5].isoformat() if r[5] else None,
+        }
+        for r in cur.fetchall()
+    ]
+    return ok(rows)
+
+
+def handle_prescription_history(qs, cur):
+    pid = qs.get("id")
+    if not pid:
+        return err("id required")
+    cur.execute(
+        f"SELECT h.remark_id, h.field, h.old_value, h.new_value, h.changed_by, h.changed_by_name, h.changed_at, "
+        f"(SELECT r.sort_order FROM {SCHEMA}.remarks r WHERE r.id = h.remark_id) "
+        f"FROM {SCHEMA}.remark_history h WHERE h.prescription_id = %s ORDER BY h.changed_at DESC, h.id DESC LIMIT 1000",
+        (pid,)
+    )
+    rows = [
+        {
+            "remarkId": r[0], "field": r[1], "oldValue": r[2], "newValue": r[3],
+            "changedBy": r[4], "changedByName": r[5],
+            "changedAt": r[6].isoformat() if r[6] else None,
+            "remarkNumber": (r[7] + 1) if r[7] is not None else None,
         }
         for r in cur.fetchall()
     ]
@@ -292,6 +314,8 @@ def handler(event: dict, context) -> dict:
                 (qs.get("id", ""), qs.get("id", "")),
             )
             return ok({"version": cur.fetchone()[0]})
+        if qs.get("type") == "prescription_history" and method == "GET":
+            return handle_prescription_history(qs, cur)
         if qs.get("type") == "remark_history" and method == "GET":
             return handle_remark_history(qs, cur)
 
@@ -463,6 +487,13 @@ def handler(event: dict, context) -> dict:
             # Новый комментарий добавлен — уведомляем участников обсуждения
             if len(new_comments) > len(old_comments):
                 new_comment = new_comments[-1]
+                att_count = len(new_comment.get("attachments") or [])
+                cur.execute(
+                    f"INSERT INTO {SCHEMA}.remark_history (remark_id, prescription_id, field, old_value, new_value, changed_by, changed_by_name) "
+                    f"VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                    ("", pid, "comment", str(att_count), (new_comment.get("text") or "")[:500],
+                     p.get("changedBy", ""), p.get("changedByName", "") or new_comment.get("author", ""))
+                )
                 author_login = new_comment.get("authorLogin")
                 author_name = new_comment.get("author") or ""
                 participant_logins = {c.get("authorLogin") for c in old_comments if c.get("authorLogin")}
@@ -486,8 +517,14 @@ def handler(event: dict, context) -> dict:
 
             # Точечное обновление замечаний: удаляем только реально убранные пункты,
             # обновляем существующие по id и добавляем только новые — без полной перезаписи списка.
-            cur.execute(f"SELECT id, place, category, description, status FROM {SCHEMA}.remarks WHERE prescription_id = %s", (pid,))
-            existing_rows = {r[0]: {"place": r[1], "category": r[2], "description": r[3], "status": r[4]} for r in cur.fetchall()}
+            cur.execute(f"SELECT id, place, category, description, status, norm_ref, deadline, photos, sort_order FROM {SCHEMA}.remarks WHERE prescription_id = %s", (pid,))
+            existing_rows = {}
+            for r in cur.fetchall():
+                ph = r[7] if r[7] else []
+                if isinstance(ph, str):
+                    ph = json.loads(ph)
+                existing_rows[r[0]] = {"place": r[1], "category": r[2], "description": r[3], "status": r[4],
+                                       "normRef": r[5], "deadline": r[6], "photos": ph, "sort_order": r[8]}
             existing_ids = set(existing_rows.keys())
 
             remarks = p.get("remarks", [])
@@ -495,15 +532,17 @@ def handler(event: dict, context) -> dict:
 
             deleted_by_client = set(p.get("deletedRemarkIds") or [])
             removed_ids = list(existing_ids & deleted_by_client - new_ids)
+            changed_by = p.get("changedBy", "")
+            changed_by_name = p.get("changedByName", "")
+            history_rows = []
+            for rid in removed_ids:
+                old = existing_rows[rid]
+                history_rows.append((rid, pid, "removed", old.get("description") or "", "", changed_by, changed_by_name))
             if removed_ids:
                 cur.execute(f"DELETE FROM {SCHEMA}.remarks WHERE prescription_id = %s AND id = ANY(%s)", (pid, removed_ids))
 
-            changed_by = p.get("changedBy", "")
-            changed_by_name = p.get("changedByName", "")
-
             to_update = []
             to_insert = []
-            history_rows = []
             for i, r in enumerate(remarks):
                 values = (
                     r.get("place", ""), r.get("category", ""), r.get("description", ""), r.get("normRef", ""),
@@ -520,8 +559,13 @@ def handler(event: dict, context) -> dict:
                         new_value = r.get(field, "") or ""
                         if old_value != new_value:
                             history_rows.append((r["id"], pid, field, old_value, new_value, changed_by, changed_by_name))
+                    old_photos = old.get("photos") or []
+                    new_photos = r.get("photos", []) or []
+                    if old_photos != new_photos:
+                        history_rows.append((r["id"], pid, "photos", str(len(old_photos)), str(len(new_photos)), changed_by, changed_by_name))
                 else:
                     to_insert.append((r["id"], pid) + values)
+                    history_rows.append((r["id"], pid, "added", "", r.get("description", "") or "", changed_by, changed_by_name))
 
             if to_update:
                 cur.executemany(

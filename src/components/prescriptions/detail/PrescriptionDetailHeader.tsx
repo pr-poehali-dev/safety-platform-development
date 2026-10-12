@@ -24,8 +24,8 @@ interface PrescriptionDetailHeaderProps {
   setAllRemarksStatus: (status: Status) => void;
   template: Template;
   onClose: () => void;
-  activeTab: "remarks" | "chat";
-  setActiveTab: (t: "remarks" | "chat") => void;
+  activeTab: "remarks" | "chat" | "history";
+  setActiveTab: (t: "remarks" | "chat" | "history") => void;
 }
 
 export function PrescriptionDetailHeader({
@@ -88,6 +88,13 @@ export function PrescriptionDetailHeader({
           <Icon name="MessageSquare" size={14} />
           Переписка
           {p.comments.length > 0 && <span className="text-[11px] bg-secondary text-muted-foreground px-1.5 py-0.5 rounded font-medium">{p.comments.length}</span>}
+        </button>
+        <button
+          onClick={() => setActiveTab("history")}
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === "history" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          <Icon name="History" size={14} />
+          История
         </button>
       </div>
     </>

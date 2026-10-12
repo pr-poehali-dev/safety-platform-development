@@ -17,6 +17,11 @@ const FIELD_LABELS: Record<string, string> = {
   category: "Вид нарушения",
   description: "Описание",
   status: "Статус",
+  normRef: "Нарушенный пункт НПА",
+  deadline: "Срок устранения",
+  photos: "Фото",
+  added: "Пункт добавлен",
+  removed: "Пункт удалён",
 };
 
 function fmtDate(iso: string): string {
