@@ -37,10 +37,13 @@ export function PrescriptionsTab({ currentUser }: { currentUser?: AppUser }) {
   };
 
   const handleSavePrescription = async (p: Prescription) => {
+    const base = prescriptions.find(x => x.id === p.id);
+    const keepIds = new Set(p.remarks.map(r => r.id));
+    const deletedRemarkIds = base ? base.remarks.filter(r => !keepIds.has(r.id)).map(r => r.id) : [];
     await fetch(PRESCRIPTIONS_API, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...p, changedBy: currentUser?.login ?? "", changedByName: currentUser?.name ?? "" }),
+      body: JSON.stringify({ ...p, deletedRemarkIds, changedBy: currentUser?.login ?? "", changedByName: currentUser?.name ?? "" }),
     });
     setPrescriptions(prev => prev.map(x => x.id === p.id ? p : x));
     setEditPrescription(null);

@@ -61,11 +61,30 @@ export function useIndexPrescriptions(user: AppUser) {
     setPrescriptions(prev => [saved, ...prev]);
   };
 
+  const reloadPrescriptions = () =>
+    fetch(`${API}?full=1`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setPrescriptions(data); })
+      .catch(() => {});
+
+  useEffect(() => {
+    const onFocus = () => { if (document.visibilityState === "visible") reloadPrescriptions(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, []);
+
   const updatePrescription = async (updated: Prescription) => {
+    const base = prescriptions.find(p => p.id === updated.id);
+    const keepIds = new Set(updated.remarks.map(r => r.id));
+    const deletedRemarkIds = base ? base.remarks.filter(r => !keepIds.has(r.id)).map(r => r.id) : [];
     const res = await fetchWithRetry(API, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...updated, changedBy: user.login, changedByName: user.name }),
+      body: JSON.stringify({ ...updated, deletedRemarkIds, changedBy: user.login, changedByName: user.name }),
     });
     if (!res.ok) {
       throw new Error("Не удалось сохранить изменения. Попробуйте ещё раз.");

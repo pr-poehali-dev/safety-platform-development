@@ -486,7 +486,8 @@ def handler(event: dict, context) -> dict:
             remarks = p.get("remarks", [])
             new_ids = {r["id"] for r in remarks}
 
-            removed_ids = list(existing_ids - new_ids)
+            deleted_by_client = set(p.get("deletedRemarkIds") or [])
+            removed_ids = list(existing_ids & deleted_by_client - new_ids)
             if removed_ids:
                 cur.execute(f"DELETE FROM {SCHEMA}.remarks WHERE prescription_id = %s AND id = ANY(%s)", (pid, removed_ids))
 

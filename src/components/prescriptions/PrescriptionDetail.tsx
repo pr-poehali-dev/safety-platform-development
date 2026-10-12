@@ -61,6 +61,15 @@ export function PrescriptionDetail({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
+  const commit = (updated: Prescription) => {
+    const previous = p;
+    setP(updated);
+    onUpdate(updated).catch(() => {
+      setP(previous);
+      alert("Не удалось сохранить изменения на сервере. Проверьте соединение и повторите действие.");
+    });
+  };
+
   const handleRemarkPhotos = async (remarkId: string, files: FileList | null) => {
     if (!files || !files.length) return;
     const remark = p.remarks.find(r => r.id === remarkId);
@@ -92,8 +101,7 @@ export function PrescriptionDetail({
       r.id === remarkId ? { ...r, photos: [...existing, ...urls] } : r
     );
     const updated = { ...p, remarks };
-    setP(updated);
-    onUpdate(updated);
+    commit(updated);
     setUploadingRemarkId(null);
     const input = photoInputRefs.current[remarkId];
     if (input) input.value = "";
@@ -104,8 +112,7 @@ export function PrescriptionDetail({
       r.id === remarkId ? { ...r, photos: (r.photos ?? []).filter((_, i) => i !== photoIdx) } : r
     );
     const updated = { ...p, remarks };
-    setP(updated);
-    onUpdate(updated);
+    commit(updated);
   };
 
   const saveEditedPhoto = async (remarkId: string, photoIdx: number, dataUrl: string) => {
@@ -120,8 +127,7 @@ export function PrescriptionDetail({
       r.id === remarkId ? { ...r, photos: (r.photos ?? []).map((url, i) => (i === photoIdx ? data.url : url)) } : r
     );
     const updated = { ...p, remarks };
-    setP(updated);
-    onUpdate(updated);
+    commit(updated);
   };
 
   const isContractor = user.role === "contractor";
@@ -157,8 +163,7 @@ export function PrescriptionDetail({
       attachments: attachments.length > 0 ? [...attachments] : undefined,
     };
     const updated = { ...p, comments: [...p.comments, c] };
-    setP(updated);
-    onUpdate(updated);
+    commit(updated);
     setNewComment("");
     setAttachments([]);
   };
@@ -170,8 +175,7 @@ export function PrescriptionDetail({
     }
     const remarks = p.remarks.map(r => r.id === remarkId ? { ...r, status } : r);
     const updated = { ...p, remarks };
-    setP(updated);
-    onUpdate(updated);
+    commit(updated);
   };
 
   const setAllRemarksStatus = (status: Status) => {
@@ -181,8 +185,7 @@ export function PrescriptionDetail({
     }
     const remarks = p.remarks.map(r => ({ ...r, status }));
     const updated = { ...p, remarks };
-    setP(updated);
-    onUpdate(updated);
+    commit(updated);
   };
 
   const canChangeStatus = user.role === "manager" || p.createdBy === user.login;
@@ -191,8 +194,7 @@ export function PrescriptionDetail({
   const deleteRemark = (remarkId: string) => {
     const remarks = p.remarks.filter(r => r.id !== remarkId);
     const updated = { ...p, remarks };
-    setP(updated);
-    onUpdate(updated);
+    commit(updated);
     setDeleteRemarkId(null);
   };
 
