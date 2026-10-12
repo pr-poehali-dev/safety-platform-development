@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Icon from "@/components/ui/icon";
 import { AppUser } from "@/lib/auth";
 import {
@@ -11,6 +11,7 @@ import { GeneralInfoSection, FormState } from "./form/GeneralInfoSection";
 
 export { Field, InputBase, TextareaBase, SelectBase, DatePicker };
 
+const PRESCRIPTIONS_URL = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
 const CATEGORIES_URL = "https://functions.poehali.dev/ea358d23-fa1e-4907-88c0-87cd78732293";
 const OBJECTS_URL = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
 const CONTRACTORS_URL = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
@@ -116,33 +117,88 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
     };
   };
 
-  const handleSave = async () => {
-    if (!isValid || isSaving) return;
-    setIsSaving(true);
-    setSaveError(null);
+  const editId = editPrescription?.id;
+  const baseVersion = useRef<string | null>(null);
+  const [stale, setStale] = useState(false);
+  const [conflict, setConflict] = useState<null | "save" | "draft">(null);
+
+  const fetchVersion = async (): Promise<string | null> => {
+    if (!editId) return null;
     try {
-      await onSave(buildPrescription(false));
+      const r = await fetch(`${PRESCRIPTIONS_URL}?type=version&id=${encodeURIComponent(editId)}`);
+      const d = await r.json();
+      return d.version ?? null;
+    } catch {
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    if (!editId) return;
+    let alive = true;
+    fetchVersion().then(v => { if (alive && baseVersion.current === null) baseVersion.current = v; });
+    const check = async () => {
+      if (document.visibilityState !== "visible" || baseVersion.current === null) return;
+      const v = await fetchVersion();
+      if (alive && v && v !== baseVersion.current) setStale(true);
+    };
+    const timer = setInterval(check, 20000);
+    document.addEventListener("visibilitychange", check);
+    return () => { alive = false; clearInterval(timer); document.removeEventListener("visibilitychange", check); };
+  }, [editId]);
+
+  const reloadFromServer = async () => {
+    try {
+      const r = await fetch(`${PRESCRIPTIONS_URL}?full=1`);
+      const data: Prescription[] = await r.json();
+      const fresh = data.find(x => x.id === editId);
+      if (!fresh) throw new Error("not found");
+      setForm({
+        object: fresh.object,
+        contractor: fresh.contractor,
+        contractNumber: fresh.contractNumber || "",
+        representative: fresh.representative || "",
+        representativeEnabled: !!fresh.representative,
+        replyEmail: fresh.replyEmail,
+        reportDeadline: fresh.reportDeadline,
+        remarks: fresh.remarks.map(x => ({ ...x })),
+      });
+      baseVersion.current = await fetchVersion();
+      setStale(false);
+      setConflict(null);
+      setShowCloseConfirm(false);
+    } catch {
+      setSaveError("Не удалось обновить данные. Проверьте соединение и попробуйте ещё раз.");
+    }
+  };
+
+  const doSave = async (asDraft: boolean, force: boolean) => {
+    if (isSaving) return;
+    setSaveError(null);
+    if (editId && !force) {
+      const v = await fetchVersion();
+      if (v && baseVersion.current && v !== baseVersion.current) {
+        setStale(true);
+        setConflict(asDraft ? "draft" : "save");
+        return;
+      }
+    }
+    setConflict(null);
+    setIsSaving(true);
+    try {
+      await onSave(buildPrescription(asDraft));
       onClose();
     } catch {
-      setSaveError("Не удалось сохранить предписание. Проверьте соединение и попробуйте ещё раз.");
+      setSaveError(asDraft
+        ? "Не удалось сохранить черновик. Проверьте соединение и попробуйте ещё раз."
+        : "Не удалось сохранить предписание. Проверьте соединение и попробуйте ещё раз.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleSaveDraft = async () => {
-    if (isSaving) return;
-    setIsSaving(true);
-    setSaveError(null);
-    try {
-      await onSave(buildPrescription(true));
-      onClose();
-    } catch {
-      setSaveError("Не удалось сохранить черновик. Проверьте соединение и попробуйте ещё раз.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const handleSave = () => { if (isValid) doSave(false, false); };
+  const handleSaveDraft = () => doSave(true, false);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -154,6 +210,13 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
             <Icon name="X" size={22} />
           </button>
         </div>
+        {stale && (
+          <div className="flex items-center gap-3 px-12 py-3 bg-amber-500/15 border-b border-amber-500/40 text-sm flex-shrink-0">
+            <Icon name="TriangleAlert" size={16} />
+            <span className="flex-1">Это предписание изменили на другом компьютере. Обновите данные, чтобы не потерять чужие правки (ваши несохранённые правки в форме будут заменены).</span>
+            <button onClick={reloadFromServer} className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium">Обновить</button>
+          </div>
+        )}
         <div className="overflow-y-auto flex-1 px-12 py-10 space-y-10">
           <GeneralInfoSection
             form={form}
@@ -219,6 +282,23 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
           </button>
         </div>
       </div>
+
+      {conflict && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-card border border-border rounded-xl w-full max-w-md shadow-2xl p-6 animate-fade-in space-y-4">
+            <h3 className="text-lg font-semibold">Предписание уже изменено</h3>
+            <p className="text-sm text-muted-foreground">
+              Пока вы его редактировали, его изменили с другого компьютера. Рекомендуем обновить данные и внести свои правки заново, иначе чужие изменения могут быть перезаписаны.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setConflict(null)} className="px-4 py-2 rounded-md border border-border text-sm text-muted-foreground hover:text-foreground">Назад</button>
+              <button onClick={() => doSave(conflict === "draft", true)} className="px-4 py-2 rounded-md border border-border text-sm">Сохранить всё равно</button>
+              <button onClick={reloadFromServer} className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium">Обновить данные</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showCloseConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={e => e.stopPropagation()}>
