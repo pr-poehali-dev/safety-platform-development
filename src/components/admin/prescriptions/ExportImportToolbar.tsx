@@ -30,8 +30,10 @@ export function ExportImportToolbar({
   const [exportDateTo, setExportDateTo] = useState("");
   const [exportObjects, setExportObjects] = useState<string[]>([]);
   const [exportContractors, setExportContractors] = useState<string[]>([]);
+  const [exportInspectors, setExportInspectors] = useState<string[]>([]);
 
   const objectOptions = Array.from(new Set(filteredPrescriptions.map(p => p.object).filter(Boolean))).sort((a, b) => a.localeCompare(b, "ru"));
+  const inspectorOptions = Array.from(new Set(filteredPrescriptions.map(p => p.inspector).filter(Boolean))).sort((a, b) => a.localeCompare(b, "ru"));
   const contractorOptions = Array.from(new Set(filteredPrescriptions.map(p => p.contractor).filter(Boolean))).sort((a, b) => a.localeCompare(b, "ru"));
 
   const toggleExportStatus = (s: Status) => {
@@ -45,6 +47,7 @@ export function ExportImportToolbar({
     if (!exportStatuses.includes(overallStatus(p.remarks))) return false;
     if (exportObjects.length > 0 && !exportObjects.includes(p.object)) return false;
     if (exportContractors.length > 0 && !exportContractors.includes(p.contractor)) return false;
+    if (exportInspectors.length > 0 && !exportInspectors.includes(p.inspector)) return false;
     if (exportDateFromObj || exportDateToObj) {
       const d = parsePrescriptionDate(p.date);
       if (!d) return false;
@@ -61,6 +64,7 @@ export function ExportImportToolbar({
       if (!exportStatuses.includes(overallStatus(p.remarks))) return false;
       if (exportObjects.length > 0 && !exportObjects.includes(p.object)) return false;
       if (exportContractors.length > 0 && !exportContractors.includes(p.contractor)) return false;
+    if (exportInspectors.length > 0 && !exportInspectors.includes(p.inspector)) return false;
       if (exportDateFromObj || exportDateToObj) {
         const d = parsePrescriptionDate(p.date);
         if (!d) return false;
@@ -304,6 +308,7 @@ export function ExportImportToolbar({
 
             <ExportMultiFilter label="Объект" options={objectOptions} value={exportObjects} onChange={setExportObjects} />
             <ExportMultiFilter label="Подрядчик" options={contractorOptions} value={exportContractors} onChange={setExportContractors} />
+            <ExportMultiFilter label="Проверяющий" options={inspectorOptions} value={exportInspectors} onChange={setExportInspectors} />
 
             <p className="text-xs text-muted-foreground mb-2">Период составления предписаний</p>
             <div className="grid grid-cols-2 gap-2 mb-2">
