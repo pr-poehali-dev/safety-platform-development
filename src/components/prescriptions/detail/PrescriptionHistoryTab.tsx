@@ -26,6 +26,18 @@ const FIELD_LABELS: Record<string, string> = {
   added: "Пункт добавлен",
   removed: "Пункт удалён",
   comment: "Комментарий",
+  created: "Предписание создано",
+  g_number: "Номер предписания",
+  g_date: "Дата выдачи",
+  g_object: "Объект",
+  g_contractor: "Подрядчик",
+  g_contractNumber: "Номер договора",
+  g_inspector: "Кем выдано",
+  g_inspectorNominative: "Кем выдано (именительный падеж)",
+  g_representative: "Представитель подрядчика",
+  g_responsible: "Ответственный",
+  g_replyEmail: "Почта для ответа",
+  g_reportDeadline: "Срок предоставления отчёта",
 };
 
 const FIELD_ICONS: Record<string, string> = {
@@ -34,6 +46,7 @@ const FIELD_ICONS: Record<string, string> = {
   added: "PlusCircle",
   removed: "Trash2",
   comment: "MessageSquare",
+  created: "FilePlus",
 };
 
 function fmtDate(iso: string): string {
@@ -43,6 +56,9 @@ function fmtDate(iso: string): string {
 }
 
 function Body({ e }: { e: HistoryEntry }) {
+  if (e.field === "created") {
+    return <p className="text-sm text-foreground">Предписание {e.newValue} создано</p>;
+  }
   if (e.field === "added") {
     return <p className="text-sm text-foreground">{e.newValue || "Без описания"}</p>;
   }
@@ -90,6 +106,7 @@ export function PrescriptionHistoryTab({ prescriptionId, comments, refreshKey }:
 
   const filters = [
     { id: "all", label: "Всё" },
+    { id: "general", label: "Общие данные" },
     { id: "remarks", label: "Пункты" },
     { id: "status", label: "Статусы" },
     { id: "comment", label: "Комментарии" },
@@ -98,7 +115,8 @@ export function PrescriptionHistoryTab({ prescriptionId, comments, refreshKey }:
 
   const visible = useMemo(() => entries.filter(e => {
     if (filter === "all") return true;
-    if (filter === "remarks") return !["status", "comment", "photos"].includes(e.field);
+    if (filter === "general") return e.field === "created" || e.field.startsWith("g_");
+    if (filter === "remarks") return !["status", "comment", "photos", "created"].includes(e.field) && !e.field.startsWith("g_");
     return e.field === filter;
   }), [entries, filter]);
 

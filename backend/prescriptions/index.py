@@ -446,6 +446,11 @@ def handler(event: dict, context) -> dict:
                  p.get("createdBy", ""),
                  p.get("inspectorNominative", ""))
             )
+            cur.execute(
+                f"INSERT INTO {SCHEMA}.remark_history (remark_id, prescription_id, field, old_value, new_value, changed_by, changed_by_name) "
+                f"VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                ("", pid, "created", "", number, p.get("createdBy", ""), p.get("changedByName", "") or p.get("createdBy", ""))
+            )
             remarks = p.get("remarks", [])
             if remarks:
                 cur.executemany(
@@ -462,8 +467,27 @@ def handler(event: dict, context) -> dict:
             p = body
             pid = p["id"]
 
-            cur.execute(f"SELECT created_by, comments FROM {SCHEMA}.prescriptions WHERE id=%s", (pid,))
+            cur.execute(
+                f"SELECT created_by, comments, number, date, object, contractor, inspector, representative, responsible, "
+                f"reply_email, report_deadline, contract_number, inspector_nominative FROM {SCHEMA}.prescriptions WHERE id=%s", (pid,))
             existing_row = cur.fetchone()
+            general_history = []
+            if existing_row:
+                general_old = {
+                    "number": existing_row[2], "date": existing_row[3], "object": existing_row[4], "contractor": existing_row[5],
+                    "inspector": existing_row[6], "representative": existing_row[7], "responsible": existing_row[8],
+                    "replyEmail": existing_row[9], "reportDeadline": existing_row[10],
+                    "contractNumber": existing_row[11], "inspectorNominative": existing_row[12],
+                }
+                for key, old_v in general_old.items():
+                    new_v = p.get(key)
+                    if new_v is None and key != "contractNumber":
+                        continue
+                    old_s = (old_v or "")
+                    new_s = (new_v or "")
+                    if old_s != new_s:
+                        general_history.append(("", pid, "g_" + key, old_s, new_s,
+                                                p.get("changedBy", ""), p.get("changedByName", "")))
             old_comments = []
             creator_login = None
             if existing_row:
@@ -585,6 +609,12 @@ def handler(event: dict, context) -> dict:
                     f"INSERT INTO {SCHEMA}.remark_history (remark_id, prescription_id, field, old_value, new_value, changed_by, changed_by_name) "
                     f"VALUES (%s,%s,%s,%s,%s,%s,%s)",
                     history_rows
+                )
+            if general_history:
+                cur.executemany(
+                    f"INSERT INTO {SCHEMA}.remark_history (remark_id, prescription_id, field, old_value, new_value, changed_by, changed_by_name) "
+                    f"VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                    general_history
                 )
             conn.commit()
             return ok({"ok": True})

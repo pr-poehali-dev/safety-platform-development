@@ -52,7 +52,7 @@ export function useIndexPrescriptions(user: AppUser) {
   }, [user.login]);
 
   const addPrescription = async (p: Prescription) => {
-    const res = await fetchWithRetry(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) });
+    const res = await fetchWithRetry(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...p, changedByName: user.name }) });
     if (!res.ok) {
       throw new Error("Не удалось сохранить предписание. Попробуйте ещё раз.");
     }
