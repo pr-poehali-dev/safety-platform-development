@@ -1,4 +1,6 @@
+import { Fragment } from "react";
 import Icon from "@/components/ui/icon";
+import { RemarkMatches, matchingRemarks, searchWords } from "@/components/prescriptions/list/RemarkMatches";
 import { AppUser } from "@/lib/auth";
 import { Template } from "@/lib/template";
 import { printPrescription, downloadPrescriptionWord } from "@/lib/printPrescription";
@@ -25,6 +27,7 @@ export function PrescriptionListTable({
   user, loading, filtered, search, uniqueDeadlines, colFilterDeadline, onColFilterDeadlineChange,
   activeTemplate, onSelect, onStatusChange,
 }: PrescriptionListTableProps) {
+  const words = searchWords(search);
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
       {loading ? (
@@ -59,9 +62,10 @@ export function PrescriptionListTable({
               {filtered.map(p => {
                 const status = overallStatus(p.remarks);
                 const nearestDeadline = p.remarks.map(r => r.deadline).sort()[0];
+                const matches = matchingRemarks(p.remarks, words);
                 return (
+                  <Fragment key={p.id}>
                   <tr
-                    key={p.id}
                     onClick={() => onSelect(p)}
                     className="hover:bg-secondary/30 cursor-pointer transition-colors group"
                   >
@@ -137,6 +141,14 @@ export function PrescriptionListTable({
                       </div>
                     </td>
                   </tr>
+                  {matches.length > 0 && (
+                    <tr onClick={() => onSelect(p)} className="cursor-pointer bg-secondary/10">
+                      <td colSpan={8} className="px-5 pb-4 pt-0">
+                        <RemarkMatches remarks={p.remarks} words={words} />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 );
               })}
             </tbody>

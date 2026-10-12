@@ -304,13 +304,14 @@ def handler(event: dict, context) -> dict:
             args: list = []
 
             search = (qs.get("search") or "").strip()
-            if search:
+            for word in search.split()[:10]:
                 where.append(
                     "(p.number ILIKE %s OR p.object ILIKE %s OR p.contractor ILIKE %s OR EXISTS ("
-                    f"SELECT 1 FROM {SCHEMA}.remarks r0 WHERE r0.prescription_id = p.id AND r0.description ILIKE %s))"
+                    f"SELECT 1 FROM {SCHEMA}.remarks r0 WHERE r0.prescription_id = p.id AND "
+                    "(r0.description ILIKE %s OR r0.place ILIKE %s OR r0.norm_ref ILIKE %s OR r0.category ILIKE %s)))"
                 )
-                like = f"%{search}%"
-                args.extend([like, like, like, like])
+                like = "%" + word.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+                args.extend([like] * 7)
 
             def multi(param, column):
                 values = [v for v in (qs.get(param) or "").split("|") if v]
