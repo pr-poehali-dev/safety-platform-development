@@ -13,9 +13,9 @@ interface TaskFormProps {
 }
 
 const ALLOWED_ROLES: Record<string, string[]> = {
-  manager: ["specialist", "contractor"],
+  manager: ["specialist", "contractor", "project_team"],
   specialist: ["contractor"],
-  admin: ["specialist", "contractor", "manager"],
+  admin: ["specialist", "contractor", "manager", "project_team"],
 };
 
 export default function TaskForm({ user, onClose, onSave, editing, onUpdate, availableUsers }: TaskFormProps) {
