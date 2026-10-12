@@ -79,6 +79,15 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
   const isMobile = useIsMobile();
   const [chartType, setChartType] = useState<ChartType>("bar");
 
+  const [showTop, setShowTop] = useState(true);
+  const TOP_N = 5;
+
+  const barData = useMemo(() => {
+    if (!isMobile || !showTop || chartData.length <= TOP_N) return chartData;
+    const total = (row: Record<string, unknown>) => contractors.reduce((sum, c) => sum + (Number(row[c]) || 0), 0);
+    return [...chartData].sort((a, b) => total(b) - total(a)).slice(0, TOP_N);
+  }, [chartData, contractors, isMobile, showTop]);
+
   const singleContractor = contractors.length === 1 ? contractors[0] : null;
 
   const pieData = useMemo(() => {
@@ -142,15 +151,31 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
       <div className="bg-card border border-border rounded-xl p-4">
         {chartType === "bar" ? (
           <div className="overflow-x-auto -mx-2 px-2">
-            {isMobile && (
+            {isMobile && chartData.length > TOP_N && (
+              <div className="flex items-center gap-1 bg-secondary/40 border border-border rounded-lg p-0.5 mb-3 w-full">
+                <button
+                  onClick={() => setShowTop(true)}
+                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${showTop ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                >
+                  Топ-{TOP_N} категорий
+                </button>
+                <button
+                  onClick={() => setShowTop(false)}
+                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${!showTop ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                >
+                  Все ({chartData.length})
+                </button>
+              </div>
+            )}
+            {isMobile && (!showTop || chartData.length <= TOP_N) && (
               <p className="text-[11px] text-muted-foreground mb-2 flex items-center gap-1">
                 <Icon name="MoveHorizontal" size={12} />
                 Проведите по диаграмме влево и вправо
               </p>
             )}
-            <div style={{ minWidth: isMobile ? Math.max(chartData.length * 64, 320) : undefined }}>
+            <div style={{ minWidth: isMobile ? Math.max(barData.length * 64, 320) : undefined }}>
           <ResponsiveContainer width="100%" height={500}>
-            <BarChart data={chartData} margin={{ top: 8, right: 20, left: 0, bottom: 140 }}>
+            <BarChart data={barData} margin={{ top: 8, right: 20, left: 0, bottom: 140 }}>
               <XAxis
                 dataKey="category"
                 tick={{ fontSize: 10, fill: "#8b9ab0" }}
@@ -181,7 +206,7 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
               />
               {contractors.map((c, i) => (
                 <Bar key={c} dataKey={c} stackId="a" fill={COLORS[i % COLORS.length]} radius={i === contractors.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}>
-                  {chartData.map((_, ci) => (
+                  {barData.map((_, ci) => (
                     <Cell key={ci} fill={COLORS[i % COLORS.length]} />
                   ))}
                   {i === contractors.length - 1 && (
@@ -191,7 +216,7 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
                       content={(props) => {
                         const { x, y, width, index } = props as { x?: number; y?: number; width?: number; index?: number };
                         if (index === undefined || x === undefined || y === undefined || width === undefined) return null;
-                        const row = chartData[index];
+                        const row = barData[index];
                         const total = contractors.reduce((sum, co) => sum + (Number(row[co]) || 0), 0);
                         if (!total) return null;
                         return (
