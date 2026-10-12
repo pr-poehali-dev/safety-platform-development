@@ -4,6 +4,7 @@ import {
   PieChart, Pie, LabelList,
 } from "recharts";
 import Icon from "@/components/ui/icon";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const COLORS = [
   "#6366f1", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6",
@@ -12,6 +13,26 @@ const COLORS = [
 ];
 
 type ChartType = "bar" | "pie";
+
+const RADIAN = Math.PI / 180;
+
+interface InnerLabelProps {
+  cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number;
+  percent: number; value: number;
+}
+
+const renderInnerLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, value }: InnerLabelProps) => {
+  if (percent < 0.04) return null;
+  const r = innerRadius + (outerRadius - innerRadius) * 0.6;
+  const x = cx + r * Math.cos(-midAngle * RADIAN);
+  const y = cy + r * Math.sin(-midAngle * RADIAN);
+  return (
+    <text x={x} y={y} fill="#ffffff" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={600} stroke="rgba(0,0,0,0.35)" strokeWidth={0.5} paintOrder="stroke">
+      <tspan x={x} dy="-0.5em">{(percent * 100).toFixed(0)}%</tspan>
+      <tspan x={x} dy="1.2em">({value})</tspan>
+    </text>
+  );
+};
 
 interface PieTooltipPayload {
   name: string;
@@ -55,6 +76,7 @@ interface RemarksChartProps {
 }
 
 export default function RemarksChart({ chartData, contractors }: RemarksChartProps) {
+  const isMobile = useIsMobile();
   const [chartType, setChartType] = useState<ChartType>("bar");
 
   const singleContractor = contractors.length === 1 ? contractors[0] : null;
@@ -177,17 +199,17 @@ export default function RemarksChart({ chartData, contractors }: RemarksChartPro
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <ResponsiveContainer width="100%" height={420}>
-            <PieChart>
+          <ResponsiveContainer width="100%" height={isMobile ? 380 : 420}>
+            <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
               <Pie
                 data={pieData}
                 dataKey="value"
                 nameKey="name"
                 cx="50%"
                 cy="50%"
-                outerRadius={140}
-                label={({ percent, value }) => `${((percent ?? 0) * 100).toFixed(0)}% (${value})`}
-                labelLine={{ stroke: "#8b9ab0" }}
+                outerRadius={isMobile ? "95%" : 140}
+                label={isMobile ? renderInnerLabel : ({ percent, value }) => `${((percent ?? 0) * 100).toFixed(0)}% (${value})`}
+                labelLine={isMobile ? false : { stroke: "#8b9ab0" }}
               >
                 {pieData.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
