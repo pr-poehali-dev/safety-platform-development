@@ -9,6 +9,7 @@ import { TemplatesTab } from "@/components/admin/TemplatesTab";
 import { DataTab } from "@/components/admin/DataTab";
 import { InspectionsTab } from "@/components/admin/InspectionsTab";
 import { SuspensionsTab } from "@/components/admin/SuspensionsTab";
+import { BackupsTab } from "@/components/admin/BackupsTab";
 import Index from "@/pages/Index";
 import AdminVisibilityBar from "@/components/admin/AdminVisibilityBar";
 import { useAdminVisibilityEditor } from "@/hooks/useVisibilitySettings";
@@ -23,7 +24,7 @@ interface AdminProps {
 }
 
 export default function Admin({ currentUser, users, onUsersChange, onLogout }: AdminProps) {
-  const [tab, setTab] = useState<"overview" | "users" | "prescriptions" | "inspections" | "suspensions" | "templates" | "data">("users");
+  const [tab, setTab] = useState<"overview" | "users" | "prescriptions" | "inspections" | "suspensions" | "templates" | "data" | "backups">("users");
   const visibilityEditor = useAdminVisibilityEditor();
 
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -128,6 +129,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
             { key: "suspensions", label: "Управление Приостановками", icon: "OctagonPause" },
             { key: "templates", label: "Управление шаблонами", icon: "FileText" },
             { key: "data", label: "Управление данными", icon: "Database" },
+            { key: "backups", label: "Бэкапы", icon: "DatabaseBackup" },
           ] as const).map(t => (
             <button
               key={t.key}
@@ -164,6 +166,7 @@ export default function Admin({ currentUser, users, onUsersChange, onLogout }: A
         {tab === "inspections" && <InspectionsTab />}
         {tab === "suspensions" && <SuspensionsTab />}
         {tab === "data" && <DataTab currentAdminLogin={currentUser.login} />}
+        {tab === "backups" && <BackupsTab currentUserId={currentUser.id} />}
       </main>
     </div>
   );
