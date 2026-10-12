@@ -7,6 +7,7 @@ import RoutineWeekPanel from "./RoutineWeekPanel";
 import TasksFilters from "./TasksFilters";
 import TasksBulkBar from "./TasksBulkBar";
 import TasksManagerTable, { TasksCardList } from "./TasksManagerTable";
+import { TaskHistoryEntry } from "./TaskHistoryBlock";
 import TaskDeleteConfirm from "./TaskDeleteConfirm";
 import { STATUS_FILTERS, FILTER_STATUSES } from "./tasksShared";
 import Icon from "@/components/ui/icon";
@@ -24,9 +25,10 @@ interface TasksBlockProps {
   onAction: (payload: Record<string, unknown>) => Promise<void>;
   onSendComment: (assignment_id: number, message: string) => Promise<void>;
   onFetchComments: (assignment_id: number) => Promise<TaskComment[]>;
+  onFetchHistory?: (assignment_id: number) => Promise<TaskHistoryEntry[]>;
 }
 
-export default function TasksBlock({ user, availableUsers, assignments, loading, initialFilter, initialTaskId, onCreateTask, onUpdateTask, onDeleteTask, onAction, onSendComment, onFetchComments }: TasksBlockProps) {
+export default function TasksBlock({ user, availableUsers, assignments, loading, initialFilter, initialTaskId, onCreateTask, onUpdateTask, onDeleteTask, onAction, onSendComment, onFetchComments, onFetchHistory }: TasksBlockProps) {
 
   const [selected, setSelected] = useState<TaskAssignment | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -257,6 +259,7 @@ export default function TasksBlock({ user, availableUsers, assignments, loading,
           }}
           onSendComment={onSendComment}
           fetchComments={onFetchComments}
+          fetchHistory={onFetchHistory}
           allUsers={availableUsers}
           onEdit={canCreate ? () => { setEditing(selected); setShowForm(true); setSelected(null); } : undefined}
           onDelete={canCreate ? () => { setConfirmDelete(selected); setSelected(null); } : undefined}

@@ -15,7 +15,7 @@ export type MergedNotification = {
 };
 
 export function useAppNotifications(user: AppUser) {
-  const { assignments, notifications: taskNotifications, unreadCount: taskUnreadCount, markAllRead: markTaskNotificationsRead, createTask, updateTask, deleteTask, action, sendComment, fetchComments, load: reloadTasks, loading: tasksLoading } = useTasks(user);
+  const { assignments, notifications: taskNotifications, unreadCount: taskUnreadCount, markAllRead: markTaskNotificationsRead, createTask, updateTask, deleteTask, action, sendComment, fetchComments, fetchHistory, load: reloadTasks, loading: tasksLoading } = useTasks(user);
   const { notifications: inspectionNotifications, unreadCount: inspectionUnreadCount, markAllRead: markInspectionNotificationsRead, load: reloadInspectionNotifications } = useInspectionNotifications(user);
   const { notifications: prescriptionNotifications, unreadCount: prescriptionUnreadCount, markAllRead: markPrescriptionNotificationsRead, load: reloadPrescriptionNotifications } = usePrescriptionNotifications(user);
 
@@ -61,5 +61,6 @@ export function useAppNotifications(user: AppUser) {
     action,
     sendComment,
     fetchComments,
+    fetchHistory,
   };
 }

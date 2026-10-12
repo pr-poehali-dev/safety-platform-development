@@ -14,6 +14,14 @@ CORS = {
 def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"])
 
+def log_history(cur, task_id, assignment_id, event_type, old_value="", new_value="", comment="", by="", by_name=""):
+    cur.execute(
+        f"""INSERT INTO {SCHEMA}.task_history
+            (task_id, assignment_id, event_type, old_value, new_value, comment, changed_by, changed_by_name)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+        (task_id, assignment_id, event_type, str(old_value or ""), str(new_value or ""), comment or "", by or "", by_name or "")
+    )
+
 def handler(event: dict, context) -> dict:
     """CRUD задач и поручений."""
     if event.get("httpMethod") == "OPTIONS":
@@ -21,6 +29,27 @@ def handler(event: dict, context) -> dict:
 
     method = event.get("httpMethod", "GET")
     params = event.get("queryStringParameters") or {}
+
+    if method == "GET" and params.get("type") == "history":
+        if params.get("role") not in ("manager", "admin"):
+            return {"statusCode": 403, "headers": CORS, "body": json.dumps({"error": "forbidden"})}
+        aid = params.get("assignment_id")
+        if not aid:
+            return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": "assignment_id required"})}
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute(
+            f"""SELECT event_type, old_value, new_value, comment, changed_by, changed_by_name, changed_at
+                FROM {SCHEMA}.task_history WHERE assignment_id = %s ORDER BY changed_at DESC, id DESC""",
+            (int(aid),)
+        )
+        rows = [
+            {"event_type": r[0], "old_value": r[1], "new_value": r[2], "comment": r[3],
+             "changed_by": r[4], "changed_by_name": r[5], "changed_at": r[6].isoformat() if r[6] else None}
+            for r in cur.fetchall()
+        ]
+        conn.close()
+        return {"statusCode": 200, "headers": CORS, "body": json.dumps(rows, ensure_ascii=False)}
 
     if method == "GET":
         conn = get_conn()
@@ -141,6 +170,10 @@ def handler(event: dict, context) -> dict:
             )
             assignment_ids.append(cur.fetchone()[0])
 
+        for i, a in enumerate(assignees):
+            log_history(cur, task_id, assignment_ids[i], "created", "", a["due_date"], "",
+                        body.get("created_by"), body.get("created_by_name"))
+
         # Уведомления назначенным
         for i, a in enumerate(assignees):
             cur.execute(
@@ -166,20 +199,46 @@ def handler(event: dict, context) -> dict:
         conn = get_conn()
         cur = conn.cursor()
 
+        by = body.get("changed_by", "")
+        by_name = body.get("changed_by_name", "")
+
         if description:
+            cur.execute(f"SELECT description FROM {SCHEMA}.tasks WHERE id = %s", (task_id,))
+            old_desc_row = cur.fetchone()
             cur.execute(
                 f"UPDATE {SCHEMA}.tasks SET description = %s WHERE id = %s",
                 (description, task_id)
             )
+            if old_desc_row and old_desc_row[0] != description:
+                cur.execute(f"SELECT id FROM {SCHEMA}.task_assignments WHERE task_id = %s", (task_id,))
+                for ar in cur.fetchall():
+                    log_history(cur, task_id, ar[0], "description_changed", old_desc_row[0], description, "", by, by_name)
 
+        today = date.today()
         for a in assignees:
             if a.get("assignment_id"):
                 cur.execute(
-                    f"""UPDATE {SCHEMA}.task_assignments
-                        SET due_date = %s, updated_at = NOW()
-                        WHERE id = %s""",
-                    (a["due_date"], a["assignment_id"])
+                    f"SELECT due_date, status FROM {SCHEMA}.task_assignments WHERE id = %s",
+                    (a["assignment_id"],)
                 )
+                old = cur.fetchone()
+                new_due = date.fromisoformat(str(a["due_date"])[:10])
+                old_due = old[0] if old else None
+                old_status = old[1] if old else None
+                new_status = old_status
+                if old_status in ("overdue", "active"):
+                    new_status = "overdue" if new_due < today else "active"
+                cur.execute(
+                    f"""UPDATE {SCHEMA}.task_assignments
+                        SET due_date = %s, status = %s, updated_at = NOW()
+                        WHERE id = %s""",
+                    (new_due, new_status, a["assignment_id"])
+                )
+                if old_due != new_due:
+                    log_history(cur, task_id, a["assignment_id"], "due_date_changed",
+                                old_due.isoformat() if old_due else "", new_due.isoformat(), "", by, by_name)
+                if old_status != new_status:
+                    log_history(cur, task_id, a["assignment_id"], "status_changed", old_status, new_status, "", by, by_name)
                 # Уведомление об изменении срока
                 cur.execute(
                     f"""INSERT INTO {SCHEMA}.task_notifications

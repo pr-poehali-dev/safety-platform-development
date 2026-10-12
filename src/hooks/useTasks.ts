@@ -48,7 +48,7 @@ export function useTasks(user: AppUser) {
     const res = await fetchWithRetry(TASKS_URL, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ task_id, description, assignees }),
+      body: JSON.stringify({ task_id, description, assignees, changed_by: user.login, changed_by_name: user.name }),
     });
     if (!res.ok) throw new Error("update task failed");
     await load();
@@ -64,7 +64,7 @@ export function useTasks(user: AppUser) {
     const res = await fetchWithRetry(ACTIONS_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, changed_by: user.login, changed_by_name: user.name }),
     });
     if (!res.ok) throw new Error("task action failed");
     await load();
@@ -85,6 +85,12 @@ export function useTasks(user: AppUser) {
     return res.json();
   };
 
+  const fetchHistory = async (assignment_id: number) => {
+    const res = await fetch(`${TASKS_URL}?type=history&assignment_id=${assignment_id}&role=${user.role}`);
+    if (!res.ok) throw new Error("fetch history failed");
+    return res.json();
+  };
+
   const markAllRead = async () => {
     await fetch(`${NOTIFICATIONS_URL}?type=task`, {
       method: "POST",
@@ -96,5 +102,5 @@ export function useTasks(user: AppUser) {
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
-  return { assignments, notifications, unreadCount, loading, load, createTask, updateTask, deleteTask, action, sendComment, fetchComments, markAllRead };
+  return { assignments, notifications, unreadCount, loading, load, createTask, updateTask, deleteTask, action, sendComment, fetchComments, fetchHistory, markAllRead };
 }

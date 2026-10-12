@@ -1,6 +1,7 @@
 import json
 import os
 import psycopg2
+from datetime import date
 
 SCHEMA = "t_p5901577_safety_platform_deve"
 
@@ -21,6 +22,19 @@ def notify(cur, user_login, assignment_id, event_type, message):
         (user_login, assignment_id, event_type, message)
     )
 
+def log_history(cur, assignment_id, event_type, old_value="", new_value="", comment="", by="", by_name=""):
+    cur.execute(
+        f"""INSERT INTO {SCHEMA}.task_history
+            (task_id, assignment_id, event_type, old_value, new_value, comment, changed_by, changed_by_name)
+            VALUES ((SELECT task_id FROM {SCHEMA}.task_assignments WHERE id = %s), %s, %s, %s, %s, %s, %s, %s)""",
+        (assignment_id, assignment_id, event_type, str(old_value or ""), str(new_value or ""), comment or "", by or "", by_name or "")
+    )
+
+def get_state(cur, assignment_id):
+    cur.execute(f"SELECT due_date, status FROM {SCHEMA}.task_assignments WHERE id = %s", (assignment_id,))
+    r = cur.fetchone()
+    return (r[0].isoformat() if r and r[0] else "", r[1] if r else "")
+
 def handler(event: dict, context) -> dict:
     """Действия над поручениями: отчёт, продление, принятие/отклонение, массовые действия."""
     if event.get("httpMethod") == "OPTIONS":
@@ -34,6 +48,13 @@ def handler(event: dict, context) -> dict:
 
     conn = get_conn()
     cur = conn.cursor()
+    by = body.get("changed_by", "")
+    by_name = body.get("changed_by_name", "")
+    if body.get("assignment_id"):
+        _, old_status = get_state(cur, body["assignment_id"])
+        old_due = get_state(cur, body["assignment_id"])[0]
+    else:
+        old_status, old_due = "", ""
 
     if action == "submit_report":
         assignment_id = body["assignment_id"]
@@ -163,6 +184,8 @@ def handler(event: dict, context) -> dict:
                 (ids,)
             )
             updated = cur.fetchall()
+            for r in updated:
+                log_history(cur, r[0], "status_changed", "", "done", "Массовое закрытие", by, by_name)
             if updated:
                 task_ids = list({r[2] for r in updated})
                 cur.execute(
@@ -188,14 +211,24 @@ def handler(event: dict, context) -> dict:
         ids = body.get("assignment_ids", [])
         new_date = body["new_date"]
         if ids:
+            cur.execute(f"SELECT id, due_date, status FROM {SCHEMA}.task_assignments WHERE id = ANY(%s)", (ids,))
+            before = {r[0]: (r[1].isoformat() if r[1] else "", r[2]) for r in cur.fetchall()}
+            is_future = date.fromisoformat(str(new_date)[:10]) >= date.today()
             cur.execute(
                 f"""UPDATE {SCHEMA}.task_assignments
-                    SET due_date = %s, updated_at = NOW()
+                    SET due_date = %s,
+                        status = CASE WHEN status = 'overdue' AND %s THEN 'active' ELSE status END,
+                        updated_at = NOW()
                     WHERE id = ANY(%s)
-                    RETURNING id, assignee_login, task_id""",
-                (new_date, ids)
+                    RETURNING id, assignee_login, task_id, status""",
+                (new_date, is_future, ids)
             )
             updated = cur.fetchall()
+            for r in updated:
+                ob = before.get(r[0], ("", ""))
+                log_history(cur, r[0], "due_date_changed", ob[0], str(new_date)[:10], "Массовый перенос срока", by, by_name)
+                if ob[1] != r[3]:
+                    log_history(cur, r[0], "status_changed", ob[1], r[3], "", by, by_name)
             if updated:
                 task_ids = list({r[2] for r in updated})
                 cur.execute(
@@ -259,6 +292,29 @@ def handler(event: dict, context) -> dict:
     else:
         conn.close()
         return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": "unknown action"})}
+
+    aid = body.get("assignment_id")
+    if aid and action in ("submit_report", "accept_report", "reject_report", "request_extension",
+                          "accept_extension", "reject_extension", "complete_self", "reassign"):
+        new_due, new_status = get_state(cur, aid)
+        if action == "submit_report":
+            log_history(cur, aid, "report_submitted", "", "", body.get("report_text", ""), by, by_name)
+        elif action == "accept_report":
+            log_history(cur, aid, "report_accepted", "", "", "", by, by_name)
+        elif action == "reject_report":
+            log_history(cur, aid, "report_rejected", "", "", body.get("comment", ""), by, by_name)
+        elif action == "request_extension":
+            log_history(cur, aid, "extension_requested", old_due, body.get("new_date", ""), body.get("comment", ""), by, by_name)
+        elif action == "accept_extension":
+            log_history(cur, aid, "extension_accepted", old_due, new_due, "", by, by_name)
+        elif action == "reject_extension":
+            log_history(cur, aid, "extension_rejected", "", "", body.get("comment", ""), by, by_name)
+        elif action == "complete_self":
+            log_history(cur, aid, "completed_self", "", "", "", by, by_name)
+        elif action == "reassign":
+            log_history(cur, aid, "reassigned", "", body.get("new_name", ""), "", by, by_name)
+        if old_status != new_status and action not in ("reassign",):
+            log_history(cur, aid, "status_changed", old_status, new_status, "", by, by_name)
 
     conn.commit()
     conn.close()

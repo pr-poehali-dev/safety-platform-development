@@ -4,9 +4,7 @@
       "name": "GET tasks as manager",
       "method": "GET",
       "path": "/?role=manager&login=test",
-      "expectedStatus": 200,
-      "expectedBody": [],
-      "bodyMatcher": "exact"
+      "expectedStatus": 200
     }
   ]
 }

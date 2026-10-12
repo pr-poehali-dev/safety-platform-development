@@ -51,7 +51,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
 
   const {
     assignments, notifications, unreadCount, markAllRead, tasksLoading,
-    createTask, updateTask, deleteTask, action, sendComment, fetchComments,
+    createTask, updateTask, deleteTask, action, sendComment, fetchComments, fetchHistory,
   } = useAppNotifications(user);
 
   const {
@@ -201,6 +201,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
             onAction={action}
             onSendComment={sendComment}
             onFetchComments={fetchComments}
+            onFetchHistory={fetchHistory}
           />
         </div>
       </div>

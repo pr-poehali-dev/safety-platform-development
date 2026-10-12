@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { TaskAssignment, TaskComment, TASK_STATUS_LABELS, TASK_STATUS_COLORS } from "@/lib/taskTypes";
 import { AppUser } from "@/lib/auth";
 import Icon from "@/components/ui/icon";
+import TaskHistoryBlock, { TaskHistoryEntry } from "./TaskHistoryBlock";
 
 interface TaskCardProps {
   assignment: TaskAssignment;
@@ -10,6 +11,7 @@ interface TaskCardProps {
   onAction: (payload: Record<string, unknown>) => Promise<void>;
   onSendComment: (assignment_id: number, message: string) => Promise<void>;
   fetchComments: (assignment_id: number) => Promise<TaskComment[]>;
+  fetchHistory?: (assignment_id: number) => Promise<TaskHistoryEntry[]>;
   onEdit?: () => void;
   onDelete?: () => void;
   allUsers?: { login: string; name: string; role: string }[];
@@ -25,7 +27,7 @@ function fmtDt(dt: string | null | undefined) {
   return new Date(dt).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-export default function TaskCard({ assignment, user, onClose, onAction, onSendComment, fetchComments, onEdit, onDelete, allUsers = [] }: TaskCardProps) {
+export default function TaskCard({ assignment, user, onClose, onAction, onSendComment, fetchComments, fetchHistory, onEdit, onDelete, allUsers = [] }: TaskCardProps) {
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [commentText, setCommentText] = useState("");
   const [sendingComment, setSendingComment] = useState(false);
@@ -296,6 +298,14 @@ export default function TaskCard({ assignment, user, onClose, onAction, onSendCo
               )}
             </div>
           </div>
+
+          {(user.role === "manager" || user.role === "admin") && fetchHistory && (
+            <TaskHistoryBlock
+              assignmentId={assignment.id}
+              refreshKey={`${assignment.updated_at}|${assignment.due_date}|${assignment.status}`}
+              fetchHistory={fetchHistory}
+            />
+          )}
 
           {/* Отчёт */}
           {assignment.report_text && (
