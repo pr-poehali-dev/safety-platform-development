@@ -99,7 +99,7 @@ export function StatusMultiSelect({ value, onChange }: {
     onChange(value.includes(s) ? value.filter(v => v !== s) : [...value, s]);
   };
 
-  const label = value.length === 0 ? "Все" : value.length === 1 ? value[0] : `Статус: ${value.length}`;
+  const label = value.length === 0 ? "Статус" : value.length === 1 ? value[0] : `Статус: ${value.length}`;
 
   return (
     <div ref={ref} className="relative">
