@@ -38,9 +38,9 @@ const REMARK_FIELD_LABELS: Record<string, string> = {
 
 // --- Строка замечания ---
 export function RemarkRow({
-  remark, index, onChange, onRemove, canRemove, categories, places, suspensionNumbers, highlight,
+  remark, index, onChange, onRemove, canRemove, categories, places, suspensionNumbers, highlight, onTakeServer,
 }: {
-  remark: Remark; index: number; onChange: (r: Remark) => void; onRemove: () => void; canRemove: boolean; categories: string[]; places: string[]; suspensionNumbers: string[]; highlight?: { kind: "changed" | "added" | "conflict" | "removed"; fields: string[] };
+  remark: Remark; index: number; onChange: (r: Remark) => void; onRemove: () => void; canRemove: boolean; categories: string[]; places: string[]; suspensionNumbers: string[]; highlight?: { kind: "changed" | "added" | "conflict" | "removed"; fields: string[] }; onTakeServer?: () => void;
 }) {
   const set = (key: keyof Remark, val: string | boolean) => onChange({ ...remark, [key]: val });
   const [uploading, setUploading] = useState(false);
@@ -105,6 +105,15 @@ export function RemarkRow({
             {highlight.kind === "conflict" && `Изменено на сервере и у вас: ${highlight.fields.map(f => REMARK_FIELD_LABELS[f] ?? f).join(", ")}. Оставлена ваша версия, проверьте.`}
             {highlight.kind === "removed" && "Пункт удалён на сервере. Ваши правки сохранены: при сохранении пункт останется в предписании."}
           </span>
+          {highlight.kind === "conflict" && onTakeServer && (
+            <button
+              type="button"
+              onClick={onTakeServer}
+              className="ml-auto flex-shrink-0 px-3 py-1 rounded-md border border-amber-500/60 text-amber-500 hover:bg-amber-500/15 font-medium transition-colors"
+            >
+              Взять версию с сервера
+            </button>
+          )}
         </div>
       )}
       <div className="flex items-center justify-between mb-1">

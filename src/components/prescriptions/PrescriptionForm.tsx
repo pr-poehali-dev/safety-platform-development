@@ -41,7 +41,7 @@ const toFormState = (p: Prescription): FormState => ({
   remarks: p.remarks.map(r => ({ ...r })),
 });
 
-type Highlight = { kind: "changed" | "added" | "conflict" | "removed"; fields: string[] };
+type Highlight = { kind: "changed" | "added" | "conflict" | "removed"; fields: string[]; server?: Remark };
 
 function mergeWithServer(base: FormState, mine: FormState, fresh: FormState) {
   const highlights: Record<string, Highlight> = {};
@@ -93,7 +93,7 @@ function mergeWithServer(base: FormState, mine: FormState, fresh: FormState) {
         conflictFields.push(f);
       }
     }
-    if (conflictFields.length) highlights[mr.id] = { kind: "conflict", fields: [...serverFields, ...conflictFields] };
+    if (conflictFields.length) highlights[mr.id] = { kind: "conflict", fields: [...serverFields, ...conflictFields], server: { ...fr } };
     else if (serverFields.length) highlights[mr.id] = { kind: "changed", fields: serverFields };
     result.push(out);
   }
@@ -351,6 +351,12 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
                 places={availablePlaces}
                 suspensionNumbers={suspensionNumbers}
                 highlight={highlights[r.id]}
+                onTakeServer={() => {
+                  const server = highlights[r.id]?.server;
+                  if (!server) return;
+                  updateRemark(r.id, { ...server });
+                  setHighlights(prev => { const next = { ...prev }; delete next[r.id]; return next; });
+                }}
               />
             ))}
             <button
