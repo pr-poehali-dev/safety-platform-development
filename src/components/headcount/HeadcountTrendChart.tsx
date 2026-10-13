@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid,
+  ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, LabelList,
 } from "recharts";
 import { MonthStats } from "@/lib/headcountTypes";
 
@@ -12,6 +12,9 @@ interface Props {
 type ViewMode = "hours" | "avg" | "combined";
 
 const fmt = (n: number) => n.toLocaleString("ru-RU");
+const fmtHoursShort = (v: number) => (v ? (v >= 1000 ? `${Math.round(v / 1000)}к` : String(v)) : "");
+const fmtCount = (v: number) => (v ? fmt(Math.round(v)) : "");
+const LABEL_STYLE = { fontSize: 10, fontWeight: 600, fill: "#d0d8e8" };
 
 const VIEW_OPTIONS: { id: ViewMode; label: string }[] = [
   { id: "hours", label: "Человекочасы" },
@@ -20,7 +23,7 @@ const VIEW_OPTIONS: { id: ViewMode; label: string }[] = [
 ];
 
 export default function HeadcountTrendChart({ months, poLabel = "ПО" }: Props) {
-  const [mode, setMode] = useState<ViewMode>("hours");
+  const [mode, setMode] = useState<ViewMode>("combined");
 
   const data = months.map(m => ({
     label: m.label.slice(0, 3),
@@ -28,6 +31,9 @@ export default function HeadcountTrendChart({ months, poLabel = "ПО" }: Props)
     sbdHours: m.sbdHours,
     poAvg: m.poAvg ?? 0,
     sbdAvg: m.sbdAvg ?? 0,
+    totalHours: m.poHours + m.sbdHours,
+    totalAvg: Math.round((m.poAvg ?? 0) + (m.sbdAvg ?? 0)),
+    zero: 0,
   }));
 
   const showHours = mode === "hours" || mode === "combined";
@@ -55,7 +61,7 @@ export default function HeadcountTrendChart({ months, poLabel = "ПО" }: Props)
       </div>
       <div className="bg-card border border-border rounded-xl p-4">
         <ResponsiveContainer width="100%" height={340}>
-          <ComposedChart data={data} margin={{ top: 8, right: 20, left: 0, bottom: 8 }}>
+          <ComposedChart data={data} margin={{ top: 20, right: 20, left: 0, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#2e3547" vertical={false} />
             <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#8b9ab0" }} />
             <YAxis
@@ -98,11 +104,21 @@ export default function HeadcountTrendChart({ months, poLabel = "ПО" }: Props)
             {showHours && (
               <Bar yAxisId="hours" dataKey="sbdHours" name="СБД, ЧЧ" stackId="hours" fill="#f59e0b" radius={[3, 3, 0, 0]} />
             )}
+            {showHours && (
+              <Bar yAxisId="hours" dataKey="zero" stackId="hours" fill="transparent" legendType="none" isAnimationActive={false}>
+                <LabelList dataKey="totalHours" position="top" formatter={fmtHoursShort} style={LABEL_STYLE} />
+              </Bar>
+            )}
             {showAvg && (
               <Bar yAxisId="avg" dataKey="poAvg" name={`${poLabel}, числ.`} stackId="avg" fill="#10b981" radius={[0, 0, 0, 0]} />
             )}
             {showAvg && (
               <Bar yAxisId="avg" dataKey="sbdAvg" name="СБД, числ." stackId="avg" fill="#ec4899" radius={[3, 3, 0, 0]} />
+            )}
+            {showAvg && (
+              <Bar yAxisId="avg" dataKey="zero" stackId="avg" fill="transparent" legendType="none" isAnimationActive={false}>
+                <LabelList dataKey="totalAvg" position="top" formatter={fmtCount} style={LABEL_STYLE} />
+              </Bar>
             )}
           </ComposedChart>
         </ResponsiveContainer>
