@@ -9,6 +9,7 @@ import { buildMonthStats, MonthStats } from "@/lib/headcountTypes";
 import HeadcountSummaryTable from "@/components/headcount/HeadcountSummaryTable";
 import MonthDetailModal from "@/components/headcount/MonthDetailModal";
 import HeadcountSettingsBar from "@/components/headcount/HeadcountSettingsBar";
+import HeadcountYearBadge from "@/components/headcount/HeadcountYearBadge";
 import HeadcountTrendChart from "@/components/headcount/HeadcountTrendChart";
 import { VisibilitySettings, defaultVisibilitySettings } from "@/lib/visibilityTypes";
 
@@ -40,6 +41,7 @@ export default function Headcount({ user, onLogout, onTabChange, activeTab = "he
   const { days, loading, saveDay } = useHeadcount(year);
   const { settings, saveSettings } = useHeadcountSettings();
   const [openMonth, setOpenMonth] = useState<number | null>(null);
+  const [tableOpen, setTableOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
 
@@ -121,12 +123,17 @@ export default function Headcount({ user, onLogout, onTabChange, activeTab = "he
           </div>
         ) : (
           <>
-            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-              <Icon name="MousePointerClick" size={12} />
-              Нажмите на месяц, чтобы посмотреть данные по дням{canEdit ? " и отредактировать их" : ""}
-            </p>
-            <HeadcountSummaryTable year={year} periodLabel="Январь — Июнь" months={firstHalf} poLabel={settings.po_label} onMonthClick={m => setOpenMonth(m.month)} />
-            <HeadcountSummaryTable year={year} periodLabel="Июль — Декабрь" months={secondHalf} poLabel={settings.po_label} onMonthClick={m => setOpenMonth(m.month)} />
+            <HeadcountYearBadge year={year} months={months} poLabel={settings.po_label} expanded={tableOpen} onToggle={() => setTableOpen(v => !v)} />
+            {tableOpen && (
+              <>
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Icon name="MousePointerClick" size={12} />
+                  Нажмите на месяц, чтобы посмотреть данные по дням{canEdit ? " и отредактировать их" : ""}
+                </p>
+                <HeadcountSummaryTable year={year} periodLabel="Январь — Июнь" months={firstHalf} poLabel={settings.po_label} onMonthClick={m => setOpenMonth(m.month)} />
+                <HeadcountSummaryTable year={year} periodLabel="Июль — Декабрь" months={secondHalf} poLabel={settings.po_label} onMonthClick={m => setOpenMonth(m.month)} />
+              </>
+            )}
             <HeadcountTrendChart months={months} poLabel={settings.po_label} />
           </>
         )}
