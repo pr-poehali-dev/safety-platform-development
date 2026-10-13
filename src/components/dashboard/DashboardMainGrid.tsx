@@ -107,16 +107,16 @@ export default function DashboardMainGrid({
           onNavigateToPrescriptions={onNavigateToPrescriptions}
           onNavigateToInspections={onNavigateToInspections}
         />
+      </div>
 
+      <div className="flex flex-col gap-4">
         {blocks.tasksWidget && (
           <DashboardTasksWidget
             taskAssignments={taskAssignments}
             onNavigateToTasks={onNavigateToTasks}
           />
         )}
-      </div>
 
-      <div className="flex flex-col gap-4">
         {!isContractor && blocks.headcountWidget && <HeadcountBadge stats={ytdStats} loading={headcountLoading} poLabel={headcountSettings.po_label} />}
 
         {!isContractor && blocks.finesWidget && (
