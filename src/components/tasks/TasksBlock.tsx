@@ -3,7 +3,6 @@ import { TaskAssignment, TaskComment } from "@/lib/taskTypes";
 import { AppUser } from "@/lib/auth";
 import TaskCard from "./TaskCard";
 import TaskForm from "./TaskForm";
-import RoutineWeekPanel from "./RoutineWeekPanel";
 import TasksFilters from "./TasksFilters";
 import TasksBulkBar from "./TasksBulkBar";
 import TasksManagerTable, { TasksCardList } from "./TasksManagerTable";
@@ -206,7 +205,7 @@ export default function TasksBlock({ user, availableUsers, assignments, loading,
 
       {/* Специалист ОТ: двухколоночный макет — задачи от руководителя + рутина */}
       {isSpecialist && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           {/* Левая колонка: задачи от руководителя */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-muted-foreground">Задачи от руководителя</h3>
@@ -233,11 +232,6 @@ export default function TasksBlock({ user, availableUsers, assignments, loading,
             </div>
 
             <TasksCardList loading={loading} filtered={filtered} onSelect={setSelected} />
-          </div>
-
-          {/* Правая колонка: рутина */}
-          <div className="lg:border-l lg:border-border lg:pl-6">
-            <RoutineWeekPanel user={user} />
           </div>
         </div>
       )}
