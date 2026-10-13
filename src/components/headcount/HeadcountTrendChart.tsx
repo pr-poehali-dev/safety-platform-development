@@ -14,6 +14,16 @@ type ViewMode = "hours" | "avg" | "combined";
 const fmt = (n: number) => n.toLocaleString("ru-RU");
 const fmtHoursShort = (v: number) => (v ? (v >= 1000 ? `${Math.round(v / 1000)}к` : String(v)) : "");
 const fmtCount = (v: number) => (v ? fmt(Math.round(v)) : "");
+type LabelProps = { x?: number | string; y?: number | string; width?: number | string; height?: number | string; value?: number | string };
+const segmentLabel = (format: (v: number) => string) => (props: LabelProps) => {
+  const x = Number(props.x) || 0, y = Number(props.y) || 0, width = Number(props.width) || 0, height = Number(props.height) || 0, value = Number(props.value) || 0;
+  if (!value || height < 9) return null;
+  return (
+    <text x={x + width / 2} y={y + height / 2} textAnchor="middle" dominantBaseline="central" fontSize={height < 12 ? 8 : 9} fontWeight={600} fill="#ffffff">
+      {format(value)}
+    </text>
+  );
+};
 const LABEL_STYLE = { fontSize: 10, fontWeight: 600, fill: "hsl(var(--foreground))" };
 
 const VIEW_OPTIONS: { id: ViewMode; label: string }[] = [
@@ -99,10 +109,14 @@ export default function HeadcountTrendChart({ months, poLabel = "ПО" }: Props)
               formatter={(value) => <span style={{ color: "#8b9ab0" }}>{value}</span>}
             />
             {showHours && (
-              <Bar yAxisId="hours" dataKey="poHours" name={`${poLabel}, ЧЧ`} stackId="hours" fill="#6366f1" radius={[0, 0, 0, 0]} />
+              <Bar yAxisId="hours" dataKey="poHours" name={`${poLabel}, ЧЧ`} stackId="hours" fill="#6366f1" radius={[0, 0, 0, 0]}>
+                <LabelList dataKey="poHours" content={segmentLabel(fmtHoursShort)} />
+              </Bar>
             )}
             {showHours && (
-              <Bar yAxisId="hours" dataKey="sbdHours" name="СБД, ЧЧ" stackId="hours" fill="#f59e0b" radius={[3, 3, 0, 0]} />
+              <Bar yAxisId="hours" dataKey="sbdHours" name="СБД, ЧЧ" stackId="hours" fill="#f59e0b" radius={[3, 3, 0, 0]}>
+                <LabelList dataKey="sbdHours" content={segmentLabel(fmtHoursShort)} />
+              </Bar>
             )}
             {showHours && (
               <Bar yAxisId="hours" dataKey="zero" stackId="hours" fill="transparent" legendType="none" isAnimationActive={false}>
@@ -110,10 +124,14 @@ export default function HeadcountTrendChart({ months, poLabel = "ПО" }: Props)
               </Bar>
             )}
             {showAvg && (
-              <Bar yAxisId="avg" dataKey="poAvg" name={`${poLabel}, числ.`} stackId="avg" fill="#10b981" radius={[0, 0, 0, 0]} />
+              <Bar yAxisId="avg" dataKey="poAvg" name={`${poLabel}, числ.`} stackId="avg" fill="#10b981" radius={[0, 0, 0, 0]}>
+                <LabelList dataKey="poAvg" content={segmentLabel(fmtCount)} />
+              </Bar>
             )}
             {showAvg && (
-              <Bar yAxisId="avg" dataKey="sbdAvg" name="СБД, числ." stackId="avg" fill="#ec4899" radius={[3, 3, 0, 0]} />
+              <Bar yAxisId="avg" dataKey="sbdAvg" name="СБД, числ." stackId="avg" fill="#ec4899" radius={[3, 3, 0, 0]}>
+                <LabelList dataKey="sbdAvg" content={segmentLabel(fmtCount)} />
+              </Bar>
             )}
             {showAvg && (
               <Bar yAxisId="avg" dataKey="zero" stackId="avg" fill="transparent" legendType="none" isAnimationActive={false}>
