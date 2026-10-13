@@ -109,8 +109,8 @@ export default function HeadcountTrendChart({ months, poLabel = "ПО" }: Props)
               formatter={(value) => <span style={{ color: "#8b9ab0" }}>{value}</span>}
             />
             {showHours && (
-              <Bar yAxisId="hours" dataKey="poHours" name={`${poLabel}, ЧЧ`} stackId="hours" fill="#d1d5db" radius={[0, 0, 0, 0]}>
-                <LabelList dataKey="poHours" content={segmentLabel(fmtHoursShort, "#111827")} />
+              <Bar yAxisId="hours" dataKey="poHours" name={`${poLabel}, ЧЧ`} stackId="hours" fill="#374151" radius={[0, 0, 0, 0]}>
+                <LabelList dataKey="poHours" content={segmentLabel(fmtHoursShort, "#ffffff")} />
               </Bar>
             )}
             {showHours && (
@@ -124,12 +124,12 @@ export default function HeadcountTrendChart({ months, poLabel = "ПО" }: Props)
               </Bar>
             )}
             {showAvg && (
-              <Bar yAxisId="avg" dataKey="poAvg" name={`${poLabel}, числ.`} stackId="avg" fill="#d1d5db" radius={[0, 0, 0, 0]}>
-                <LabelList dataKey="poAvg" content={segmentLabel(fmtCount, "#111827")} />
+              <Bar yAxisId="avg" dataKey="poAvg" name={`${poLabel}, числ.`} stackId="avg" fill="#6b7280" radius={[0, 0, 0, 0]}>
+                <LabelList dataKey="poAvg" content={segmentLabel(fmtCount, "#ffffff")} />
               </Bar>
             )}
             {showAvg && (
-              <Bar yAxisId="avg" dataKey="sbdAvg" name="СБД, числ." stackId="avg" fill="#1d4ed8" radius={[3, 3, 0, 0]}>
+              <Bar yAxisId="avg" dataKey="sbdAvg" name="СБД, числ." stackId="avg" fill="#3b82f6" radius={[3, 3, 0, 0]}>
                 <LabelList dataKey="sbdAvg" content={segmentLabel(fmtCount, "#ffffff")} />
               </Bar>
             )}
