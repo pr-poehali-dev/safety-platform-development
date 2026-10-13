@@ -179,7 +179,7 @@ export default function DashboardMainGrid({
           onToggleVisible={isAdmin ? () => onTogglePyramidVisible(2) : undefined}
           data={pyramidData}
           year={new Date().getFullYear()}
-          title="Пирамида происшествий (НИТ) №2"
+          title="Пирамида происшествий (НИТ) с начала проекта"
           editable={isAdmin}
           manualDangerActions={manualDangerActions2}
           manualSuspendedWorks={manualSuspendedWorks2}

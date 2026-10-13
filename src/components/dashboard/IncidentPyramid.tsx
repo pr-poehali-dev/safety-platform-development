@@ -142,7 +142,7 @@ export default function IncidentPyramid({
           <span className="text-foreground font-black text-sm"></span>
         </div>
       )}
-      <h3 className="font-semibold text-primary text-center mb-2 text-base whitespace-pre-line">{title ?? "Пирамида происшествий (НИТ)\n(сейчас результат ТОЛЬКО за 2026 год)"}</h3>
+      <h3 className="font-semibold text-primary text-center mb-2 text-base whitespace-pre-line">{title ?? "Пирамида происшествий (текущий год)"}</h3>
 
       <div className="flex-1 flex items-center justify-center overflow-hidden">
         <svg
