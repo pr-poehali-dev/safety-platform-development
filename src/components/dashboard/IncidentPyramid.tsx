@@ -1,4 +1,5 @@
 import Icon from "@/components/ui/icon";
+import { Switch } from "@/components/ui/switch";
 
 interface PyramidData {
   fatal: number;
@@ -22,6 +23,8 @@ interface IncidentPyramidProps {
   onSave?: () => void;
   saving?: boolean;
   title?: string;
+  visible?: boolean;
+  onToggleVisible?: () => void;
 }
 
 function clampFiveDigits(raw: string): number {
@@ -34,7 +37,7 @@ export default function IncidentPyramid({
   data, year, editable,
   manualDangerActions = 0, manualSuspendedWorks = 0,
   onManualDangerActionsChange, onManualSuspendedWorksChange,
-  onSave, saving, title,
+  onSave, saving, title, visible = true, onToggleVisible,
 }: IncidentPyramidProps) {
   const { fatal, severe_injury, light_injury, microtrauma, no_consequences, totalViolations, suspendedWorks, suspendedWorksWithAct } = data;
 
@@ -127,7 +130,13 @@ export default function IncidentPyramid({
   const ox = labelPanelW;
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4 flex flex-col h-full py-0 my-0">
+    <div className={`relative bg-card border border-border rounded-xl p-4 flex flex-col h-full py-0 my-0 ${visible ? "" : "opacity-50"}`}>
+      {onToggleVisible && (
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">{visible ? "Вкл" : "Выкл"}</span>
+          <Switch checked={visible} onCheckedChange={onToggleVisible} />
+        </div>
+      )}
       {year && (
         <div className="text-center mb-0.5">
           <span className="text-foreground font-black text-sm"></span>

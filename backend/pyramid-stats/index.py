@@ -26,14 +26,24 @@ def handler(event: dict, context) -> dict:
     if method == "GET":
         conn = get_conn()
         cur = conn.cursor()
-        cur.execute(f"SELECT danger_actions, suspended_works FROM {SCHEMA}.pyramid_manual_stats WHERE id = {pyramid_id}")
+        cur.execute(f"SELECT danger_actions, suspended_works, visible FROM {SCHEMA}.pyramid_manual_stats WHERE id = {pyramid_id}")
         row = cur.fetchone()
         conn.close()
-        data = {"danger_actions": row[0] if row else 0, "suspended_works": row[1] if row else 0}
+        data = {"danger_actions": row[0] if row else 0, "suspended_works": row[1] if row else 0, "visible": bool(row[2]) if row else True}
         return {"statusCode": 200, "headers": cors, "body": json.dumps(data)}
 
     if method == "PUT":
         body = json.loads(event.get("body") or "{}")
+        if "visible" in body and "danger_actions" not in body:
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                f"UPDATE {SCHEMA}.pyramid_manual_stats SET visible = %s, updated_by = %s, updated_at = now() WHERE id = {pyramid_id}",
+                (bool(body["visible"]), body.get("updated_by"))
+            )
+            conn.commit()
+            conn.close()
+            return {"statusCode": 200, "headers": cors, "body": json.dumps({"ok": True})}
         danger_actions = int(body.get("danger_actions") or 0)
         suspended_works = int(body.get("suspended_works") or 0)
         updated_by = body.get("updated_by")

@@ -1,0 +1,1 @@
+ALTER TABLE t_p5901577_safety_platform_deve.pyramid_manual_stats ADD COLUMN IF NOT EXISTS visible BOOLEAN NOT NULL DEFAULT TRUE;

@@ -64,6 +64,8 @@ interface DashboardMainGridProps {
   onManualSuspendedWorks2Change: (v: number) => void;
   onPyramid2Save: () => void;
   pyramidSaving2: boolean;
+  pyramidVisible: [boolean, boolean];
+  onTogglePyramidVisible: (n: 1 | 2) => void;
 
   totalWorkedHours: number;
   allHeadcountLoading: boolean;
@@ -82,7 +84,7 @@ export default function DashboardMainGrid({
   manualDangerActions, manualSuspendedWorks, onManualDangerActionsChange, onManualSuspendedWorksChange,
   onPyramidSave, pyramidSaving,
   manualDangerActions2, manualSuspendedWorks2, onManualDangerActions2Change, onManualSuspendedWorks2Change,
-  onPyramid2Save, pyramidSaving2,
+  onPyramid2Save, pyramidSaving2, pyramidVisible, onTogglePyramidVisible,
   totalWorkedHours, allHeadcountLoading, daysWithoutIncidents, lastIncidentDate,
 }: DashboardMainGridProps) {
   return (
@@ -157,9 +159,11 @@ export default function DashboardMainGrid({
       </div>
     </div>
 
-    {blocks.pyramid && (
+    {blocks.pyramid && (pyramidVisible[0] || pyramidVisible[1] || isAdmin) && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <IncidentPyramid
+        {(pyramidVisible[0] || isAdmin) && <IncidentPyramid
+          visible={pyramidVisible[0]}
+          onToggleVisible={isAdmin ? () => onTogglePyramidVisible(1) : undefined}
           data={pyramidData}
           year={new Date().getFullYear()}
           editable={isAdmin}
@@ -169,8 +173,10 @@ export default function DashboardMainGrid({
           onManualSuspendedWorksChange={onManualSuspendedWorksChange}
           onSave={onPyramidSave}
           saving={pyramidSaving}
-        />
-        <IncidentPyramid
+        />}
+        {(pyramidVisible[1] || isAdmin) && <IncidentPyramid
+          visible={pyramidVisible[1]}
+          onToggleVisible={isAdmin ? () => onTogglePyramidVisible(2) : undefined}
           data={pyramidData}
           year={new Date().getFullYear()}
           title="Пирамида происшествий (НИТ) №2"
@@ -181,7 +187,7 @@ export default function DashboardMainGrid({
           onManualSuspendedWorksChange={onManualSuspendedWorks2Change}
           onSave={onPyramid2Save}
           saving={pyramidSaving2}
-        />
+        />}
       </div>
     )}
     </>

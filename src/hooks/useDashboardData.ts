@@ -51,6 +51,7 @@ export function useDashboardData(user: AppUser) {
   const [manualDangerActions2, setManualDangerActions2] = useState(0);
   const [manualSuspendedWorks2, setManualSuspendedWorks2] = useState(0);
   const [pyramidSaving2, setPyramidSaving2] = useState(false);
+  const [pyramidVisible, setPyramidVisible] = useState<[boolean, boolean]>([true, true]);
   const [fines, setFines] = useState<Fine[]>([]);
   const [finesLoading, setFinesLoading] = useState(true);
 
@@ -106,10 +107,12 @@ export function useDashboardData(user: AppUser) {
       if (pyramidStats && typeof pyramidStats === "object") {
         setManualDangerActions(Number(pyramidStats.danger_actions) || 0);
         setManualSuspendedWorks(Number(pyramidStats.suspended_works) || 0);
+        setPyramidVisible(v => [pyramidStats.visible !== false, v[1]]);
       }
       if (pyramidStats2 && typeof pyramidStats2 === "object") {
         setManualDangerActions2(Number(pyramidStats2.danger_actions) || 0);
         setManualSuspendedWorks2(Number(pyramidStats2.suspended_works) || 0);
+        setPyramidVisible(v => [v[0], pyramidStats2.visible !== false]);
       }
       if (Array.isArray(objs) && user.role === "project_team") {
         const ids = new Set(user.objectIds ?? []);
@@ -153,6 +156,20 @@ export function useDashboardData(user: AppUser) {
     }
   };
 
+  const togglePyramidVisible = async (n: 1 | 2) => {
+    const next = !pyramidVisible[n - 1];
+    setPyramidVisible(v => (n === 1 ? [next, v[1]] : [v[0], next]));
+    try {
+      await fetch(`${PYRAMID_STATS_API}?id=${n}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visible: next, updated_by: user.login }),
+      });
+    } catch {
+      setPyramidVisible(v => (n === 1 ? [!next, v[1]] : [v[0], !next]));
+    }
+  };
+
   return {
     prescriptions, inspections, incidents, spbCategories, loading,
     myObjectNames,
@@ -161,6 +178,7 @@ export function useDashboardData(user: AppUser) {
     pyramidSaving, savePyramidStats,
     manualDangerActions2, manualSuspendedWorks2, setManualDangerActions2, setManualSuspendedWorks2,
     pyramidSaving2, savePyramidStats2,
+    pyramidVisible, togglePyramidVisible,
     ytdStats, headcountLoading, totalWorkedHours, allHeadcountLoading, headcountSettings,
   };
 }

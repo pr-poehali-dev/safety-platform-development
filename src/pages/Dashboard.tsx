@@ -28,6 +28,7 @@ export default function Dashboard({ user, taskAssignments, visibility, onNavigat
     pyramidSaving, savePyramidStats,
     manualDangerActions2, manualSuspendedWorks2, setManualDangerActions2, setManualSuspendedWorks2,
     pyramidSaving2, savePyramidStats2,
+    pyramidVisible, togglePyramidVisible,
     ytdStats, headcountLoading, totalWorkedHours, allHeadcountLoading, headcountSettings,
   } = useDashboardData(user);
 
@@ -123,6 +124,8 @@ export default function Dashboard({ user, taskAssignments, visibility, onNavigat
         onManualSuspendedWorks2Change={setManualSuspendedWorks2}
         onPyramid2Save={savePyramidStats2}
         pyramidSaving2={pyramidSaving2}
+        pyramidVisible={pyramidVisible}
+        onTogglePyramidVisible={togglePyramidVisible}
         totalWorkedHours={totalWorkedHours}
         allHeadcountLoading={allHeadcountLoading}
         daysWithoutIncidents={daysWithoutIncidents}
