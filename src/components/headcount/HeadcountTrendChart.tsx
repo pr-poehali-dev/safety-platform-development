@@ -14,7 +14,7 @@ type ViewMode = "hours" | "avg" | "combined";
 const fmt = (n: number) => n.toLocaleString("ru-RU");
 const fmtHoursShort = (v: number) => (v ? (v >= 1000 ? `${Math.round(v / 1000)}к` : String(v)) : "");
 const fmtCount = (v: number) => (v ? fmt(Math.round(v)) : "");
-const LABEL_STYLE = { fontSize: 10, fontWeight: 600, fill: "#d0d8e8" };
+const LABEL_STYLE = { fontSize: 10, fontWeight: 600, fill: "hsl(var(--foreground))" };
 
 const VIEW_OPTIONS: { id: ViewMode; label: string }[] = [
   { id: "hours", label: "Человекочасы" },
