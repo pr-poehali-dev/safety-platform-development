@@ -20,11 +20,13 @@ def handler(event: dict, context) -> dict:
         return {"statusCode": 200, "headers": cors, "body": ""}
 
     method = event.get("httpMethod", "GET")
+    qs = event.get("queryStringParameters") or {}
+    pyramid_id = 2 if str(qs.get("id", "1")) == "2" else 1
 
     if method == "GET":
         conn = get_conn()
         cur = conn.cursor()
-        cur.execute(f"SELECT danger_actions, suspended_works FROM {SCHEMA}.pyramid_manual_stats WHERE id = 1")
+        cur.execute(f"SELECT danger_actions, suspended_works FROM {SCHEMA}.pyramid_manual_stats WHERE id = {pyramid_id}")
         row = cur.fetchone()
         conn.close()
         data = {"danger_actions": row[0] if row else 0, "suspended_works": row[1] if row else 0}
@@ -40,7 +42,7 @@ def handler(event: dict, context) -> dict:
         cur.execute(
             f"""UPDATE {SCHEMA}.pyramid_manual_stats
                 SET danger_actions = %s, suspended_works = %s, updated_by = %s, updated_at = now()
-                WHERE id = 1""",
+                WHERE id = {pyramid_id}""",
             (danger_actions, suspended_works, updated_by)
         )
         conn.commit()

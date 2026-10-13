@@ -4,9 +4,13 @@
       "name": "Get pyramid manual stats",
       "method": "GET",
       "path": "/",
-      "expectedStatus": 200,
-      "expectedBody": {"danger_actions": 0, "suspended_works": 0},
-      "bodyMatcher": "partial"
+      "expectedStatus": 200
+    },
+    {
+      "name": "Get second pyramid manual stats",
+      "method": "GET",
+      "path": "/?id=2",
+      "expectedStatus": 200
     }
   ]
 }

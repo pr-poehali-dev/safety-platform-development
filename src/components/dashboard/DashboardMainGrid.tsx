@@ -3,6 +3,7 @@ import DashboardTasksWidget from "@/components/dashboard/DashboardTasksWidget";
 import DashboardSpbPanel from "@/components/dashboard/DashboardSpbPanel";
 import HeadcountBadge from "@/components/dashboard/HeadcountBadge";
 import FinesBadge from "@/components/dashboard/FinesBadge";
+import IncidentPyramid from "@/components/dashboard/IncidentPyramid";
 import InjuryRateBadge from "@/components/dashboard/InjuryRateBadge";
 import { TaskAssignment } from "@/lib/taskTypes";
 import { VisibilitySettings } from "@/lib/visibilityTypes";
@@ -57,6 +58,12 @@ interface DashboardMainGridProps {
   onManualSuspendedWorksChange: (v: number) => void;
   onPyramidSave: () => void;
   pyramidSaving: boolean;
+  manualDangerActions2: number;
+  manualSuspendedWorks2: number;
+  onManualDangerActions2Change: (v: number) => void;
+  onManualSuspendedWorks2Change: (v: number) => void;
+  onPyramid2Save: () => void;
+  pyramidSaving2: boolean;
 
   totalWorkedHours: number;
   allHeadcountLoading: boolean;
@@ -74,9 +81,12 @@ export default function DashboardMainGrid({
   spbCategories, spbStats, spbTotal, pyramidData,
   manualDangerActions, manualSuspendedWorks, onManualDangerActionsChange, onManualSuspendedWorksChange,
   onPyramidSave, pyramidSaving,
+  manualDangerActions2, manualSuspendedWorks2, onManualDangerActions2Change, onManualSuspendedWorks2Change,
+  onPyramid2Save, pyramidSaving2,
   totalWorkedHours, allHeadcountLoading, daysWithoutIncidents, lastIncidentDate,
 }: DashboardMainGridProps) {
   return (
+    <>
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
       <div className="flex flex-col gap-4">
@@ -131,7 +141,7 @@ export default function DashboardMainGrid({
           onPyramidSave={onPyramidSave}
           pyramidSaving={pyramidSaving}
           showSpb={blocks.spb}
-          showPyramid={blocks.pyramid}
+          showPyramid={false}
         />
 
         {blocks.injuryRates && (
@@ -146,5 +156,34 @@ export default function DashboardMainGrid({
         )}
       </div>
     </div>
+
+    {blocks.pyramid && (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <IncidentPyramid
+          data={pyramidData}
+          year={new Date().getFullYear()}
+          editable={isAdmin}
+          manualDangerActions={manualDangerActions}
+          manualSuspendedWorks={manualSuspendedWorks}
+          onManualDangerActionsChange={onManualDangerActionsChange}
+          onManualSuspendedWorksChange={onManualSuspendedWorksChange}
+          onSave={onPyramidSave}
+          saving={pyramidSaving}
+        />
+        <IncidentPyramid
+          data={pyramidData}
+          year={new Date().getFullYear()}
+          title="Пирамида происшествий (НИТ) №2"
+          editable={isAdmin}
+          manualDangerActions={manualDangerActions2}
+          manualSuspendedWorks={manualSuspendedWorks2}
+          onManualDangerActionsChange={onManualDangerActions2Change}
+          onManualSuspendedWorksChange={onManualSuspendedWorks2Change}
+          onSave={onPyramid2Save}
+          saving={pyramidSaving2}
+        />
+      </div>
+    )}
+    </>
   );
 }

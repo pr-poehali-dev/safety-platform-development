@@ -48,6 +48,9 @@ export function useDashboardData(user: AppUser) {
   const [manualDangerActions, setManualDangerActions] = useState(0);
   const [manualSuspendedWorks, setManualSuspendedWorks] = useState(0);
   const [pyramidSaving, setPyramidSaving] = useState(false);
+  const [manualDangerActions2, setManualDangerActions2] = useState(0);
+  const [manualSuspendedWorks2, setManualSuspendedWorks2] = useState(0);
+  const [pyramidSaving2, setPyramidSaving2] = useState(false);
   const [fines, setFines] = useState<Fine[]>([]);
   const [finesLoading, setFinesLoading] = useState(true);
 
@@ -94,7 +97,8 @@ export function useDashboardData(user: AppUser) {
       fetch(CATEGORIES_API).then(r => r.json()).catch(() => []),
       fetch(PYRAMID_STATS_API).then(r => r.json()).catch(() => null),
       fetch(OBJECTS_API).then(r => r.json()).catch(() => []),
-    ]).then(([pres, insp, inc, cats, pyramidStats, objs]) => {
+      fetch(`${PYRAMID_STATS_API}?id=2`).then(r => r.json()).catch(() => null),
+    ]).then(([pres, insp, inc, cats, pyramidStats, objs, pyramidStats2]) => {
       setPrescriptions(Array.isArray(pres) ? pres : []);
       setInspections(Array.isArray(insp) ? insp : []);
       setIncidents(Array.isArray(inc) ? inc : []);
@@ -102,6 +106,10 @@ export function useDashboardData(user: AppUser) {
       if (pyramidStats && typeof pyramidStats === "object") {
         setManualDangerActions(Number(pyramidStats.danger_actions) || 0);
         setManualSuspendedWorks(Number(pyramidStats.suspended_works) || 0);
+      }
+      if (pyramidStats2 && typeof pyramidStats2 === "object") {
+        setManualDangerActions2(Number(pyramidStats2.danger_actions) || 0);
+        setManualSuspendedWorks2(Number(pyramidStats2.suspended_works) || 0);
       }
       if (Array.isArray(objs) && user.role === "project_team") {
         const ids = new Set(user.objectIds ?? []);
@@ -128,12 +136,31 @@ export function useDashboardData(user: AppUser) {
     }
   };
 
+  const savePyramidStats2 = async () => {
+    setPyramidSaving2(true);
+    try {
+      await fetch(`${PYRAMID_STATS_API}?id=2`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          danger_actions: manualDangerActions2,
+          suspended_works: manualSuspendedWorks2,
+          updated_by: user.login,
+        }),
+      });
+    } finally {
+      setPyramidSaving2(false);
+    }
+  };
+
   return {
     prescriptions, inspections, incidents, spbCategories, loading,
     myObjectNames,
     fines, finesLoading, finesStats, currentMonthLabel,
     manualDangerActions, manualSuspendedWorks, setManualDangerActions, setManualSuspendedWorks,
     pyramidSaving, savePyramidStats,
+    manualDangerActions2, manualSuspendedWorks2, setManualDangerActions2, setManualSuspendedWorks2,
+    pyramidSaving2, savePyramidStats2,
     ytdStats, headcountLoading, totalWorkedHours, allHeadcountLoading, headcountSettings,
   };
 }

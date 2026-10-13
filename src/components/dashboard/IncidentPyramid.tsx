@@ -21,6 +21,7 @@ interface IncidentPyramidProps {
   onManualSuspendedWorksChange?: (v: number) => void;
   onSave?: () => void;
   saving?: boolean;
+  title?: string;
 }
 
 function clampFiveDigits(raw: string): number {
@@ -33,7 +34,7 @@ export default function IncidentPyramid({
   data, year, editable,
   manualDangerActions = 0, manualSuspendedWorks = 0,
   onManualDangerActionsChange, onManualSuspendedWorksChange,
-  onSave, saving,
+  onSave, saving, title,
 }: IncidentPyramidProps) {
   const { fatal, severe_injury, light_injury, microtrauma, no_consequences, totalViolations, suspendedWorks, suspendedWorksWithAct } = data;
 
@@ -132,8 +133,7 @@ export default function IncidentPyramid({
           <span className="text-foreground font-black text-sm"></span>
         </div>
       )}
-      <h3 className="font-semibold text-primary text-center mb-2 text-base">Пирамида происшествий (НИТ)
-(сейчас результат ТОЛЬКО за 2026 год)</h3>
+      <h3 className="font-semibold text-primary text-center mb-2 text-base whitespace-pre-line">{title ?? "Пирамида происшествий (НИТ)\n(сейчас результат ТОЛЬКО за 2026 год)"}</h3>
 
       <div className="flex-1 flex items-center justify-center overflow-hidden">
         <svg

@@ -1,0 +1,2 @@
+ALTER TABLE t_p5901577_safety_platform_deve.pyramid_manual_stats DROP CONSTRAINT single_row;
+INSERT INTO t_p5901577_safety_platform_deve.pyramid_manual_stats (id, danger_actions, suspended_works) VALUES (2, 0, 0) ON CONFLICT (id) DO NOTHING;

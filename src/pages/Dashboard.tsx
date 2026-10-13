@@ -26,6 +26,8 @@ export default function Dashboard({ user, taskAssignments, visibility, onNavigat
     finesStats, finesLoading, currentMonthLabel,
     manualDangerActions, manualSuspendedWorks, setManualDangerActions, setManualSuspendedWorks,
     pyramidSaving, savePyramidStats,
+    manualDangerActions2, manualSuspendedWorks2, setManualDangerActions2, setManualSuspendedWorks2,
+    pyramidSaving2, savePyramidStats2,
     ytdStats, headcountLoading, totalWorkedHours, allHeadcountLoading, headcountSettings,
   } = useDashboardData(user);
 
@@ -115,6 +117,12 @@ export default function Dashboard({ user, taskAssignments, visibility, onNavigat
         onManualSuspendedWorksChange={setManualSuspendedWorks}
         onPyramidSave={savePyramidStats}
         pyramidSaving={pyramidSaving}
+        manualDangerActions2={manualDangerActions2}
+        manualSuspendedWorks2={manualSuspendedWorks2}
+        onManualDangerActions2Change={setManualDangerActions2}
+        onManualSuspendedWorks2Change={setManualSuspendedWorks2}
+        onPyramid2Save={savePyramidStats2}
+        pyramidSaving2={pyramidSaving2}
         totalWorkedHours={totalWorkedHours}
         allHeadcountLoading={allHeadcountLoading}
         daysWithoutIncidents={daysWithoutIncidents}
