@@ -107,6 +107,22 @@ export default function DashboardMainGrid({
           onNavigateToPrescriptions={onNavigateToPrescriptions}
           onNavigateToInspections={onNavigateToInspections}
         />
+
+        <DashboardSpbPanel
+          spbCategories={spbCategories}
+          spbStats={spbStats}
+          spbTotal={spbTotal}
+          pyramidData={pyramidData}
+          pyramidEditable={isAdmin}
+          manualDangerActions={manualDangerActions}
+          manualSuspendedWorks={manualSuspendedWorks}
+          onManualDangerActionsChange={onManualDangerActionsChange}
+          onManualSuspendedWorksChange={onManualSuspendedWorksChange}
+          onPyramidSave={onPyramidSave}
+          pyramidSaving={pyramidSaving}
+          showSpb={blocks.spb}
+          showPyramid={false}
+        />
       </div>
 
       <div className="flex flex-col gap-4">
@@ -129,22 +145,6 @@ export default function DashboardMainGrid({
             monthLabel={currentMonthLabel}
           />
         )}
-
-        <DashboardSpbPanel
-          spbCategories={spbCategories}
-          spbStats={spbStats}
-          spbTotal={spbTotal}
-          pyramidData={pyramidData}
-          pyramidEditable={isAdmin}
-          manualDangerActions={manualDangerActions}
-          manualSuspendedWorks={manualSuspendedWorks}
-          onManualDangerActionsChange={onManualDangerActionsChange}
-          onManualSuspendedWorksChange={onManualSuspendedWorksChange}
-          onPyramidSave={onPyramidSave}
-          pyramidSaving={pyramidSaving}
-          showSpb={blocks.spb}
-          showPyramid={false}
-        />
 
         {blocks.injuryRates && (
           <InjuryRateBadge
