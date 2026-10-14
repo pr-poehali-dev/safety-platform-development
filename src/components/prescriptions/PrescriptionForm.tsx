@@ -99,7 +99,7 @@ export function AddForm({ onClose, onSave, onAutoSave, user, editPrescription }:
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const buildPrescription = (asDraft: boolean, force = false, idle = false): Prescription => {
+  const buildPrescription = (asDraft: boolean, force = false, idle = false, auto = false): Prescription => {
     const now = new Date();
     return {
       id: editPrescription?.id ?? Date.now().toString(),
@@ -120,6 +120,7 @@ export function AddForm({ onClose, onSave, onAutoSave, user, editPrescription }:
       baseVersion: editId && !force ? baseVersion.current ?? undefined : undefined,
       lockSession: editId ? sessionId : undefined,
       idleAutosave: idle || undefined,
+      autoSave: auto || undefined,
     };
   };
 
@@ -260,7 +261,7 @@ export function AddForm({ onClose, onSave, onAutoSave, user, editPrescription }:
         setStale(true);
         return;
       }
-      await onAutoSave(buildPrescription(false));
+      await onAutoSave(buildPrescription(false, false, false, true));
       lastSavedJson.current = json;
       baseSnapshot.current = { ...form, remarks: form.remarks.map(r => ({ ...r })) };
       baseVersion.current = await fetchVersion();

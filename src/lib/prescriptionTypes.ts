@@ -121,6 +121,7 @@ export interface Prescription {
   baseVersion?: string;
   lockSession?: string;
   idleAutosave?: boolean;
+  autoSave?: boolean;
   id: string;
   number: string;
   date: string;
