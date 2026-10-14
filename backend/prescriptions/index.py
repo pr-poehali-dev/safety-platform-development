@@ -39,6 +39,15 @@ def err(msg, code=400):
     return {"statusCode": code, "headers": {**CORS, "Content-Type": "application/json"}, "body": json.dumps({"error": msg})}
 
 
+def get_version(cur, pid):
+    cur.execute(
+        f"SELECT md5(COALESCE((SELECT x::text FROM {SCHEMA}.prescriptions x WHERE x.id = %s), '') || "
+        f"COALESCE((SELECT string_agg(r::text, '|' ORDER BY r.id) FROM {SCHEMA}.remarks r WHERE r.prescription_id = %s), ''))",
+        (pid, pid),
+    )
+    return cur.fetchone()[0]
+
+
 def row_to_prescription(row, remarks):
     return {
         "id": row[0], "number": row[1], "date": row[2], "object": row[3],
@@ -308,12 +317,7 @@ def handler(event: dict, context) -> dict:
         if qs.get("type") == "numbering" or body.get("_type") == "numbering":
             return handle_numbering(method, body, cur, conn)
         if qs.get("type") == "version" and method == "GET":
-            cur.execute(
-                f"SELECT md5(COALESCE((SELECT x::text FROM {SCHEMA}.prescriptions x WHERE x.id = %s), '') || "
-                f"COALESCE((SELECT string_agg(r::text, '|' ORDER BY r.id) FROM {SCHEMA}.remarks r WHERE r.prescription_id = %s), ''))",
-                (qs.get("id", ""), qs.get("id", "")),
-            )
-            return ok({"version": cur.fetchone()[0]})
+            return ok({"version": get_version(cur, qs.get("id", ""))})
         if qs.get("type") == "prescription_history" and method == "GET":
             return handle_prescription_history(qs, cur)
         if qs.get("type") == "remark_history" and method == "GET":
@@ -466,6 +470,14 @@ def handler(event: dict, context) -> dict:
         if method == "PUT":
             p = body
             pid = p["id"]
+
+            cur.execute(f"SELECT id FROM {SCHEMA}.prescriptions WHERE id=%s FOR UPDATE", (pid,))
+            client_version = p.get("baseVersion")
+            if client_version and not p.get("force"):
+                if get_version(cur, pid) != client_version:
+                    conn.rollback()
+                    return {"statusCode": 409, "headers": {**CORS, "Content-Type": "application/json"},
+                            "body": json.dumps({"error": "Предписание уже изменено в другой вкладке или другим пользователем", "code": "conflict"}, ensure_ascii=False)}
 
             cur.execute(
                 f"SELECT created_by, comments, number, date, object, contractor, inspector, representative, responsible, "

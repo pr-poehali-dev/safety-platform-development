@@ -7,6 +7,7 @@ import { Template } from "@/lib/template";
 import {
   Prescription, Comment, Attachment, Status,
   overallStatus, effectiveStatus,
+  ConflictError,
 } from "@/lib/prescriptionTypes";
 import { PrescriptionDetailHeader } from "@/components/prescriptions/detail/PrescriptionDetailHeader";
 import { PrescriptionRemarksTab } from "@/components/prescriptions/detail/PrescriptionRemarksTab";
@@ -93,10 +94,15 @@ export function PrescriptionDetail({
 
   const send = (updated: Prescription, previous: Prescription) => {
     setP(updated);
-    onUpdate(updated)
+    onUpdate({ ...updated, baseVersion: baseVersion.current ?? undefined })
       .then(async () => { baseVersion.current = await fetchVersion(); setStale(false); })
-      .catch(() => {
+      .catch((e) => {
         setP(previous);
+        if (e instanceof ConflictError) {
+          setStale(true);
+          setPending({ updated, previous });
+          return;
+        }
         alert("Не удалось сохранить изменения на сервере. Проверьте соединение и повторите действие.");
       });
   };

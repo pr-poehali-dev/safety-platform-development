@@ -4,6 +4,7 @@ import { AppUser } from "@/lib/auth";
 import {
   Remark, Prescription,
   newRemark, detectGenderFromName, declinePosition, toInstrumental,
+  ConflictError,
 } from "@/lib/prescriptionTypes";
 import { Field, InputBase, TextareaBase, SelectBase, DatePicker } from "./form/FormControls";
 import { RemarkRow } from "./form/RemarkRow";
@@ -188,7 +189,7 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const buildPrescription = (asDraft: boolean): Prescription => {
+  const buildPrescription = (asDraft: boolean, force = false): Prescription => {
     const now = new Date();
     return {
       id: editPrescription?.id ?? Date.now().toString(),
@@ -206,6 +207,7 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
       remarks: asDraft ? form.remarks.map(r => ({ ...r, status: "Черновик" })) : form.remarks,
       comments: editPrescription?.comments ?? [],
       createdBy: editPrescription?.createdBy ?? user.login,
+      baseVersion: editId && !force ? baseVersion.current ?? undefined : undefined,
     };
   };
 
@@ -285,9 +287,14 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
     setConflict(null);
     setIsSaving(true);
     try {
-      await onSave(buildPrescription(asDraft));
+      await onSave(buildPrescription(asDraft, force));
       onClose();
-    } catch {
+    } catch (e) {
+      if (e instanceof ConflictError) {
+        setStale(true);
+        setConflict(asDraft ? "draft" : "save");
+        return;
+      }
       setSaveError(asDraft
         ? "Не удалось сохранить черновик. Проверьте соединение и попробуйте ещё раз."
         : "Не удалось сохранить предписание. Проверьте соединение и попробуйте ещё раз.");

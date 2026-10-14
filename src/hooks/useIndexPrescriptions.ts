@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { AppUser } from "@/lib/auth";
 import { Template, DEFAULT_TEMPLATE } from "@/lib/template";
-import { Prescription, Status } from "@/lib/prescriptionTypes";
+import { Prescription, Status, ConflictError } from "@/lib/prescriptionTypes";
 import { fetchWithRetry } from "@/lib/fetchWithRetry";
 
 const API = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
@@ -77,15 +77,17 @@ export function useIndexPrescriptions(user: AppUser) {
     };
   }, []);
 
-  const updatePrescription = async (updated: Prescription) => {
+  const updatePrescription = async (input: Prescription) => {
+    const { baseVersion, ...updated } = input;
     const base = prescriptions.find(p => p.id === updated.id);
     const keepIds = new Set(updated.remarks.map(r => r.id));
     const deletedRemarkIds = base ? base.remarks.filter(r => !keepIds.has(r.id)).map(r => r.id) : [];
     const res = await fetchWithRetry(API, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...updated, deletedRemarkIds, changedBy: user.login, changedByName: user.name }),
+      body: JSON.stringify({ ...updated, baseVersion, deletedRemarkIds, changedBy: user.login, changedByName: user.name }),
     });
+    if (res.status === 409) throw new ConflictError();
     if (!res.ok) {
       throw new Error("Не удалось сохранить изменения. Попробуйте ещё раз.");
     }

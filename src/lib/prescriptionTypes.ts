@@ -110,7 +110,15 @@ export interface Remark {
   photos?: string[];
 }
 
+export class ConflictError extends Error {
+  constructor() {
+    super("conflict");
+    this.name = "ConflictError";
+  }
+}
+
 export interface Prescription {
+  baseVersion?: string;
   id: string;
   number: string;
   date: string;
