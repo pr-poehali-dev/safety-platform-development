@@ -332,6 +332,40 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
     }
   };
 
+  const IDLE_LIMIT_MS = 30 * 60 * 1000;
+  const IDLE_WARN_MS = 28 * 60 * 1000;
+  const lastActivity = useRef(Date.now());
+  const idleAction = useRef<() => void>(() => {});
+  const [idleWarning, setIdleWarning] = useState(false);
+
+  idleAction.current = () => {
+    const hasContent = !!editId || !!form.object;
+    if (lockedBy || !hasContent) { onClose(); return; }
+    doSave(true, true);
+  };
+
+  useEffect(() => {
+    const touch = () => {
+      lastActivity.current = Date.now();
+      setIdleWarning(false);
+    };
+    const events = ["keydown", "input", "change", "paste", "pointerdown"];
+    events.forEach(e => document.addEventListener(e, touch, true));
+    const timer = setInterval(() => {
+      const idle = Date.now() - lastActivity.current;
+      if (idle >= IDLE_LIMIT_MS) {
+        clearInterval(timer);
+        idleAction.current();
+      } else {
+        setIdleWarning(idle >= IDLE_WARN_MS);
+      }
+    }, 10000);
+    return () => {
+      events.forEach(e => document.removeEventListener(e, touch, true));
+      clearInterval(timer);
+    };
+  }, []);
+
   const handleSave = () => { if (isValid) doSave(false, false); };
   const handleSaveDraft = () => doSave(true, false);
 
@@ -434,6 +468,12 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
           </button>
         </div>
       </div>
+
+      {idleWarning && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[130] bg-card border border-border rounded-lg shadow-2xl px-5 py-3 text-sm animate-fade-in">
+          Нет действий почти 30 минут. Предписание будет сохранено как черновик и закроется. Нажмите любую клавишу, чтобы продолжить.
+        </div>
+      )}
 
       {lockedBy && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
