@@ -52,6 +52,7 @@ interface DashboardMainGridProps {
   spbStats: { name: string; count: number }[];
   spbTotal: number;
   pyramidData: PyramidData;
+  pyramidDataYear: PyramidData;
   manualDangerActions: number;
   manualSuspendedWorks: number;
   onManualDangerActionsChange: (v: number) => void;
@@ -80,7 +81,7 @@ export default function DashboardMainGrid({
   inspTotal, inspRemarks, inspSuspended,
   isContractor, isAdmin, ytdStats, headcountLoading, headcountSettings,
   finesStats, finesLoading, currentMonthLabel,
-  spbCategories, spbStats, spbTotal, pyramidData,
+  spbCategories, spbStats, spbTotal, pyramidData, pyramidDataYear,
   manualDangerActions, manualSuspendedWorks, onManualDangerActionsChange, onManualSuspendedWorksChange,
   onPyramidSave, pyramidSaving,
   manualDangerActions2, manualSuspendedWorks2, onManualDangerActions2Change, onManualSuspendedWorks2Change,
@@ -164,7 +165,7 @@ export default function DashboardMainGrid({
         {(pyramidVisible[0] || isAdmin) && <IncidentPyramid
           visible={pyramidVisible[0]}
           onToggleVisible={isAdmin ? () => onTogglePyramidVisible(1) : undefined}
-          data={pyramidData}
+          data={pyramidDataYear}
           year={new Date().getFullYear()}
           editable={isAdmin}
           manualDangerActions={manualDangerActions}

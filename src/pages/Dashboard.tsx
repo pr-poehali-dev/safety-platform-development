@@ -43,7 +43,7 @@ export default function Dashboard({ user, taskAssignments, visibility, onNavigat
     presTotal, presIssued, presFixed, presOverdue, presRemarksTotal,
     inspTotal, inspSuspended, inspRemarks,
     presSuspendedRemarks,
-    pyramidData, daysWithoutIncidents, lastIncidentDate,
+    pyramidData, pyramidDataYear, daysWithoutIncidents, lastIncidentDate,
     spbStats, spbTotal,
     contractors, pivotRows, grandTotal, chartData, topContractors,
     hasFilter, toggleItem,
@@ -112,6 +112,7 @@ export default function Dashboard({ user, taskAssignments, visibility, onNavigat
         spbStats={spbStats}
         spbTotal={spbTotal}
         pyramidData={pyramidData}
+        pyramidDataYear={pyramidDataYear}
         manualDangerActions={manualDangerActions}
         manualSuspendedWorks={manualSuspendedWorks}
         onManualDangerActionsChange={setManualDangerActions}

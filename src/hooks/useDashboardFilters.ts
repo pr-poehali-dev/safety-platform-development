@@ -139,6 +139,53 @@ export function useDashboardFilters(
     };
   }, [filteredIncidents, filteredPrescriptions, inspRemarks, totalSuspended, totalSuspendedActs]);
 
+  const pyramidDataYear = useMemo(() => {
+    const now = new Date();
+    const yearStart = new Date(now.getFullYear(), 0, 1, 0, 1, 0);
+    const yearEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+    const inYear = (str: string | null | undefined) => {
+      const d = str ? parseDate(str) : null;
+      return !!d && d >= yearStart && d <= yearEnd;
+    };
+    const contractorOk = (c: string | null | undefined) => selectedContractors.length === 0 || selectedContractors.includes(c || "Не указан");
+
+    const yearPrescriptions = prescriptions.filter(p => {
+      if (isContractor && p.contractor !== user.contractor) return false;
+      if (isProjectTeam && !myObjectNames.includes(p.object)) return false;
+      if (isSpecialist && filterMine && p.createdBy !== user.login) return false;
+      return inYear(p.date) && contractorOk(p.contractor);
+    });
+    const yearInspections = inspections.filter(i => {
+      if (isContractor && i.contractor !== user.contractor) return false;
+      if (isProjectTeam && !myObjectNames.includes(i.object_name)) return false;
+      if (isSpecialist && filterMine && i.created_by !== user.id) return false;
+      return inYear(i.inspection_date) && contractorOk(i.contractor);
+    });
+    const yearIncidents = incidents.filter(i => {
+      if (isContractor && i.contractor !== user.contractor) return false;
+      return inYear(i.incident_date) && contractorOk(i.contractor);
+    });
+
+    const presViolations = yearPrescriptions.reduce((s, p) => s + (p.remarks || []).length, 0);
+    const inspViolations = yearInspections.reduce((s, i) => s + (i.remarks_count || 0), 0);
+    const inspSusp = yearInspections.filter(i => i.works_suspended).length;
+    const presSusp = yearPrescriptions.reduce((a, p) => a + (p.remarks || []).filter(r => r.work_suspended).length, 0);
+    const presActs = yearPrescriptions.reduce((a, p) => a + (p.remarks || []).filter(r => r.work_suspended && r.suspension_act_drawn).length, 0);
+    const sum = (key: "fatal" | "severe_injury" | "light_injury" | "microtrauma" | "no_consequences") =>
+      yearIncidents.reduce((s, i) => s + (i[key] || 0), 0);
+
+    return {
+      fatal: sum("fatal"),
+      severe_injury: sum("severe_injury"),
+      light_injury: sum("light_injury"),
+      microtrauma: sum("microtrauma"),
+      no_consequences: sum("no_consequences"),
+      totalViolations: inspViolations + presViolations,
+      suspendedWorks: inspSusp + presSusp,
+      suspendedWorksWithAct: presActs,
+    };
+  }, [prescriptions, inspections, incidents, user, isContractor, isProjectTeam, isSpecialist, filterMine, myObjectNames, selectedContractors]);
+
   const { daysWithoutIncidents, lastIncidentDate } = useMemo(() => {
     const dates = incidents
       .filter(i => (i.fatal || 0) > 0 || (i.severe_injury || 0) > 0 || (i.light_injury || 0) > 0)
@@ -275,7 +322,7 @@ export function useDashboardFilters(
     presTotal, presIssued, presFixed, presOverdue, presRemarksTotal,
     inspTotal, inspSuspended, inspRemarks,
     presSuspendedRemarks,
-    pyramidData, daysWithoutIncidents, lastIncidentDate,
+    pyramidData, pyramidDataYear, daysWithoutIncidents, lastIncidentDate,
     spbStats, spbTotal,
     contractors, pivotRows, grandTotal, chartData, topContractors,
     hasFilter, toggleItem,
