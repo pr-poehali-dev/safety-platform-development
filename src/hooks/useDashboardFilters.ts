@@ -7,7 +7,7 @@ import { SpbCategory, Incident } from "@/hooks/useDashboardData";
 
 function parseDate(str: string): Date | null {
   if (!str) return null;
-  if (str.includes("-")) return new Date(str);
+  if (str.includes("-")) return new Date(str.length === 10 ? str + "T00:00:00" : str);
   const [d, m, y] = str.split(".").map(Number);
   if (!d || !m || !y) return null;
   return new Date(y, m - 1, d);
@@ -35,7 +35,7 @@ export function useDashboardFilters(
   const isProjectTeam = user.role === "project_team";
   const [filterMine, setFilterMine] = useState(isSpecialist);
 
-  const from = dateFrom ? new Date(dateFrom) : null;
+  const from = dateFrom ? new Date(dateFrom + "T00:00:00") : null;
   const to = dateTo ? new Date(dateTo + "T23:59:59") : null;
 
   const allContractorOptions = useMemo(() => {
