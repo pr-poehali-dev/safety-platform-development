@@ -27,6 +27,7 @@ const FIELD_LABELS: Record<string, string> = {
   removed: "Пункт удалён",
   comment: "Комментарий",
   created: "Предписание создано",
+  idle_autosave: "Автосохранение из-за простоя",
   g_number: "Номер предписания",
   g_date: "Дата выдачи",
   g_object: "Объект",
@@ -47,6 +48,7 @@ const FIELD_ICONS: Record<string, string> = {
   removed: "Trash2",
   comment: "MessageSquare",
   created: "FilePlus",
+  idle_autosave: "Clock",
 };
 
 function fmtDate(iso: string): string {
@@ -58,6 +60,9 @@ function fmtDate(iso: string): string {
 function Body({ e }: { e: HistoryEntry }) {
   if (e.field === "created") {
     return <p className="text-sm text-foreground">Предписание {e.newValue} создано</p>;
+  }
+  if (e.field === "idle_autosave") {
+    return <p className="text-sm text-foreground">{e.newValue || "Нет действий 30 минут, пункты сохранены как черновик"}</p>;
   }
   if (e.field === "added") {
     return <p className="text-sm text-foreground">{e.newValue || "Без описания"}</p>;
@@ -115,8 +120,8 @@ export function PrescriptionHistoryTab({ prescriptionId, comments, refreshKey }:
 
   const visible = useMemo(() => entries.filter(e => {
     if (filter === "all") return true;
-    if (filter === "general") return e.field === "created" || e.field.startsWith("g_");
-    if (filter === "remarks") return !["status", "comment", "photos", "created"].includes(e.field) && !e.field.startsWith("g_");
+    if (filter === "general") return e.field === "created" || e.field === "idle_autosave" || e.field.startsWith("g_");
+    if (filter === "remarks") return !["status", "comment", "photos", "created", "idle_autosave"].includes(e.field) && !e.field.startsWith("g_");
     return e.field === filter;
   }), [entries, filter]);
 

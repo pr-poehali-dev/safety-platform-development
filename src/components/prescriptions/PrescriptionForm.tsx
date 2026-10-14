@@ -189,7 +189,7 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const buildPrescription = (asDraft: boolean, force = false): Prescription => {
+  const buildPrescription = (asDraft: boolean, force = false, idle = false): Prescription => {
     const now = new Date();
     return {
       id: editPrescription?.id ?? Date.now().toString(),
@@ -209,6 +209,7 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
       createdBy: editPrescription?.createdBy ?? user.login,
       baseVersion: editId && !force ? baseVersion.current ?? undefined : undefined,
       lockSession: editId ? sessionId : undefined,
+      idleAutosave: idle || undefined,
     };
   };
 
@@ -302,7 +303,7 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
     }
   };
 
-  const doSave = async (asDraft: boolean, force: boolean) => {
+  const doSave = async (asDraft: boolean, force: boolean, idle = false) => {
     if (isSaving) return;
     setSaveError(null);
     if (editId && !force) {
@@ -316,7 +317,7 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
     setConflict(null);
     setIsSaving(true);
     try {
-      await onSave(buildPrescription(asDraft, force));
+      await onSave(buildPrescription(asDraft, force, idle));
       onClose();
     } catch (e) {
       if (e instanceof ConflictError) {
@@ -341,7 +342,7 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
   idleAction.current = () => {
     const hasContent = !!editId || !!form.object;
     if (lockedBy || !hasContent) { onClose(); return; }
-    doSave(true, true);
+    doSave(true, true, true);
   };
 
   useEffect(() => {

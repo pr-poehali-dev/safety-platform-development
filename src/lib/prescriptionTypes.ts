@@ -120,6 +120,7 @@ export class ConflictError extends Error {
 export interface Prescription {
   baseVersion?: string;
   lockSession?: string;
+  idleAutosave?: boolean;
   id: string;
   number: string;
   date: string;

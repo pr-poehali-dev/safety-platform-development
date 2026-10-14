@@ -660,6 +660,8 @@ def handler(event: dict, context) -> dict:
                     f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                     to_insert
                 )
+            if p.get("idleAutosave"):
+                history_rows.append(("", pid, "idle_autosave", "", "Автосохранение из-за простоя: нет действий 30 минут, пункты сохранены как черновик", changed_by, changed_by_name))
             if history_rows:
                 cur.executemany(
                     f"INSERT INTO {SCHEMA}.remark_history (remark_id, prescription_id, field, old_value, new_value, changed_by, changed_by_name) "
