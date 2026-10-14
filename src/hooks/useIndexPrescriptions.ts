@@ -88,6 +88,7 @@ export function useIndexPrescriptions(user: AppUser) {
       body: JSON.stringify({ ...updated, baseVersion, deletedRemarkIds, changedBy: user.login, changedByName: user.name }),
     });
     if (res.status === 409) throw new ConflictError();
+    if (res.status === 423) throw new Error("Предписание сейчас редактирует другой пользователь.");
     if (!res.ok) {
       throw new Error("Не удалось сохранить изменения. Попробуйте ещё раз.");
     }

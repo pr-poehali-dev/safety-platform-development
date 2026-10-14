@@ -208,6 +208,7 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
       comments: editPrescription?.comments ?? [],
       createdBy: editPrescription?.createdBy ?? user.login,
       baseVersion: editId && !force ? baseVersion.current ?? undefined : undefined,
+      lockSession: editId ? sessionId : undefined,
     };
   };
 
@@ -216,6 +217,8 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
   const [highlights, setHighlights] = useState<Record<string, Highlight>>({});
   const [mergeNotes, setMergeNotes] = useState<string[]>([]);
   const baseVersion = useRef<string | null>(null);
+  const [sessionId] = useState(() => `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
+  const [lockedBy, setLockedBy] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
   const [conflict, setConflict] = useState<null | "save" | "draft">(null);
 
@@ -242,6 +245,32 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
     const timer = setInterval(check, 20000);
     document.addEventListener("visibilitychange", check);
     return () => { alive = false; clearInterval(timer); document.removeEventListener("visibilitychange", check); };
+  }, [editId]);
+
+  useEffect(() => {
+    if (!editId) return;
+    let alive = true;
+    const call = async (action: "acquire" | "heartbeat" | "release") => {
+      try {
+        const r = await fetch(PRESCRIPTIONS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ _type: "lock", action, id: editId, sessionId, userLogin: user.login, userName: user.name }),
+          keepalive: action === "release",
+        });
+        return await r.json();
+      } catch {
+        return null;
+      }
+    };
+    call("acquire").then(d => {
+      if (alive && d && d.granted === false) setLockedBy(d.ownerName || "другой пользователь");
+    });
+    const timer = setInterval(async () => {
+      const d = await call("heartbeat");
+      if (alive && d && d.granted === false) setLockedBy(d.ownerName || "другой пользователь");
+    }, 15000);
+    return () => { alive = false; clearInterval(timer); call("release"); };
   }, [editId]);
 
   const reloadFromServer = async () => {
@@ -405,6 +434,21 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
           </button>
         </div>
       </div>
+
+      {lockedBy && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-card border border-border rounded-xl w-full max-w-md shadow-2xl p-6 animate-fade-in space-y-4">
+            <h3 className="text-lg font-semibold">Предписание занято</h3>
+            <p className="text-sm text-muted-foreground">
+              С данным предписанием работает {lockedBy}, одновременная работа двух пользователей невозможна.
+            </p>
+            <div className="flex justify-end">
+              <button onClick={onClose} className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium">Понятно</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {conflict && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">

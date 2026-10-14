@@ -119,6 +119,7 @@ export class ConflictError extends Error {
 
 export interface Prescription {
   baseVersion?: string;
+  lockSession?: string;
   id: string;
   number: string;
   date: string;

@@ -39,6 +39,38 @@ def err(msg, code=400):
     return {"statusCode": code, "headers": {**CORS, "Content-Type": "application/json"}, "body": json.dumps({"error": msg})}
 
 
+LOCK_TTL_SECONDS = 45
+
+
+def handle_lock(body, cur, conn):
+    action = body.get("action")
+    pid = body.get("id") or ""
+    session = body.get("sessionId") or ""
+    if not pid or not session:
+        return err("id and sessionId required")
+    if action == "release":
+        cur.execute(f"DELETE FROM {SCHEMA}.prescription_locks WHERE prescription_id=%s AND session_id=%s", (pid, session))
+        conn.commit()
+        return ok({"released": True})
+    cur.execute(f"DELETE FROM {SCHEMA}.prescription_locks WHERE prescription_id=%s AND heartbeat_at < now() - interval '{LOCK_TTL_SECONDS} seconds'", (pid,))
+    if action == "heartbeat":
+        cur.execute(f"UPDATE {SCHEMA}.prescription_locks SET heartbeat_at=now() WHERE prescription_id=%s AND session_id=%s", (pid, session))
+        if cur.rowcount == 0:
+            cur.execute(
+                f"INSERT INTO {SCHEMA}.prescription_locks (prescription_id, user_login, user_name, session_id) VALUES (%s,%s,%s,%s) ON CONFLICT (prescription_id) DO NOTHING",
+                (pid, body.get("userLogin", ""), body.get("userName", ""), session))
+    else:
+        cur.execute(
+            f"INSERT INTO {SCHEMA}.prescription_locks (prescription_id, user_login, user_name, session_id) VALUES (%s,%s,%s,%s) ON CONFLICT (prescription_id) DO NOTHING",
+            (pid, body.get("userLogin", ""), body.get("userName", ""), session))
+    conn.commit()
+    cur.execute(f"SELECT session_id, user_login, user_name FROM {SCHEMA}.prescription_locks WHERE prescription_id=%s", (pid,))
+    row = cur.fetchone()
+    if row and row[0] == session:
+        return ok({"granted": True})
+    return ok({"granted": False, "ownerName": (row[2] or row[1]) if row else "", "ownerLogin": row[1] if row else ""})
+
+
 def get_version(cur, pid):
     cur.execute(
         f"SELECT md5(COALESCE((SELECT x::text FROM {SCHEMA}.prescriptions x WHERE x.id = %s), '') || "
@@ -316,6 +348,8 @@ def handler(event: dict, context) -> dict:
             return handle_templates(method, body, cur, conn)
         if qs.get("type") == "numbering" or body.get("_type") == "numbering":
             return handle_numbering(method, body, cur, conn)
+        if body.get("_type") == "lock" and method == "POST":
+            return handle_lock(body, cur, conn)
         if qs.get("type") == "version" and method == "GET":
             return ok({"version": get_version(cur, qs.get("id", ""))})
         if qs.get("type") == "prescription_history" and method == "GET":
@@ -472,6 +506,16 @@ def handler(event: dict, context) -> dict:
             pid = p["id"]
 
             cur.execute(f"SELECT id FROM {SCHEMA}.prescriptions WHERE id=%s FOR UPDATE", (pid,))
+            lock_session = p.get("lockSession")
+            if lock_session:
+                cur.execute(
+                    f"SELECT session_id, user_name, user_login FROM {SCHEMA}.prescription_locks WHERE prescription_id=%s "
+                    f"AND heartbeat_at >= now() - interval '{LOCK_TTL_SECONDS} seconds'", (pid,))
+                lk = cur.fetchone()
+                if lk and lk[0] != lock_session:
+                    conn.rollback()
+                    return {"statusCode": 423, "headers": {**CORS, "Content-Type": "application/json"},
+                            "body": json.dumps({"error": f"С данным предписанием работает {lk[1] or lk[2]}", "code": "locked"}, ensure_ascii=False)}
             client_version = p.get("baseVersion")
             if client_version and not p.get("force"):
                 if get_version(cur, pid) != client_version:
