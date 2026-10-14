@@ -305,6 +305,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
         <AddForm
           onClose={() => setEditingPrescription(null)}
           onSave={async p => { await updatePrescription(p); setEditingPrescription(null); }}
+          onAutoSave={updatePrescription}
           user={user}
           editPrescription={editingPrescription}
         />

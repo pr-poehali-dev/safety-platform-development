@@ -22,7 +22,7 @@ const CONTRACTORS_URL = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-e
 const SUSPENSIONS_URL = "https://functions.poehali.dev/bcc14bec-45e7-4857-867d-95233fa38b64";
 
 // --- Форма добавления / редактирования ---
-export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: () => void; onSave: (p: Prescription) => Promise<void>; user: AppUser; editPrescription?: Prescription | null }) {
+export function AddForm({ onClose, onSave, onAutoSave, user, editPrescription }: { onClose: () => void; onSave: (p: Prescription) => Promise<void>; onAutoSave?: (p: Prescription) => Promise<void>; user: AppUser; editPrescription?: Prescription | null }) {
   const isMale = user.name ? detectGenderFromName(user.name) : true;
   const inspectorPosition = user.position ? declinePosition(user.position, isMale) : "";
   const inspectorName = user.name ? toInstrumental(user.name) : "";
@@ -214,7 +214,7 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
   };
 
   const doSave = async (asDraft: boolean, force: boolean, idle = false) => {
-    if (isSaving) return;
+    if (isSaving || autoSaving.current) return;
     setSaveError(null);
     if (editId && !force) {
       const v = await fetchVersion();
@@ -242,6 +242,41 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
       setIsSaving(false);
     }
   };
+
+  const AUTOSAVE_INTERVAL_MS = 360 * 1000;
+  const autoSaving = useRef(false);
+  const lastSavedJson = useRef(JSON.stringify(form));
+  const autoSaveAction = useRef<() => void>(() => {});
+  const [autoSavedAt, setAutoSavedAt] = useState<Date | null>(null);
+
+  autoSaveAction.current = async () => {
+    if (!editId || !onAutoSave || isSaving || autoSaving.current || lockedBy || stale || conflict || showCloseConfirm) return;
+    const json = JSON.stringify(form);
+    if (json === lastSavedJson.current) return;
+    autoSaving.current = true;
+    try {
+      const v = await fetchVersion();
+      if (v && baseVersion.current && v !== baseVersion.current) {
+        setStale(true);
+        return;
+      }
+      await onAutoSave(buildPrescription(false));
+      lastSavedJson.current = json;
+      baseSnapshot.current = { ...form, remarks: form.remarks.map(r => ({ ...r })) };
+      baseVersion.current = await fetchVersion();
+      setAutoSavedAt(new Date());
+    } catch (e) {
+      if (e instanceof ConflictError) setStale(true);
+    } finally {
+      autoSaving.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (!editId || !onAutoSave) return;
+    const timer = setInterval(() => autoSaveAction.current(), AUTOSAVE_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [editId]);
 
   const IDLE_LIMIT_MS = 30 * 60 * 1000;
   const IDLE_WARN_MS = 28 * 60 * 1000;
@@ -333,6 +368,12 @@ export function AddForm({ onClose, onSave, user, editPrescription }: { onClose: 
             <p className="text-sm text-red-400 mr-auto flex items-center gap-1.5">
               <Icon name="AlertTriangle" size={15} />
               {saveError}
+            </p>
+          )}
+          {!saveError && autoSavedAt && (
+            <p className="text-xs text-muted-foreground mr-auto flex items-center gap-1.5">
+              <Icon name="Check" size={14} />
+              Автосохранено в {autoSavedAt.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
             </p>
           )}
           <button onClick={() => setShowCloseConfirm(true)} className="text-base px-8 py-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">
