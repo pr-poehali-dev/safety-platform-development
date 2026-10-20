@@ -12,6 +12,7 @@ import { Highlight, MAX_REMARKS, toFormState, mergeWithServer } from "./form/for
 import FormBanners from "./form/FormBanners";
 import FormRemarksSection from "./form/FormRemarksSection";
 import FormDialogs from "./form/FormDialogs";
+import RemarkSearchPanel from "./form/RemarkSearchPanel";
 
 export { Field, InputBase, TextareaBase, SelectBase, DatePicker };
 
@@ -82,6 +83,19 @@ export function AddForm({ onClose, onSave, onAutoSave, user, editPrescription }:
 
   const removeRemark = (id: string) =>
     setForm(prev => ({ ...prev, remarks: prev.remarks.filter(x => x.id !== id) }));
+
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  const insertFoundRemark = (src: Remark) =>
+    setForm(prev => {
+      const copy: Remark = { ...newRemark(), category: src.category, description: src.description, normRef: src.normRef };
+      const last = prev.remarks[prev.remarks.length - 1];
+      if (last && !last.description.trim() && !last.category.trim() && !last.normRef.trim()) {
+        return { ...prev, remarks: [...prev.remarks.slice(0, -1), { ...last, category: copy.category, description: copy.description, normRef: copy.normRef }] };
+      }
+      if (prev.remarks.length >= MAX_REMARKS) return prev;
+      return { ...prev, remarks: [...prev.remarks, copy] };
+    });
 
   const isValid =
     form.object.trim() &&
@@ -319,7 +333,8 @@ export function AddForm({ onClose, onSave, onAutoSave, user, editPrescription }:
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative bg-card border border-border rounded-xl w-full max-w-[1344px] shadow-2xl animate-fade-in flex flex-col max-h-[92vh]">
+      <div className={`relative bg-card border border-border rounded-xl w-full max-w-[1344px] shadow-2xl animate-fade-in flex flex-col overflow-hidden ${searchOpen ? "h-[92vh]" : "max-h-[92vh]"}`}>
+        <div className={`flex flex-col min-h-0 ${searchOpen ? "flex-[7]" : "flex-1"}`}>
         <div className="flex items-center justify-between px-12 py-8 border-b border-border flex-shrink-0">
           <h2 className="text-xl font-semibold">{editPrescription ? "Редактирование предписания" : "Новое предписание"}</h2>
           <button onClick={() => setShowCloseConfirm(true)} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -365,6 +380,13 @@ export function AddForm({ onClose, onSave, onAutoSave, user, editPrescription }:
           </div>
         </div>
         <div className="flex items-center justify-end gap-4 px-12 py-6 border-t border-border flex-shrink-0">
+          <button
+            onClick={() => setSearchOpen(v => !v)}
+            className={`flex items-center gap-2 text-sm px-4 py-2.5 rounded-lg border transition-colors whitespace-nowrap ${searchOpen ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"}`}
+          >
+            <Icon name="Search" size={15} />
+            Поиск внутри предписаний
+          </button>
           {saveError && (
             <p className="text-sm text-red-400 mr-auto flex items-center gap-1.5">
               <Icon name="AlertTriangle" size={15} />
@@ -388,6 +410,12 @@ export function AddForm({ onClose, onSave, onAutoSave, user, editPrescription }:
             {isSaving ? "Сохранение..." : editPrescription ? "Сохранить изменения" : "Создать предписание"}
           </button>
         </div>
+        </div>
+        {searchOpen && (
+          <div className="flex-[3] min-h-0">
+            <RemarkSearchPanel onInsert={insertFoundRemark} onClose={() => setSearchOpen(false)} />
+          </div>
+        )}
       </div>
 
       <FormDialogs

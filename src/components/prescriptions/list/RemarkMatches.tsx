@@ -21,7 +21,7 @@ export function matchingRemarks(remarks: Remark[], words: string[]): Remark[] {
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-function Highlight({ text, words }: { text: string; words: string[] }) {
+export function Highlight({ text, words }: { text: string; words: string[] }) {
   if (!text) return null;
   if (!words.length) return <>{text}</>;
   const re = new RegExp(`(${words.map(escapeRe).join("|")})`, "gi");
