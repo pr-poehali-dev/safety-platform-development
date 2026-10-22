@@ -23,7 +23,7 @@ const CONTRACTORS_URL = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-e
 const SUSPENSIONS_URL = "https://functions.poehali.dev/bcc14bec-45e7-4857-867d-95233fa38b64";
 
 // --- Форма добавления / редактирования ---
-export function AddForm({ onClose, onSave, onAutoSave, user, editPrescription }: { onClose: () => void; onSave: (p: Prescription) => Promise<void>; onAutoSave?: (p: Prescription) => Promise<void>; user: AppUser; editPrescription?: Prescription | null }) {
+export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, editPrescription }: { onClose: () => void; onSave: (p: Prescription) => Promise<void>; onAutoSave?: (p: Prescription) => Promise<void>; onSaveKeepOpen?: (p: Prescription) => Promise<void>; user: AppUser; editPrescription?: Prescription | null }) {
   const isMale = user.name ? detectGenderFromName(user.name) : true;
   const inspectorPosition = user.position ? declinePosition(user.position, isMale) : "";
   const inspectorName = user.name ? toInstrumental(user.name) : "";
@@ -109,7 +109,17 @@ export function AddForm({ onClose, onSave, onAutoSave, user, editPrescription }:
       r.deadline
     );
 
+  const isRemarkComplete = (r: Remark) =>
+    !!(r.category.trim() && r.description.trim() && r.normRef.trim() && r.deadline);
+
+  const normalizeRemarkStatuses = (remarks: Remark[]): Remark[] =>
+    remarks.map(r => {
+      if (!isRemarkComplete(r)) return r.status === "Черновик" ? r : { ...r, status: "Черновик" };
+      return r.status === "Черновик" ? { ...r, status: "В работе" } : r;
+    });
+
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [manualSavedAt, setManualSavedAt] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -258,6 +268,46 @@ export function AddForm({ onClose, onSave, onAutoSave, user, editPrescription }:
     }
   };
 
+  const doSaveKeepOpen = async () => {
+    if (!onSaveKeepOpen || isSaving || autoSaving.current) return;
+    if (!form.object.trim() || !form.contractor.trim()) {
+      setSaveError("Чтобы сохранить, выберите объект и подрядчика.");
+      return;
+    }
+    setSaveError(null);
+    if (editId) {
+      const v = await fetchVersion();
+      if (v && baseVersion.current && v !== baseVersion.current) {
+        setStale(true);
+        setConflict("save");
+        return;
+      }
+    }
+    setIsSaving(true);
+    try {
+      const normalized = normalizeRemarkStatuses(form.remarks);
+      await onSaveKeepOpen({ ...buildPrescription(false, false), remarks: normalized });
+      if (editId) {
+        const nextForm = { ...form, remarks: normalized };
+        setForm(nextForm);
+        lastSavedJson.current = JSON.stringify(nextForm);
+        baseSnapshot.current = { ...nextForm, remarks: normalized.map(r => ({ ...r })) };
+        baseVersion.current = await fetchVersion();
+        setManualSavedAt(new Date());
+        setAutoSavedAt(null);
+      }
+    } catch (e) {
+      if (e instanceof ConflictError) {
+        setStale(true);
+        setConflict("save");
+        return;
+      }
+      setSaveError("Не удалось сохранить. Проверьте соединение и попробуйте ещё раз.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const AUTOSAVE_INTERVAL_MS = 360 * 1000;
   const autoSaving = useRef(false);
   const lastSavedJson = useRef(JSON.stringify(form));
@@ -275,11 +325,12 @@ export function AddForm({ onClose, onSave, onAutoSave, user, editPrescription }:
         setStale(true);
         return;
       }
-      await onAutoSave(buildPrescription(false, false, false, true));
+      await onAutoSave({ ...buildPrescription(false, false, false, true), remarks: normalizeRemarkStatuses(form.remarks) });
       lastSavedJson.current = json;
       baseSnapshot.current = { ...form, remarks: form.remarks.map(r => ({ ...r })) };
       baseVersion.current = await fetchVersion();
       setAutoSavedAt(new Date());
+      setManualSavedAt(null);
     } catch (e) {
       if (e instanceof ConflictError) setStale(true);
     } finally {
@@ -393,6 +444,12 @@ export function AddForm({ onClose, onSave, onAutoSave, user, editPrescription }:
               {saveError}
             </p>
           )}
+          {!saveError && manualSavedAt && (
+            <p className="text-xs text-muted-foreground mr-auto flex items-center gap-1.5">
+              <Icon name="Check" size={14} />
+              Сохранено в {manualSavedAt.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+            </p>
+          )}
           {!saveError && autoSavedAt && (
             <p className="text-xs text-muted-foreground mr-auto flex items-center gap-1.5">
               <Icon name="Check" size={14} />
@@ -402,6 +459,16 @@ export function AddForm({ onClose, onSave, onAutoSave, user, editPrescription }:
           <button onClick={() => setShowCloseConfirm(true)} className="text-base px-8 py-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">
             Отмена
           </button>
+          {onSaveKeepOpen && (
+            <button
+              onClick={doSaveKeepOpen}
+              disabled={isSaving}
+              className="flex items-center gap-2 text-base px-8 py-3 rounded-lg border border-primary text-primary hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <Icon name="Save" size={16} />
+              Сохранить
+            </button>
+          )}
           <button
             onClick={handleSave}
             disabled={!isValid || isSaving}

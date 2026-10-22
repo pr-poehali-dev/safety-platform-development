@@ -59,6 +59,7 @@ export function useIndexPrescriptions(user: AppUser) {
     const data = await res.json();
     const saved = { ...p, number: data.number ?? p.number };
     setPrescriptions(prev => [saved, ...prev]);
+    return saved;
   };
 
   const reloadPrescriptions = () =>

@@ -298,7 +298,16 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
       />
 
       {showAdd && canEdit && (
-        <AddForm onClose={() => setShowAdd(false)} onSave={addPrescription} user={user} />
+        <AddForm
+          onClose={() => setShowAdd(false)}
+          onSave={async p => { await addPrescription(p); }}
+          onSaveKeepOpen={async p => {
+            const saved = await addPrescription(p);
+            setShowAdd(false);
+            setEditingPrescription(saved);
+          }}
+          user={user}
+        />
       )}
 
       {editingPrescription && (
@@ -306,6 +315,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
           onClose={() => setEditingPrescription(null)}
           onSave={async p => { await updatePrescription(p); setEditingPrescription(null); }}
           onAutoSave={updatePrescription}
+          onSaveKeepOpen={updatePrescription}
           user={user}
           editPrescription={editingPrescription}
         />
