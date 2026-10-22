@@ -118,6 +118,37 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
       return r.status === "Черновик" ? { ...r, status: "В работе" } : r;
     });
 
+  const closedLogged = useRef(false);
+  const lastEventKey = useRef("");
+  const sendFormEvent = (kind: "closed" | "event", reason: string, text = "") => {
+    if (!editId) return;
+    fetch(PRESCRIPTIONS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ _type: "form_event", id: editId, kind, reason, text, changedBy: user.login, changedByName: user.name }),
+      keepalive: true,
+    }).catch(() => {});
+  };
+  const logEvent = (reason: string, text = "") => {
+    const key = `${reason}:${Math.floor(Date.now() / 60000)}`;
+    if (key === lastEventKey.current) return;
+    lastEventKey.current = key;
+    sendFormEvent("event", reason, text);
+  };
+  const closeWith = (reason: string) => {
+    if (!closedLogged.current) {
+      closedLogged.current = true;
+      sendFormEvent("closed", reason);
+    }
+    onClose();
+  };
+  const logSaveFailure = (e: unknown) => {
+    const msg = e instanceof Error ? e.message : "";
+    if (e instanceof TypeError) logEvent("network", "Нет связи с сервером");
+    else if (msg.includes("другой пользователь")) logEvent("locked_save");
+    else logEvent("server_error", msg);
+  };
+
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [manualSavedAt, setManualSavedAt] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -246,6 +277,7 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
       if (v && baseVersion.current && v !== baseVersion.current) {
         setStale(true);
         setConflict(asDraft ? "draft" : "save");
+        logEvent("conflict");
         return;
       }
     }
@@ -253,13 +285,15 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
     setIsSaving(true);
     try {
       await onSave(buildPrescription(asDraft, force, idle));
-      onClose();
+      closeWith(idle ? "idle" : asDraft ? "button_draft" : "button_save");
     } catch (e) {
       if (e instanceof ConflictError) {
         setStale(true);
         setConflict(asDraft ? "draft" : "save");
+        logEvent("conflict");
         return;
       }
+      logSaveFailure(e);
       setSaveError(asDraft
         ? "Не удалось сохранить черновик. Проверьте соединение и попробуйте ещё раз."
         : "Не удалось сохранить предписание. Проверьте соединение и попробуйте ещё раз.");
@@ -280,6 +314,7 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
       if (v && baseVersion.current && v !== baseVersion.current) {
         setStale(true);
         setConflict("save");
+        logEvent("conflict");
         return;
       }
     }
@@ -300,8 +335,10 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
       if (e instanceof ConflictError) {
         setStale(true);
         setConflict("save");
+        logEvent("conflict");
         return;
       }
+      logSaveFailure(e);
       setSaveError("Не удалось сохранить. Проверьте соединение и попробуйте ещё раз.");
     } finally {
       setIsSaving(false);
@@ -323,6 +360,7 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
       const v = await fetchVersion();
       if (v && baseVersion.current && v !== baseVersion.current) {
         setStale(true);
+        logEvent("conflict", "Автосохранение пропущено");
         return;
       }
       await onAutoSave({ ...buildPrescription(false, false, false, true), remarks: normalizeRemarkStatuses(form.remarks) });
@@ -332,7 +370,8 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
       setAutoSavedAt(new Date());
       setManualSavedAt(null);
     } catch (e) {
-      if (e instanceof ConflictError) setStale(true);
+      if (e instanceof ConflictError) { setStale(true); logEvent("conflict", "Автосохранение отклонено"); }
+      else logSaveFailure(e);
     } finally {
       autoSaving.current = false;
     }
@@ -352,7 +391,7 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
 
   idleAction.current = () => {
     const hasContent = !!editId || !!form.object;
-    if (lockedBy || !hasContent) { onClose(); return; }
+    if (lockedBy || !hasContent) { closeWith(lockedBy ? "locked" : "idle"); return; }
     doSave(true, true, true);
   };
 
@@ -377,6 +416,16 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
       clearInterval(timer);
     };
   }, []);
+
+  useEffect(() => {
+    const onHide = () => {
+      if (closedLogged.current) return;
+      closedLogged.current = true;
+      sendFormEvent("closed", "tab_closed");
+    };
+    window.addEventListener("pagehide", onHide);
+    return () => window.removeEventListener("pagehide", onHide);
+  }, [editId]);
 
   const handleSave = () => { if (isValid) doSave(false, false); };
   const handleSaveDraft = () => doSave(true, false);
@@ -491,7 +540,8 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
         conflict={conflict}
         showCloseConfirm={showCloseConfirm}
         isSaving={isSaving}
-        onClose={onClose}
+        onClose={() => closeWith("button_cancel")}
+        onCloseLocked={() => closeWith("locked")}
         onCancelConflict={() => setConflict(null)}
         onSaveAnyway={() => doSave(conflict === "draft", true)}
         onReload={reloadFromServer}

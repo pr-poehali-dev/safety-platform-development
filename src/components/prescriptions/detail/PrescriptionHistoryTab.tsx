@@ -29,6 +29,8 @@ const FIELD_LABELS: Record<string, string> = {
   created: "Предписание создано",
   idle_autosave: "Автосохранение из-за простоя",
   autosave: "Автосохранение",
+  form_closed: "Форма закрыта",
+  form_event: "Событие в форме",
   g_number: "Номер предписания",
   g_date: "Дата выдачи",
   g_object: "Объект",
@@ -51,6 +53,8 @@ const FIELD_ICONS: Record<string, string> = {
   created: "FilePlus",
   idle_autosave: "Clock",
   autosave: "Save",
+  form_closed: "LogOut",
+  form_event: "TriangleAlert",
 };
 
 function fmtDate(iso: string): string {
@@ -68,6 +72,9 @@ function Body({ e }: { e: HistoryEntry }) {
   }
   if (e.field === "idle_autosave") {
     return <p className="text-sm text-foreground">{e.newValue || "Нет действий 30 минут, пункты сохранены как черновик"}</p>;
+  }
+  if (e.field === "form_closed" || e.field === "form_event") {
+    return <p className="text-sm text-foreground">{e.newValue || e.oldValue}</p>;
   }
   if (e.field === "added") {
     return <p className="text-sm text-foreground">{e.newValue || "Без описания"}</p>;
@@ -125,8 +132,8 @@ export function PrescriptionHistoryTab({ prescriptionId, comments, refreshKey }:
 
   const visible = useMemo(() => entries.filter(e => {
     if (filter === "all") return true;
-    if (filter === "general") return e.field === "created" || e.field === "idle_autosave" || e.field === "autosave" || e.field.startsWith("g_");
-    if (filter === "remarks") return !["status", "comment", "photos", "created", "idle_autosave", "autosave"].includes(e.field) && !e.field.startsWith("g_");
+    if (filter === "general") return e.field === "created" || e.field === "idle_autosave" || e.field === "autosave" || e.field === "form_closed" || e.field === "form_event" || e.field.startsWith("g_");
+    if (filter === "remarks") return !["status", "comment", "photos", "created", "idle_autosave", "autosave", "form_closed", "form_event"].includes(e.field) && !e.field.startsWith("g_");
     return e.field === filter;
   }), [entries, filter]);
 

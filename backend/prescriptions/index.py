@@ -71,6 +71,38 @@ def handle_lock(body, cur, conn):
     return ok({"granted": False, "ownerName": (row[2] or row[1]) if row else "", "ownerLogin": row[1] if row else ""})
 
 
+FORM_REASONS = {
+    "button_save": "Закрыта кнопкой «Создать/Сохранить изменения»",
+    "button_draft": "Закрыта кнопкой «Да» (сохранение черновиком)",
+    "button_cancel": "Закрыта кнопкой «Нет» (без сохранения)",
+    "idle": "Закрыта из-за простоя 30 минут",
+    "locked": "Закрыта: предписание занято другим пользователем",
+    "tab_closed": "Вкладка закрыта или перезагружена",
+    "conflict": "Конфликт версий: предписание изменено в другом месте",
+    "network": "Ошибка сети: сохранить не удалось",
+    "server_error": "Ошибка сервера: сохранить не удалось",
+    "locked_save": "Сохранение отклонено: предписание занято другим пользователем",
+}
+
+
+def handle_form_event(body, cur, conn):
+    pid = body.get("id") or ""
+    if not pid:
+        return err("id required")
+    kind = "form_closed" if body.get("kind") == "closed" else "form_event"
+    reason = str(body.get("reason") or "")[:40]
+    text = FORM_REASONS.get(reason, reason)
+    extra = str(body.get("text") or "")[:300]
+    if extra:
+        text = f"{text}. {extra}"
+    cur.execute(
+        f"INSERT INTO {SCHEMA}.remark_history (remark_id, prescription_id, field, old_value, new_value, changed_by, changed_by_name) "
+        f"VALUES (%s,%s,%s,%s,%s,%s,%s)",
+        ("", pid, kind, reason, text, body.get("changedBy", ""), body.get("changedByName", "")))
+    conn.commit()
+    return ok({"ok": True})
+
+
 def get_version(cur, pid):
     cur.execute(
         f"SELECT md5(COALESCE((SELECT x::text FROM {SCHEMA}.prescriptions x WHERE x.id = %s), '') || "
@@ -350,6 +382,8 @@ def handler(event: dict, context) -> dict:
             return handle_numbering(method, body, cur, conn)
         if body.get("_type") == "lock" and method == "POST":
             return handle_lock(body, cur, conn)
+        if body.get("_type") == "form_event" and method == "POST":
+            return handle_form_event(body, cur, conn)
         if qs.get("type") == "version" and method == "GET":
             return ok({"version": get_version(cur, qs.get("id", ""))})
         if qs.get("type") == "prescription_history" and method == "GET":

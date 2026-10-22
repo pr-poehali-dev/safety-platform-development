@@ -7,6 +7,7 @@ interface FormDialogsProps {
   showCloseConfirm: boolean;
   isSaving: boolean;
   onClose: () => void;
+  onCloseLocked: () => void;
   onCancelConflict: () => void;
   onSaveAnyway: () => void;
   onReload: () => void;
@@ -16,7 +17,7 @@ interface FormDialogsProps {
 
 export default function FormDialogs({
   idleWarning, lockedBy, conflict, showCloseConfirm, isSaving,
-  onClose, onCancelConflict, onSaveAnyway, onReload, onDismissCloseConfirm, onSaveDraft,
+  onClose, onCloseLocked, onCancelConflict, onSaveAnyway, onReload, onDismissCloseConfirm, onSaveDraft,
 }: FormDialogsProps) {
   return (
     <>
@@ -35,7 +36,7 @@ export default function FormDialogs({
               С данным предписанием работает {lockedBy}, одновременная работа двух пользователей невозможна.
             </p>
             <div className="flex justify-end">
-              <button onClick={onClose} className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium">Понятно</button>
+              <button onClick={onCloseLocked} className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium">Понятно</button>
             </div>
           </div>
         </div>
