@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { AppUser } from "@/lib/auth";
 import { AddForm } from "@/components/prescriptions/PrescriptionForm";
 import { PrescriptionDetail } from "@/components/prescriptions/PrescriptionDetail";
@@ -300,9 +301,13 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
       {showAdd && canEdit && (
         <AddForm
           onClose={() => setShowAdd(false)}
-          onSave={async p => { await addPrescription(p); }}
+          onSave={async p => {
+            const saved = await addPrescription(p);
+            toast.success(`Предписание ${saved?.number || ""} создано и сохранено`.replace("  ", " "));
+          }}
           onSaveKeepOpen={async p => {
             const saved = await addPrescription(p);
+            toast.success(`Предписание ${saved?.number || ""} создано и сохранено`.replace("  ", " "));
             setShowAdd(false);
             setEditingPrescription(saved);
           }}
