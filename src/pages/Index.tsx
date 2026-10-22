@@ -32,6 +32,10 @@ type Tab = "dashboard" | "prescriptions" | "inspections" | "incidents" | "tasks"
 export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, onTasksPopupShown, visibilityOverride }: IndexProps) {
   const resolvedVisibility = useResolvedVisibility(user);
   const visibility: VisibilitySettings = visibilityOverride ?? resolvedVisibility.settings ?? defaultVisibilitySettings();
+  const notifySaved = (number: string) => {
+    const time = new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+    toast.success(`Предписание ${number} сохранено в ${time}`);
+  };
   const [tab, setTab] = useState<Tab>("dashboard");
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterMine, setFilterMine] = useState(false);
@@ -318,9 +322,9 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
       {editingPrescription && (
         <AddForm
           onClose={() => setEditingPrescription(null)}
-          onSave={async p => { await updatePrescription(p); setEditingPrescription(null); }}
+          onSave={async p => { await updatePrescription(p); notifySaved(p.number); setEditingPrescription(null); }}
           onAutoSave={updatePrescription}
-          onSaveKeepOpen={updatePrescription}
+          onSaveKeepOpen={async p => { await updatePrescription(p); notifySaved(p.number); }}
           user={user}
           editPrescription={editingPrescription}
         />
