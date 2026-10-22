@@ -1,3 +1,4 @@
+import { altaiDateTime } from "@/lib/altaiTime";
 import { useEffect, useState } from "react";
 import Icon from "@/components/ui/icon";
 
@@ -25,9 +26,7 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 function fmtDate(iso: string): string {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return altaiDateTime(iso);
 }
 
 export function RemarkHistoryDialog({ remarkId, onClose }: { remarkId: string; onClose: () => void }) {

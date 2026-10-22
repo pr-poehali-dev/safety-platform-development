@@ -1,3 +1,4 @@
+import { altaiDateTime } from "@/lib/altaiTime";
 export type Status = "Черновик" | "В работе" | "Устранено" | "Просрочено";
 export interface Remark { id: string; place: string; category: string; description: string; normRef: string; deadline: string; status: Status; work_suspended?: boolean; suspension_act_drawn?: boolean; suspension_act_number?: string; photos?: string[]; }
 export interface ImportLogEntry { date: string; adminLogin: string; adminName: string; }
@@ -54,7 +55,5 @@ export function parsePrescriptionDate(str: string): Date | null {
 
 // Форматирует ISO-дату записи журнала импорта в читаемый вид
 export function fmtImportDate(iso: string): string {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return altaiDateTime(iso);
 }

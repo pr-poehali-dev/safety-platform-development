@@ -1,3 +1,4 @@
+import { altaiDate, altaiTime } from "@/lib/altaiTime";
 import { useState, useEffect, useRef } from "react";
 import Icon from "@/components/ui/icon";
 import { AppUser } from "@/lib/auth";
@@ -174,7 +175,7 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
     return {
       id: editPrescription?.id ?? Date.now().toString(),
       number: editPrescription?.number ?? "",
-      date: editPrescription?.date ?? now.toLocaleDateString("ru-RU"),
+      date: editPrescription?.date ?? altaiDate(now),
       object: form.object,
       contractor: form.contractor,
       contractNumber: form.contractNumber || undefined,
@@ -537,13 +538,13 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
           {!saveError && manualSavedAt && (
             <p className="text-xs text-muted-foreground mr-auto flex items-center gap-1.5">
               <Icon name="Check" size={14} />
-              Сохранено в {manualSavedAt.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+              Сохранено в {altaiTime(manualSavedAt)}
             </p>
           )}
           {!saveError && autoSavedAt && (
             <p className="text-xs text-muted-foreground mr-auto flex items-center gap-1.5">
               <Icon name="Check" size={14} />
-              Автосохранено в {autoSavedAt.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+              Автосохранено в {altaiTime(autoSavedAt)}
             </p>
           )}
           <button onClick={() => setShowCloseConfirm(true)} className="text-base px-8 py-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">

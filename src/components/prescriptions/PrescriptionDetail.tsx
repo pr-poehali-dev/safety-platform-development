@@ -1,3 +1,4 @@
+import { altaiDateTimeSec } from "@/lib/altaiTime";
 import { useState, useRef, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import { PrescriptionHistoryTab } from "@/components/prescriptions/detail/PrescriptionHistoryTab";
@@ -229,7 +230,7 @@ export function PrescriptionDetail({
       authorLogin: user.login,
       role: myRole,
       text: newComment.trim(),
-      time: new Date().toLocaleString("ru-RU"),
+      time: altaiDateTimeSec(),
       attachments: attachments.length > 0 ? [...attachments] : undefined,
     };
     const updated = { ...p, comments: [...p.comments, c] };

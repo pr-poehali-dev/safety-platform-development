@@ -1,3 +1,4 @@
+import { altaiTime } from "@/lib/altaiTime";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { AppUser } from "@/lib/auth";
@@ -33,7 +34,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
   const resolvedVisibility = useResolvedVisibility(user);
   const visibility: VisibilitySettings = visibilityOverride ?? resolvedVisibility.settings ?? defaultVisibilitySettings();
   const notifySaved = (number: string) => {
-    const time = new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+    const time = altaiTime();
     toast.success(`Предписание ${number} сохранено в ${time}`);
   };
   const [tab, setTab] = useState<Tab>("dashboard");
