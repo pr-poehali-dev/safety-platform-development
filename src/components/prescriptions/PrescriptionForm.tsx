@@ -49,6 +49,20 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
       .then((data: { number: string }[]) => setSuspensionNumbers(Array.isArray(data) ? data.map(s => s.number).filter(Boolean) : []));
   }, []);
 
+  const draftKey = `prescription-new-draft:${user.login}`;
+  function loadLocalDraft(): FormState | null {
+    if (editPrescription) return null;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return null;
+      const d = JSON.parse(raw) as FormState;
+      return d && Array.isArray(d.remarks) && d.remarks.length ? d : null;
+    } catch {
+      return null;
+    }
+  }
+  const clearLocalDraft = () => { try { localStorage.removeItem(draftKey); } catch { /* ignore */ } };
+
   const [form, setForm] = useState<FormState>(() => editPrescription ? {
     object: editPrescription.object,
     contractor: editPrescription.contractor,
@@ -58,9 +72,9 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
     replyEmail: editPrescription.replyEmail,
     reportDeadline: editPrescription.reportDeadline,
     remarks: editPrescription.remarks.map(r => ({ ...r })),
-  } : {
+  } : (loadLocalDraft() ?? {
     object: "", contractor: "", contractNumber: "", representative: "", representativeEnabled: false, replyEmail: "", reportDeadline: "", remarks: [newRemark()],
-  });
+  }));
 
   const selectedObject = objectsList.find(o => o.name === form.object);
   const availablePlaces = selectedObject ? selectedObject.places.map(p => p.name) : [];
@@ -136,6 +150,7 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
     sendFormEvent("event", reason, text);
   };
   const closeWith = (reason: string) => {
+    clearLocalDraft();
     if (!closedLogged.current) {
       closedLogged.current = true;
       sendFormEvent("closed", reason);
@@ -322,6 +337,7 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
     try {
       const normalized = normalizeRemarkStatuses(form.remarks);
       await onSaveKeepOpen({ ...buildPrescription(false, false), remarks: normalized });
+      if (!editId) clearLocalDraft();
       if (editId) {
         const nextForm = { ...form, remarks: normalized };
         setForm(nextForm);
@@ -426,6 +442,31 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
     window.addEventListener("pagehide", onHide);
     return () => window.removeEventListener("pagehide", onHide);
   }, [editId]);
+
+  const hasContent = !!form.object || !!form.contractor || form.remarks.some(r => r.description.trim() || r.normRef.trim() || r.category.trim());
+
+  useEffect(() => {
+    if (editId) return;
+    const t = setTimeout(() => {
+      try {
+        if (hasContent) localStorage.setItem(draftKey, JSON.stringify(form));
+        else localStorage.removeItem(draftKey);
+      } catch { /* ignore */ }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [form, editId]);
+
+  const dirtyRef = useRef(false);
+  dirtyRef.current = editId ? JSON.stringify(form) !== lastSavedJson.current : hasContent;
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!dirtyRef.current) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
 
   const handleSave = () => { if (isValid) doSave(false, false); };
   const handleSaveDraft = () => doSave(true, false);
