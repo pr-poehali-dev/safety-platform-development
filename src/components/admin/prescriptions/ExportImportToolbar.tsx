@@ -96,24 +96,16 @@ export function ExportImportToolbar({
         work_suspended: r.work_suspended,
         suspension_act_drawn: r.suspension_act_drawn,
         suspension_act_number: r.suspension_act_number ?? "",
-        photos: r.photos ?? [],
       })),
     }));
-
-    const totalPhotos = payload.reduce((sum, p) => sum + p.remarks.reduce((s, r) => s + r.photos.length, 0), 0);
-    // Примерная оценка времени формирования файла — зависит от количества фото, которые нужно скачать и уменьшить на сервере
-    const estimatedMs = Math.max(1200, totalPhotos * 35);
 
     setExporting(true);
     setExportProgress(0);
 
-    // Плавно приближаем прогресс к 92%, не показывая 100% пока не придёт реальный ответ сервера
     const startedAt = Date.now();
     const progressTimer = window.setInterval(() => {
-      const elapsed = Date.now() - startedAt;
-      const ratio = Math.min(elapsed / estimatedMs, 1);
-      const eased = 1 - Math.pow(1 - ratio, 2);
-      setExportProgress(Math.min(92, Math.round(eased * 92)));
+      const ratio = Math.min((Date.now() - startedAt) / 2500, 1);
+      setExportProgress(Math.min(92, Math.round((1 - Math.pow(1 - ratio, 2)) * 92)));
     }, 120);
 
     try {
@@ -125,7 +117,7 @@ export function ExportImportToolbar({
       const data = await res.json().catch(() => ({}));
       window.clearInterval(progressTimer);
       if (!res.ok || !data.url) {
-        window.alert("Не удалось сформировать Excel-файл: сервер не успел обработать запрос. Попробуйте выбрать меньше предписаний (по датам или объекту) и повторите.");
+        window.alert("Не удалось сформировать Excel-файл: сервер не успел обработать запрос. Попробуйте повторить.");
         return;
       }
       setExportProgress(100);
@@ -140,9 +132,6 @@ export function ExportImportToolbar({
         a.click();
         a.remove();
         URL.revokeObjectURL(blobUrl);
-        if (data.skippedPhotos > 0) {
-          window.alert(`Файл скачан, но ${data.skippedPhotos} фото не удалось загрузить вовремя и они не попали в файл.`);
-        }
       }
     } catch {
       window.alert("Не удалось скачать файл. Проверьте соединение и повторите.");
