@@ -2,9 +2,10 @@ import json
 import os
 import io
 import uuid
+import time
 import boto3
 import requests
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutTimeout
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment
 from openpyxl.drawing.image import Image as XLImage
@@ -30,7 +31,8 @@ COL_WIDTHS = [10, 12, 24, 24, 14, 22, 22, 22, 12, 22, 16, 10, 20, 22, 40, 22, 14
 THUMB_SIZE = 90
 ROW_HEIGHT_WITH_PHOTOS = 74
 ROW_HEIGHT_PLAIN = 16
-FETCH_TIMEOUT = 3
+FETCH_TIMEOUT = 2
+PHOTOS_BUDGET_SEC = 2.5
 MAX_WORKERS = 64
 
 _adapter = requests.adapters.HTTPAdapter(pool_connections=MAX_WORKERS, pool_maxsize=MAX_WORKERS)
@@ -62,9 +64,10 @@ def fetch_all_thumbnails(tasks):
     results = {}
     if not tasks:
         return results
-    with ThreadPoolExecutor(max_workers=min(MAX_WORKERS, len(tasks))) as executor:
-        future_map = {executor.submit(fetch_thumbnail, url): (row_idx, url) for row_idx, url in tasks}
-        for future in as_completed(future_map):
+    executor = ThreadPoolExecutor(max_workers=min(MAX_WORKERS, len(tasks)))
+    future_map = {executor.submit(fetch_thumbnail, url): (row_idx, url) for row_idx, url in tasks}
+    try:
+        for future in as_completed(future_map, timeout=PHOTOS_BUDGET_SEC):
             key = future_map[future]
             try:
                 result = future.result()
@@ -72,6 +75,9 @@ def fetch_all_thumbnails(tasks):
                 result = None
             if result:
                 results[key] = result
+    except FutTimeout:
+        pass
+    executor.shutdown(wait=False, cancel_futures=True)
     return results
 
 
@@ -166,6 +172,7 @@ def handler(event: dict, context) -> dict:
         for url in photos:
             fetch_tasks.append((row_idx, url))
     thumbnails = fetch_all_thumbnails(fetch_tasks)
+    skipped_photos = len(fetch_tasks) - len(thumbnails)
 
     # Второй проход: заполняем лист данными и вставляем уже скачанные миниатюры
     for i, (values, photos) in enumerate(data_rows):
@@ -202,5 +209,5 @@ def handler(event: dict, context) -> dict:
     return {
         "statusCode": 200,
         "headers": {**CORS, "Content-Type": "application/json"},
-        "body": json.dumps({"url": cdn_url}),
+        "body": json.dumps({"url": cdn_url, "skippedPhotos": skipped_photos}),
     }

@@ -122,8 +122,12 @@ export function ExportImportToolbar({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prescriptions: payload }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       window.clearInterval(progressTimer);
+      if (!res.ok || !data.url) {
+        window.alert("Не удалось сформировать Excel-файл: сервер не успел обработать запрос. Попробуйте выбрать меньше предписаний (по датам или объекту) и повторите.");
+        return;
+      }
       setExportProgress(100);
       if (data.url) {
         const fileRes = await fetch(data.url);
@@ -136,7 +140,12 @@ export function ExportImportToolbar({
         a.click();
         a.remove();
         URL.revokeObjectURL(blobUrl);
+        if (data.skippedPhotos > 0) {
+          window.alert(`Файл скачан, но ${data.skippedPhotos} фото не удалось загрузить вовремя и они не попали в файл.`);
+        }
       }
+    } catch {
+      window.alert("Не удалось скачать файл. Проверьте соединение и повторите.");
     } finally {
       window.clearInterval(progressTimer);
       setTimeout(() => { setExporting(false); setExportProgress(0); }, 400);
