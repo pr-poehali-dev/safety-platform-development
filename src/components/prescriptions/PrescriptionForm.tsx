@@ -12,6 +12,7 @@ import { GeneralInfoSection, FormState } from "./form/GeneralInfoSection";
 import { Highlight, MAX_REMARKS, toFormState, mergeWithServer } from "./form/formMerge";
 import FormBanners from "./form/FormBanners";
 import { useOtherTabOpen } from "./form/useOtherTabOpen";
+import { useFormHistory } from "./form/useFormHistory";
 import FormRemarksSection from "./form/FormRemarksSection";
 import FormDialogs from "./form/FormDialogs";
 import RemarkSearchPanel from "./form/RemarkSearchPanel";
@@ -77,6 +78,8 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
   } : (loadLocalDraft() ?? {
     object: "", contractor: "", contractNumber: "", representative: "", representativeEnabled: false, replyEmail: "", reportDeadline: "", remarks: [newRemark()],
   }));
+
+  const { undo, redo, canUndo, canRedo } = useFormHistory(form, setForm);
 
   const selectedObject = objectsList.find(o => o.name === form.object);
   const availablePlaces = selectedObject ? selectedObject.places.map(p => p.name) : [];
@@ -485,7 +488,17 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
       <div className={`relative bg-card border border-border rounded-xl w-full max-w-[1344px] shadow-2xl animate-fade-in flex flex-col overflow-hidden ${searchOpen ? "h-[92vh]" : "max-h-[92vh]"}`}>
         <div className={`flex flex-col min-h-0 ${searchOpen ? "flex-[7]" : "flex-1"}`}>
         <div className="flex items-center justify-between px-12 py-8 border-b border-border flex-shrink-0">
-          <h2 className="text-xl font-semibold">{editPrescription ? "Редактирование предписания" : "Новое предписание"}</h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-semibold">{editPrescription ? "Редактирование предписания" : "Новое предписание"}</h2>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={undo} disabled={!canUndo} title="Отменить последнее действие" aria-label="Назад" className="p-2 rounded-md border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent">
+                <Icon name="Undo2" size={18} />
+              </button>
+              <button type="button" onClick={redo} disabled={!canRedo} title="Вернуть отменённое действие" aria-label="Вперёд" className="p-2 rounded-md border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent">
+                <Icon name="Redo2" size={18} />
+              </button>
+            </div>
+          </div>
           <button onClick={() => setShowCloseConfirm(true)} className="text-muted-foreground hover:text-foreground transition-colors">
             <Icon name="X" size={22} />
           </button>
