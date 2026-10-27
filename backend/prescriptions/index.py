@@ -701,7 +701,7 @@ def handler(event: dict, context) -> dict:
             if p.get("idleAutosave"):
                 history_rows.append(("", pid, "idle_autosave", "", "Автосохранение из-за простоя: нет действий 30 минут, пункты сохранены как черновик", changed_by, changed_by_name))
             if p.get("autoSave") and not p.get("idleAutosave"):
-                history_rows.append(("", pid, "autosave", "", "Автосохранение: изменения сохранены автоматически (каждые 6 минут)", changed_by, changed_by_name))
+                history_rows.append(("", pid, "autosave", "", "Автосохранение: изменения сохранены автоматически (каждую минуту)", changed_by, changed_by_name))
             if history_rows:
                 cur.executemany(
                     f"INSERT INTO {SCHEMA}.remark_history (remark_id, prescription_id, field, old_value, new_value, changed_by, changed_by_name) "

@@ -372,7 +372,7 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
     }
   };
 
-  const AUTOSAVE_INTERVAL_MS = 360 * 1000;
+  const AUTOSAVE_INTERVAL_MS = 60 * 1000;
   const autoSaving = useRef(false);
   const lastSavedJson = useRef(JSON.stringify(form));
   const autoSaveAction = useRef<() => void>(() => {});
