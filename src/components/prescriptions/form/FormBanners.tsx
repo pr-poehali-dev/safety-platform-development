@@ -2,14 +2,21 @@ import Icon from "@/components/ui/icon";
 
 interface FormBannersProps {
   stale: boolean;
+  otherTabOpen?: boolean;
   mergeNotes: string[];
   onReload: () => void;
   onHideNotes: () => void;
 }
 
-export default function FormBanners({ stale, mergeNotes, onReload, onHideNotes }: FormBannersProps) {
+export default function FormBanners({ stale, otherTabOpen, mergeNotes, onReload, onHideNotes }: FormBannersProps) {
   return (
     <>
+      {otherTabOpen && (
+        <div className="flex items-center gap-3 px-12 py-3 bg-red-500/15 border-b border-red-500/40 text-sm flex-shrink-0">
+          <Icon name="TriangleAlert" size={16} />
+          <span className="flex-1">Это предписание уже открыто для редактирования в другой вкладке или окне. Закройте лишнюю, иначе устаревшая форма может затереть свежие правки.</span>
+        </div>
+      )}
       {stale && (
         <div className="flex items-center gap-3 px-12 py-3 bg-amber-500/15 border-b border-amber-500/40 text-sm flex-shrink-0">
           <Icon name="TriangleAlert" size={16} />

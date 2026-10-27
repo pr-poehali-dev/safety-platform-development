@@ -11,6 +11,7 @@ import { Field, InputBase, TextareaBase, SelectBase, DatePicker } from "./form/F
 import { GeneralInfoSection, FormState } from "./form/GeneralInfoSection";
 import { Highlight, MAX_REMARKS, toFormState, mergeWithServer } from "./form/formMerge";
 import FormBanners from "./form/FormBanners";
+import { useOtherTabOpen } from "./form/useOtherTabOpen";
 import FormRemarksSection from "./form/FormRemarksSection";
 import FormDialogs from "./form/FormDialogs";
 import RemarkSearchPanel from "./form/RemarkSearchPanel";
@@ -206,6 +207,7 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
   const [mergeNotes, setMergeNotes] = useState<string[]>([]);
   const baseVersion = useRef<string | null>(null);
   const [sessionId] = useState(() => `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
+  const otherTabOpen = useOtherTabOpen(editId, sessionId);
   const [lockedBy, setLockedBy] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
   const [conflict, setConflict] = useState<null | "save" | "draft">(null);
@@ -374,7 +376,7 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
   const [autoSavedAt, setAutoSavedAt] = useState<Date | null>(null);
 
   autoSaveAction.current = async () => {
-    if (!editId || !onAutoSave || isSaving || autoSaving.current || lockedBy || stale || conflict || showCloseConfirm) return;
+    if (!editId || !onAutoSave || isSaving || autoSaving.current || lockedBy || stale || otherTabOpen || conflict || showCloseConfirm) return;
     const json = JSON.stringify(form);
     if (json === lastSavedJson.current) return;
     autoSaving.current = true;
@@ -490,6 +492,7 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
         </div>
         <FormBanners
           stale={stale}
+          otherTabOpen={otherTabOpen}
           mergeNotes={mergeNotes}
           onReload={reloadFromServer}
           onHideNotes={() => { setMergeNotes([]); setHighlights({}); }}
