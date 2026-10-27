@@ -1,6 +1,5 @@
-import { altaiDate, altaiTime } from "@/lib/altaiTime";
+import { altaiDate } from "@/lib/altaiTime";
 import { useState, useEffect, useRef } from "react";
-import Icon from "@/components/ui/icon";
 import { AppUser } from "@/lib/auth";
 import {
   Remark, Prescription,
@@ -13,6 +12,10 @@ import { Highlight, MAX_REMARKS, toFormState, mergeWithServer } from "./form/for
 import FormBanners from "./form/FormBanners";
 import { useOtherTabOpen } from "./form/useOtherTabOpen";
 import { useFormHistory } from "./form/useFormHistory";
+import { useFormLookups } from "./form/useFormLookups";
+import FormHeader from "./form/FormHeader";
+import FormReportSection from "./form/FormReportSection";
+import FormFooter from "./form/FormFooter";
 import FormRemarksSection from "./form/FormRemarksSection";
 import FormDialogs from "./form/FormDialogs";
 import RemarkSearchPanel from "./form/RemarkSearchPanel";
@@ -20,10 +23,6 @@ import RemarkSearchPanel from "./form/RemarkSearchPanel";
 export { Field, InputBase, TextareaBase, SelectBase, DatePicker };
 
 const PRESCRIPTIONS_URL = "https://functions.poehali.dev/72e22ece-f829-4b90-9dee-a6df60027d69";
-const CATEGORIES_URL = "https://functions.poehali.dev/ea358d23-fa1e-4907-88c0-87cd78732293";
-const OBJECTS_URL = "https://functions.poehali.dev/644a7c32-2a01-4964-b2c3-cc4af7bfd839";
-const CONTRACTORS_URL = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-ef7bc1d23b4b";
-const SUSPENSIONS_URL = "https://functions.poehali.dev/bcc14bec-45e7-4857-867d-95233fa38b64";
 
 // --- Форма добавления / редактирования ---
 export function AddForm({ onClose, onSave, onAutoSave, onAutoCreate, onSaveKeepOpen, user, editPrescription }: { onClose: () => void; onSave: (p: Prescription) => Promise<void>; onAutoSave?: (p: Prescription) => Promise<void>; onAutoCreate?: (p: Prescription) => Promise<Prescription>; onSaveKeepOpen?: (p: Prescription) => Promise<void>; user: AppUser; editPrescription?: Prescription | null }) {
@@ -33,24 +32,7 @@ export function AddForm({ onClose, onSave, onAutoSave, onAutoCreate, onSaveKeepO
   const inspectorLabel = editPrescription ? editPrescription.inspector : [inspectorPosition, inspectorName].filter(Boolean).join(" ");
   const inspectorNominativeLabel = editPrescription ? (editPrescription.inspectorNominative ?? "") : [user.position || "", user.name || ""].filter(Boolean).join(" ");
 
-  const [categories, setCategories] = useState<string[]>([]);
-  const [objectsList, setObjectsList] = useState<{ id: number; name: string; places: { id: number; name: string }[] }[]>([]);
-  const [contractorsList, setContractorsList] = useState<{ name: string; contracts: { id: number; contract_number: string }[] }[]>([]);
-  const [suspensionNumbers, setSuspensionNumbers] = useState<string[]>([]);
-  useEffect(() => {
-    fetch(CATEGORIES_URL)
-      .then(r => r.json())
-      .then(data => setCategories(Array.isArray(data) ? data.map((d: { name: string }) => d.name) : []));
-    fetch(OBJECTS_URL)
-      .then(r => r.json())
-      .then(data => setObjectsList(Array.isArray(data) ? data : []));
-    fetch(CONTRACTORS_URL)
-      .then(r => r.json())
-      .then(data => setContractorsList(Array.isArray(data) ? data : []));
-    fetch(SUSPENSIONS_URL)
-      .then(r => r.json())
-      .then((data: { number: string }[]) => setSuspensionNumbers(Array.isArray(data) ? data.map(s => s.number).filter(Boolean) : []));
-  }, []);
+  const { categories, objectsList, contractorsList, suspensionNumbers } = useFormLookups();
 
   const draftKey = `prescription-new-draft:${user.login}`;
   function loadLocalDraft(): FormState | null {
@@ -509,22 +491,14 @@ export function AddForm({ onClose, onSave, onAutoSave, onAutoCreate, onSaveKeepO
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div className={`relative bg-card border border-border rounded-xl w-full max-w-[1344px] shadow-2xl animate-fade-in flex flex-col overflow-hidden ${searchOpen ? "h-[92vh]" : "max-h-[92vh]"}`}>
         <div className={`flex flex-col min-h-0 ${searchOpen ? "flex-[7]" : "flex-1"}`}>
-        <div className="flex items-center justify-between px-12 py-8 border-b border-border flex-shrink-0">
-          <div className="flex items-center gap-4">
-            <h2 className="text-xl font-semibold">{editPrescription ? "Редактирование предписания" : "Новое предписание"}</h2>
-            <div className="flex items-center gap-1">
-              <button type="button" onClick={undo} disabled={!canUndo} title="Отменить последнее действие" aria-label="Назад" className="p-2 rounded-md border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent">
-                <Icon name="Undo2" size={18} />
-              </button>
-              <button type="button" onClick={redo} disabled={!canRedo} title="Вернуть отменённое действие" aria-label="Вперёд" className="p-2 rounded-md border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent">
-                <Icon name="Redo2" size={18} />
-              </button>
-            </div>
-          </div>
-          <button onClick={() => setShowCloseConfirm(true)} className="text-muted-foreground hover:text-foreground transition-colors">
-            <Icon name="X" size={22} />
-          </button>
-        </div>
+        <FormHeader
+          isEdit={!!editPrescription}
+          undo={undo}
+          redo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onRequestClose={() => setShowCloseConfirm(true)}
+        />
         <FormBanners
           stale={stale}
           otherTabOpen={otherTabOpen}
@@ -553,64 +527,22 @@ export function AddForm({ onClose, onSave, onAutoSave, onAutoCreate, onSaveKeepO
             addRemark={addRemark}
             limitReached={limitReached}
           />
-          <div className="border-t border-border pt-8 space-y-6">
-            <div className="grid grid-cols-2 gap-6">
-              <Field label="Срок предоставления отчёта *">
-                <DatePicker value={form.reportDeadline} onChange={v => setField("reportDeadline", v)} placeholder="Выбрать дату" />
-              </Field>
-              <Field label="Электронная почта для ответа *">
-                <InputBase type="email" value={form.replyEmail} onChange={e => setField("replyEmail", e.target.value)} placeholder="example@company.ru" />
-              </Field>
-            </div>
-          </div>
+          <FormReportSection form={form} setField={setField} />
         </div>
-        <div className="flex items-center justify-end gap-4 px-12 py-6 border-t border-border flex-shrink-0">
-          <button
-            onClick={() => setSearchOpen(v => !v)}
-            className={`flex items-center gap-2 text-sm px-4 py-2.5 rounded-lg border transition-colors whitespace-nowrap ${searchOpen ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"}`}
-          >
-            <Icon name="Search" size={15} />
-            Поиск внутри предписаний
-          </button>
-          {saveError && (
-            <p className="text-sm text-red-400 mr-auto flex items-center gap-1.5">
-              <Icon name="AlertTriangle" size={15} />
-              {saveError}
-            </p>
-          )}
-          {!saveError && manualSavedAt && (
-            <p className="text-xs text-muted-foreground mr-auto flex items-center gap-1.5">
-              <Icon name="Check" size={14} />
-              Сохранено в {altaiTime(manualSavedAt)}
-            </p>
-          )}
-          {!saveError && autoSavedAt && (
-            <p className="text-xs text-muted-foreground mr-auto flex items-center gap-1.5">
-              <Icon name="Check" size={14} />
-              Автосохранено в {altaiTime(autoSavedAt)}
-            </p>
-          )}
-          <button onClick={() => setShowCloseConfirm(true)} className="text-base px-8 py-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">
-            Отмена
-          </button>
-          {onSaveKeepOpen && (
-            <button
-              onClick={doSaveKeepOpen}
-              disabled={isSaving}
-              className="flex items-center gap-2 text-base px-8 py-3 rounded-lg border border-primary text-primary hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              <Icon name="Save" size={16} />
-              Сохранить
-            </button>
-          )}
-          <button
-            onClick={handleSave}
-            disabled={!isValid || isSaving}
-            className="text-base px-10 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            {isSaving ? "Сохранение..." : editPrescription ? "Сохранить изменения" : "Создать предписание"}
-          </button>
-        </div>
+        <FormFooter
+          isEdit={!!editPrescription}
+          searchOpen={searchOpen}
+          onToggleSearch={() => setSearchOpen(v => !v)}
+          saveError={saveError}
+          manualSavedAt={manualSavedAt}
+          autoSavedAt={autoSavedAt}
+          onRequestClose={() => setShowCloseConfirm(true)}
+          showKeepOpen={!!onSaveKeepOpen}
+          onSaveKeepOpen={doSaveKeepOpen}
+          isSaving={isSaving}
+          isValid={!!isValid}
+          onSave={handleSave}
+        />
         </div>
         {searchOpen && (
           <div className="flex-[3] min-h-0">
