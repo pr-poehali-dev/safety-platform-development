@@ -26,7 +26,7 @@ const CONTRACTORS_URL = "https://functions.poehali.dev/95247612-816e-4c39-b2d8-e
 const SUSPENSIONS_URL = "https://functions.poehali.dev/bcc14bec-45e7-4857-867d-95233fa38b64";
 
 // --- Форма добавления / редактирования ---
-export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, editPrescription }: { onClose: () => void; onSave: (p: Prescription) => Promise<void>; onAutoSave?: (p: Prescription) => Promise<void>; onSaveKeepOpen?: (p: Prescription) => Promise<void>; user: AppUser; editPrescription?: Prescription | null }) {
+export function AddForm({ onClose, onSave, onAutoSave, onAutoCreate, onSaveKeepOpen, user, editPrescription }: { onClose: () => void; onSave: (p: Prescription) => Promise<void>; onAutoSave?: (p: Prescription) => Promise<void>; onAutoCreate?: (p: Prescription) => Promise<Prescription>; onSaveKeepOpen?: (p: Prescription) => Promise<void>; user: AppUser; editPrescription?: Prescription | null }) {
   const isMale = user.name ? detectGenderFromName(user.name) : true;
   const inspectorPosition = user.position ? declinePosition(user.position, isMale) : "";
   const inspectorName = user.name ? toInstrumental(user.name) : "";
@@ -65,6 +65,9 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
     }
   }
   const clearLocalDraft = () => { try { localStorage.removeItem(draftKey); } catch { /* ignore */ } };
+
+  const [created, setCreated] = useState<Prescription | null>(null);
+  const base = editPrescription ?? created;
 
   const [form, setForm] = useState<FormState>(() => editPrescription ? {
     object: editPrescription.object,
@@ -181,21 +184,21 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
       ? baseSnapshot.current.remarks.filter(r => !keepIds.has(r.id)).map(r => r.id)
       : [];
     return {
-      id: editPrescription?.id ?? Date.now().toString(),
-      number: editPrescription?.number ?? "",
-      date: editPrescription?.date ?? altaiDate(now),
+      id: base?.id ?? Date.now().toString(),
+      number: base?.number ?? "",
+      date: base?.date ?? altaiDate(now),
       object: form.object,
       contractor: form.contractor,
       contractNumber: form.contractNumber || undefined,
       inspector: inspectorLabel,
       inspectorNominative: inspectorNominativeLabel,
       representative: form.representative,
-      responsible: editPrescription?.responsible ?? "",
+      responsible: base?.responsible ?? "",
       replyEmail: form.replyEmail,
       reportDeadline: form.reportDeadline,
       remarks: asDraft ? form.remarks.map(r => ({ ...r, status: "Черновик" })) : form.remarks,
-      comments: editPrescription?.comments ?? [],
-      createdBy: editPrescription?.createdBy ?? user.login,
+      comments: base?.comments ?? [],
+      createdBy: base?.createdBy ?? user.login,
       deletedRemarkIds,
       baseVersion: editId && !force ? baseVersion.current ?? undefined : undefined,
       lockSession: editId ? sessionId : undefined,
@@ -204,7 +207,7 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
     };
   };
 
-  const editId = editPrescription?.id;
+  const editId = base?.id;
   const baseSnapshot = useRef<FormState | null>(editPrescription ? toFormState(editPrescription) : null);
   const [highlights, setHighlights] = useState<Record<string, Highlight>>({});
   const [mergeNotes, setMergeNotes] = useState<string[]>([]);
@@ -379,7 +382,26 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
   const [autoSavedAt, setAutoSavedAt] = useState<Date | null>(null);
 
   autoSaveAction.current = async () => {
-    if (!editId || !onAutoSave || isSaving || autoSaving.current || lockedBy || stale || otherTabOpen || conflict || showCloseConfirm) return;
+    if (!editId) {
+      if (!onAutoCreate || !hasContent || isSaving || autoSaving.current || showCloseConfirm) return;
+      const json = JSON.stringify(form);
+      autoSaving.current = true;
+      try {
+        const saved = await onAutoCreate(buildPrescription(true, false, false, true));
+        lastSavedJson.current = json;
+        baseSnapshot.current = { ...form, remarks: form.remarks.map(r => ({ ...r })) };
+        clearLocalDraft();
+        setCreated(saved);
+        setAutoSavedAt(new Date());
+        setManualSavedAt(null);
+      } catch (e) {
+        logSaveFailure(e);
+      } finally {
+        autoSaving.current = false;
+      }
+      return;
+    }
+    if (!onAutoSave || isSaving || autoSaving.current || lockedBy || stale || otherTabOpen || conflict || showCloseConfirm) return;
     const json = JSON.stringify(form);
     if (json === lastSavedJson.current) return;
     autoSaving.current = true;
@@ -405,7 +427,7 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
   };
 
   useEffect(() => {
-    if (!editId || !onAutoSave) return;
+    if (!onAutoSave && !onAutoCreate) return;
     const timer = setInterval(() => autoSaveAction.current(), AUTOSAVE_INTERVAL_MS);
     return () => clearInterval(timer);
   }, [editId]);

@@ -1,5 +1,5 @@
 import { altaiTime } from "@/lib/altaiTime";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { AppUser } from "@/lib/auth";
 import { AddForm } from "@/components/prescriptions/PrescriptionForm";
@@ -66,6 +66,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
     setPrescriptionOpenId,
     addPrescription, updatePrescription, changePrescriptionStatus,
   } = useIndexPrescriptions(user);
+  const autoCreatedIds = useRef<Set<string>>(new Set());
 
   // Показываем попап с задачами при каждом входе в систему
   useEffect(() => {
@@ -305,12 +306,28 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
 
       {showAdd && canEdit && (
         <AddForm
-          onClose={() => setShowAdd(false)}
+          onClose={() => { setShowAdd(false); setSelected(null); }}
+          onAutoSave={updatePrescription}
+          onAutoCreate={async p => {
+            const saved = await addPrescription(p);
+            autoCreatedIds.current.add(saved.id);
+            return saved;
+          }}
           onSave={async p => {
+            if (autoCreatedIds.current.has(p.id)) {
+              await updatePrescription(p);
+              toast.success(`Предписание ${p.number} создано и сохранено`);
+              return;
+            }
             const saved = await addPrescription(p);
             toast.success(`Предписание ${saved?.number || ""} создано и сохранено`.replace("  ", " "));
           }}
           onSaveKeepOpen={async p => {
+            if (autoCreatedIds.current.has(p.id)) {
+              await updatePrescription(p);
+              notifySaved(p.number);
+              return;
+            }
             const saved = await addPrescription(p);
             toast.success(`Предписание ${saved?.number || ""} создано и сохранено`.replace("  ", " "));
             setShowAdd(false);
@@ -331,7 +348,7 @@ export default function Index({ user, onLogout, onUserUpdate, showTasksPopup, on
         />
       )}
 
-      {selected && !editingPrescription && (
+      {selected && !editingPrescription && !showAdd && (
         <PrescriptionDetail
           prescription={selected}
           onClose={() => setSelected(null)}
