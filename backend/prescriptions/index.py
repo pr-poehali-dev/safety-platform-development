@@ -541,6 +541,7 @@ def handler(event: dict, context) -> dict:
 
             cur.execute(f"SELECT id FROM {SCHEMA}.prescriptions WHERE id=%s FOR UPDATE", (pid,))
             lock_session = p.get("lockSession")
+            lk = None
             if lock_session:
                 cur.execute(
                     f"SELECT session_id, user_name, user_login FROM {SCHEMA}.prescription_locks WHERE prescription_id=%s "
@@ -653,6 +654,10 @@ def handler(event: dict, context) -> dict:
             changed_by = p.get("changedBy", "")
             changed_by_name = p.get("changedByName", "")
             history_rows = []
+            holds_lock = bool(lock_session)
+            if removed_ids and (p.get("force") or not client_version or not holds_lock):
+                history_rows.append(("", pid, "delete_skipped", "", f"Удаление пунктов ({len(removed_ids)}) пропущено: форма устарела или не держит блокировку", changed_by, changed_by_name))
+                removed_ids = []
             for rid in removed_ids:
                 old = existing_rows[rid]
                 history_rows.append((rid, pid, "removed", old.get("description") or "", "", changed_by, changed_by_name))

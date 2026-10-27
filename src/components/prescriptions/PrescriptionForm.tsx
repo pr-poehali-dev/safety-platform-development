@@ -181,7 +181,7 @@ export function AddForm({ onClose, onSave, onAutoSave, onAutoCreate, onSaveKeepO
       remarks: asDraft ? form.remarks.map(r => ({ ...r, status: "Черновик" })) : form.remarks,
       comments: base?.comments ?? [],
       createdBy: base?.createdBy ?? user.login,
-      deletedRemarkIds,
+      deletedRemarkIds: force ? [] : deletedRemarkIds,
       baseVersion: editId && !force ? baseVersion.current ?? undefined : undefined,
       lockSession: editId ? sessionId : undefined,
       idleAutosave: idle || undefined,
