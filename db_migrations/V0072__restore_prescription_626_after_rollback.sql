@@ -1,0 +1,7 @@
+UPDATE t_p5901577_safety_platform_deve.remarks SET deadline='Незамедлительно' WHERE id IN ('17930096532681fmqawe','17930699645741lb0nvj','179307671562325obygf') AND prescription_id='1793011202981';
+UPDATE t_p5901577_safety_platform_deve.remarks SET deadline='28.10.2026' WHERE id='17930711087612x2gba7' AND prescription_id='1793011202981';
+UPDATE t_p5901577_safety_platform_deve.remarks SET place='Гостиница 5.2 / Секция Б', category='Территория/пути передвижения', description=(SELECT old_value FROM t_p5901577_safety_platform_deve.remark_history WHERE id=1295) WHERE id='17930760287421rgu0zb' AND prescription_id='1793011202981';
+UPDATE t_p5901577_safety_platform_deve.remarks SET place='Гостиница 5.2 / Секция Б', norm_ref=(SELECT old_value FROM t_p5901577_safety_platform_deve.remark_history WHERE id=1298) WHERE id='179307671562325obygf' AND prescription_id='1793011202981';
+UPDATE t_p5901577_safety_platform_deve.prescriptions SET reply_email='o.lutsenko@sbbuild.ru', report_deadline='30.10.2026' WHERE id='1793011202981';
+INSERT INTO t_p5901577_safety_platform_deve.remark_history (remark_id, prescription_id, field, old_value, new_value, changed_by, changed_by_name)
+VALUES ('', '1793011202981', 'restored', '', 'Восстановлены тексты, сроки, места, почта и срок отчёта, откатившиеся устаревшим сохранением в 07:08', 'system', 'Система');
