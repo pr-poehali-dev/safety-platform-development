@@ -646,6 +646,10 @@ def handler(event: dict, context) -> dict:
 
             deleted_by_client = set(p.get("deletedRemarkIds") or [])
             removed_ids = list(existing_ids & deleted_by_client - new_ids)
+            if removed_ids and not client_version and not p.get("force"):
+                conn.rollback()
+                return {"statusCode": 409, "headers": {**CORS, "Content-Type": "application/json"},
+                        "body": json.dumps({"error": "Удаление пунктов без проверки версии запрещено, обновите предписание", "code": "conflict"}, ensure_ascii=False)}
             changed_by = p.get("changedBy", "")
             changed_by_name = p.get("changedByName", "")
             history_rows = []

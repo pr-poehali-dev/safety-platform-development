@@ -80,9 +80,7 @@ export function useIndexPrescriptions(user: AppUser) {
 
   const updatePrescription = async (input: Prescription) => {
     const { baseVersion, ...updated } = input;
-    const base = prescriptions.find(p => p.id === updated.id);
-    const keepIds = new Set(updated.remarks.map(r => r.id));
-    const deletedRemarkIds = base ? base.remarks.filter(r => !keepIds.has(r.id)).map(r => r.id) : [];
+    const deletedRemarkIds = updated.deletedRemarkIds ?? [];
     const res = await fetchWithRetry(API, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

@@ -172,6 +172,10 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
 
   const buildPrescription = (asDraft: boolean, force = false, idle = false, auto = false): Prescription => {
     const now = new Date();
+    const keepIds = new Set(form.remarks.map(r => r.id));
+    const deletedRemarkIds = baseSnapshot.current
+      ? baseSnapshot.current.remarks.filter(r => !keepIds.has(r.id)).map(r => r.id)
+      : [];
     return {
       id: editPrescription?.id ?? Date.now().toString(),
       number: editPrescription?.number ?? "",
@@ -188,6 +192,7 @@ export function AddForm({ onClose, onSave, onAutoSave, onSaveKeepOpen, user, edi
       remarks: asDraft ? form.remarks.map(r => ({ ...r, status: "Черновик" })) : form.remarks,
       comments: editPrescription?.comments ?? [],
       createdBy: editPrescription?.createdBy ?? user.login,
+      deletedRemarkIds,
       baseVersion: editId && !force ? baseVersion.current ?? undefined : undefined,
       lockSession: editId ? sessionId : undefined,
       idleAutosave: idle || undefined,
