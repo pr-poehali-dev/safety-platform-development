@@ -3,6 +3,7 @@ import Icon from "@/components/ui/icon";
 import { EditablePhotoLightbox } from "@/components/ui/ImageAnnotator";
 import { Remark, Status, ALL_STATUSES } from "@/lib/prescriptionTypes";
 import { Field, SelectBase, TextareaBase, DatePicker } from "./FormControls";
+import { ObjectPicker } from "./ObjectPicker";
 
 const UPLOAD_URL = "https://functions.poehali.dev/b1d2899a-a609-43c1-81e8-34e4c4922136";
 const MAX_PHOTOS = 3;
@@ -125,12 +126,15 @@ export function RemarkRow({
         )}
       </div>
       <div className="flex flex-wrap gap-4">
-        <div className="flex-1 min-w-[220px] basis-full sm:basis-[calc(50%_-_0.5rem)] lg:basis-[0] lg:flex-[0_0_38%]">
+        <div className="flex-1 min-w-[220px] max-w-full basis-full sm:basis-[calc(50%_-_0.5rem)] lg:basis-[0] lg:flex-[0_0_38%]">
           <Field label="Место нарушения *">
-            <SelectBase value={remark.place} onChange={e => set("place", e.target.value)} disabled={places.length === 0}>
-              <option value="">{places.length === 0 ? "— Сначала выберите объект —" : "— Выберите место нарушения —"}</option>
-              {places.map(p => <option key={p} value={p}>{p}</option>)}
-            </SelectBase>
+            <ObjectPicker
+              value={remark.place}
+              onChange={v => set("place", v)}
+              disabled={places.length === 0}
+              options={places.map(p => ({ name: p }))}
+              placeholder={places.length === 0 ? "— Сначала выберите объект —" : "— Выберите место нарушения —"}
+            />
           </Field>
         </div>
         <div className="flex-1 min-w-[220px] basis-full sm:basis-[calc(50%_-_0.5rem)] lg:basis-[0] lg:flex-[0_0_25%]">

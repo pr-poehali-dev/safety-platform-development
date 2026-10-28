@@ -1,5 +1,5 @@
 import Icon from "@/components/ui/icon";
-import { Field, InputBase, SelectBase } from "./FormControls";
+import { Field, InputBase } from "./FormControls";
 import { ObjectPicker } from "./ObjectPicker";
 
 export interface FormState {
@@ -35,12 +35,9 @@ export function GeneralInfoSection({ form, setField, setForm, objectsList, contr
           </Field>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-6 [&>*]:min-w-0">
         <Field label="Подрядчик *">
-          <SelectBase value={form.contractor} onChange={e => setField("contractor", e.target.value)}>
-            <option value="">— Выберите подрядчика —</option>
-            {contractorsList.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-          </SelectBase>
+          <ObjectPicker value={form.contractor} onChange={v => setField("contractor", v)} options={contractorsList} placeholder="— Выберите подрядчика —" />
           {selectedContractor && selectedContractor.contracts.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {selectedContractor.contracts.map(c => {

@@ -8,7 +8,7 @@ import { DEADLINE_IMMEDIATE } from "@/lib/prescriptionTypes";
 // --- Базовые UI-элементы ---
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5 min-w-0">
       <label className="text-xs text-muted-foreground font-medium">{label}</label>
       {children}
     </div>
@@ -37,7 +37,7 @@ export function SelectBase(props: React.SelectHTMLAttributes<HTMLSelectElement>)
   return (
     <select
       {...props}
-      className={`w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 ${props.className ?? ""}`}
+      className={`w-full min-w-0 max-w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 ${props.className ?? ""}`}
     />
   );
 }
