@@ -1,5 +1,6 @@
 import Icon from "@/components/ui/icon";
 import { Field, InputBase, SelectBase } from "./FormControls";
+import { ObjectPicker } from "./ObjectPicker";
 
 export interface FormState {
   object: string;
@@ -28,12 +29,9 @@ export function GeneralInfoSection({ form, setField, setForm, objectsList, contr
     <div className="space-y-6">
       <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Общие сведения</p>
       <div className="grid grid-cols-2 gap-6">
-        <div className="col-span-2">
+        <div className="col-span-2 min-w-0">
           <Field label="Проверяемый объект *">
-            <SelectBase value={form.object} onChange={e => setField("object", e.target.value)}>
-              <option value="">— Выберите объект —</option>
-              {objectsList.map(o => <option key={o.name} value={o.name}>{o.name}</option>)}
-            </SelectBase>
+            <ObjectPicker value={form.object} onChange={v => setField("object", v)} options={objectsList} />
           </Field>
         </div>
       </div>
